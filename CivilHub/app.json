@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "CivilHub",
+    "slug": "civilhub",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1e293b"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.civilhub.app"
+    },
+    "android": {
+      "package": "com.civilhub.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#1e293b"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}
