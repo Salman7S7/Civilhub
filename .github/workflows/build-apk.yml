@@ -1,0 +1,63 @@
+name: Build & Release Android APK
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
+
+jobs:
+  build:
+    name: Build Android Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ☕ Set up Java (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🟢 Set up Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: CivilHub/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ./CivilHub
+        run: npm ci || npm install
+
+      - name: 🛠️ Generate Android Native Project (Expo Prebuild)
+        working-directory: ./CivilHub
+        run: npx expo prebuild --platform android --clean
+
+      - name: 🏗️ Build Android Release APK
+        working-directory: ./CivilHub/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: 📤 Upload APK Artifact to GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: CivilHub-Release-APK
+          path: CivilHub/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: warn
+
+      - name: 🚀 Create GitHub Release & Attach APK
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name || 'v1.0.0-apk' }}
+          name: CivilHub Android APK ${{ github.ref_name || 'Release' }}
+          draft: false
+          prerelease: false
+          files: |
+            CivilHub/android/app/build/outputs/apk/release/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
