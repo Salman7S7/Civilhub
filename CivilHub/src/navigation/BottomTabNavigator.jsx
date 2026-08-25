@@ -9,10 +9,8 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import FeasibilityScreen from "../screens/FeasibilityScreen";
-import {
-  DesignSuggestionsScreen,
-  CostEstimatorScreen,
-} from "../screens/PlaceholderScreens";
+import DesignSuggestionsScreen from "../screens/DesignSuggestionsScreen";
+import { CostEstimatorScreen } from "../screens/PlaceholderScreens";
 
 const Tab = createBottomTabNavigator();
 
