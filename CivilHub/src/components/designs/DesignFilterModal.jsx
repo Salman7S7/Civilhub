@@ -1,12 +1,12 @@
 // src/components/designs/DesignFilterModal.jsx
 // -----------------------------------------------------------------------------
 // Interactive filter modal allowing users to filter architectural designs by:
-//   - Number of Floors (5 Story, 10 Story, or Custom Story Input)
-//   - Land Area (Preset Pills or Exact Custom Katha Input)
-//   - Basement (Yes / No)
-//   - Car Garage & Parking Capacity
-//   - Rooftop Type (Garden / Open Terrace / Helipad)
-//   - Units Per Floor
+//   - Number of Floors: Direct User Input (e.g. 5, 8, 10)
+//   - Land Area (Katha): Direct User Input (e.g. 3.5, 4.0, 5.0)
+//   - Basement: Yes / No / Any
+//   - Car Garage: Yes / No / Any
+//   - Rooftop Type: Garden / Open Terrace / Any
+//   - Units Per Floor & Minimum Parking
 // -----------------------------------------------------------------------------
 
 import React, { useState, useEffect } from "react";
@@ -76,12 +76,11 @@ export default function DesignFilterModal({
 
   // Custom Katha input change handler
   const handleCustomKathaChange = (text) => {
-    // Only allow numbers and decimal points
     const cleaned = text.replace(/[^0-9.]/g, "");
     setDraftFilters((prev) => ({
       ...prev,
       custom_katha: cleaned,
-      min_katha: cleaned ? "all" : prev.min_katha, // clear preset if custom entered
+      min_katha: cleaned || "all",
     }));
   };
 
@@ -91,7 +90,7 @@ export default function DesignFilterModal({
     setDraftFilters((prev) => ({
       ...prev,
       custom_floors: cleaned,
-      floors: cleaned ? "all" : prev.floors, // clear preset if custom entered
+      floors: cleaned || "all",
     }));
   };
 
@@ -117,7 +116,7 @@ export default function DesignFilterModal({
                 <View>
                   <Text style={styles.headerTitle}>Filter Designs</Text>
                   <Text style={styles.headerSubtitle}>
-                    Select presets or enter your exact plot specs
+                    Enter your exact plot specifications & amenities
                   </Text>
                 </View>
 
@@ -136,85 +135,7 @@ export default function DesignFilterModal({
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
               >
-                {/* 1. Custom Plot Size in Katha (Custom Input + Presets) */}
-                <View style={styles.section}>
-                  <View style={styles.sectionTitleRow}>
-                    <Ionicons name="resize" size={18} color="#d97706" />
-                    <Text style={styles.sectionTitle}>
-                      Plot Size (Katha)
-                    </Text>
-                  </View>
-
-                  {/* Custom Number Input */}
-                  <View style={styles.customInputRow}>
-                    <Text style={styles.customInputLabel}>Enter Exact Katha:</Text>
-                    <View style={styles.customInputWrap}>
-                      <TextInput
-                        style={styles.customTextInput}
-                        placeholder="e.g. 3.75, 5.0"
-                        placeholderTextColor="#94a3b8"
-                        keyboardType="decimal-pad"
-                        value={draftFilters.custom_katha}
-                        onChangeText={handleCustomKathaChange}
-                      />
-                      {draftFilters.custom_katha ? (
-                        <TouchableOpacity
-                          onPress={() =>
-                            setDraftFilters((p) => ({ ...p, custom_katha: "" }))
-                          }
-                          style={{ padding: 4 }}
-                        >
-                          <Ionicons
-                            name="close-circle"
-                            size={16}
-                            color="#94a3b8"
-                          />
-                        </TouchableOpacity>
-                      ) : (
-                        <Text style={styles.inputUnit}>Katha</Text>
-                      )}
-                    </View>
-                  </View>
-
-                  {/* Quick Katha Presets */}
-                  <Text style={styles.subCategoryLabel}>Or Choose Preset:</Text>
-                  <View style={styles.pillGroup}>
-                    {[
-                      { label: "Any Katha", value: "all" },
-                      { label: "≤ 3.5 Katha", value: "3.5" },
-                      { label: "≤ 4.5 Katha", value: "4.5" },
-                      { label: "5.0+ Katha", value: "7.5" },
-                    ].map((opt) => {
-                      const active =
-                        !draftFilters.custom_katha &&
-                        isFilterActive("min_katha", opt.value);
-                      return (
-                        <TouchableOpacity
-                          key={opt.value}
-                          style={[styles.pill, active && styles.activePill]}
-                          onPress={() => {
-                            setDraftFilters((p) => ({
-                              ...p,
-                              custom_katha: "",
-                              min_katha: opt.value,
-                            }));
-                          }}
-                        >
-                          <Text
-                            style={[
-                              styles.pillText,
-                              active && styles.activePillText,
-                            ]}
-                          >
-                            {opt.label}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                {/* 2. Number of Floors (Custom Input + Presets) */}
+                {/* 1. Direct User Input: Number of Floors */}
                 <View style={styles.section}>
                   <View style={styles.sectionTitleRow}>
                     <MaterialCommunityIcons
@@ -225,23 +146,24 @@ export default function DesignFilterModal({
                     <Text style={styles.sectionTitle}>Number of Floors</Text>
                   </View>
 
-                  {/* Custom Floor Input */}
                   <View style={styles.customInputRow}>
-                    <Text style={styles.customInputLabel}>Enter Exact Stories:</Text>
+                    <Text style={styles.customInputLabel}>Target Stories:</Text>
                     <View style={styles.customInputWrap}>
                       <TextInput
                         style={styles.customTextInput}
-                        placeholder="e.g. 5, 8, 10"
+                        placeholder="e.g. 5 or 10"
                         placeholderTextColor="#94a3b8"
                         keyboardType="number-pad"
-                        value={draftFilters.custom_floors}
+                        value={
+                          draftFilters.custom_floors ||
+                          (draftFilters.floors !== "all" ? String(draftFilters.floors) : "")
+                        }
                         onChangeText={handleCustomFloorChange}
                       />
-                      {draftFilters.custom_floors ? (
+                      <Text style={styles.inputUnit}>Stories</Text>
+                      {(draftFilters.custom_floors || draftFilters.floors !== "all") && (
                         <TouchableOpacity
-                          onPress={() =>
-                            setDraftFilters((p) => ({ ...p, custom_floors: "" }))
-                          }
+                          onPress={() => handleCustomFloorChange("")}
                           style={{ padding: 4 }}
                         >
                           <Ionicons
@@ -250,84 +172,50 @@ export default function DesignFilterModal({
                             color="#94a3b8"
                           />
                         </TouchableOpacity>
-                      ) : (
-                        <Text style={styles.inputUnit}>Stories</Text>
                       )}
                     </View>
                   </View>
-
-                  {/* Quick Floor Presets */}
-                  <Text style={styles.subCategoryLabel}>Or Choose Preset:</Text>
-                  <View style={styles.pillGroup}>
-                    {[
-                      { label: "All Stories", value: "all" },
-                      { label: "5 Story Building", value: "5" },
-                      { label: "10 Story Building", value: "10" },
-                    ].map((opt) => {
-                      const active =
-                        !draftFilters.custom_floors &&
-                        isFilterActive("floors", opt.value);
-                      return (
-                        <TouchableOpacity
-                          key={opt.value}
-                          style={[styles.pill, active && styles.activePill]}
-                          onPress={() => {
-                            setDraftFilters((p) => ({
-                              ...p,
-                              custom_floors: "",
-                              floors: opt.value,
-                            }));
-                          }}
-                        >
-                          <Text
-                            style={[
-                              styles.pillText,
-                              active && styles.activePillText,
-                            ]}
-                          >
-                            {opt.label}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
                 </View>
 
-                {/* 3. Rooftop Type */}
+                {/* 2. Direct User Input: Land Amount in Katha */}
                 <View style={styles.section}>
                   <View style={styles.sectionTitleRow}>
-                    <Ionicons name="leaf" size={18} color="#16a34a" />
-                    <Text style={styles.sectionTitle}>Rooftop Type</Text>
+                    <Ionicons name="resize" size={18} color="#d97706" />
+                    <Text style={styles.sectionTitle}>Land Amount (Katha)</Text>
                   </View>
-                  <View style={styles.pillGroup}>
-                    {[
-                      { label: "Any Rooftop", value: "all" },
-                      { label: "🌱 Rooftop Garden", value: "Garden" },
-                      { label: "⛅ Open Terrace", value: "Open Terrace" },
-                      { label: "🚁 Helipad", value: "Helipad" },
-                    ].map((opt) => {
-                      const active = isFilterActive("rooftop_type", opt.value);
-                      return (
+
+                  <View style={styles.customInputRow}>
+                    <Text style={styles.customInputLabel}>Plot Size:</Text>
+                    <View style={styles.customInputWrap}>
+                      <TextInput
+                        style={styles.customTextInput}
+                        placeholder="e.g. 3.5, 4.0, 5.0"
+                        placeholderTextColor="#94a3b8"
+                        keyboardType="decimal-pad"
+                        value={
+                          draftFilters.custom_katha ||
+                          (draftFilters.min_katha !== "all" ? String(draftFilters.min_katha) : "")
+                        }
+                        onChangeText={handleCustomKathaChange}
+                      />
+                      <Text style={styles.inputUnit}>Katha</Text>
+                      {(draftFilters.custom_katha || draftFilters.min_katha !== "all") && (
                         <TouchableOpacity
-                          key={opt.value}
-                          style={[styles.pill, active && styles.activePill]}
-                          onPress={() => setFilterVal("rooftop_type", opt.value)}
+                          onPress={() => handleCustomKathaChange("")}
+                          style={{ padding: 4 }}
                         >
-                          <Text
-                            style={[
-                              styles.pillText,
-                              active && styles.activePillText,
-                            ]}
-                          >
-                            {opt.label}
-                          </Text>
+                          <Ionicons
+                            name="close-circle"
+                            size={16}
+                            color="#94a3b8"
+                          />
                         </TouchableOpacity>
-                      );
-                    })}
+                      )}
+                    </View>
                   </View>
                 </View>
 
-                {/* 4. Basement Requirement */}
+                {/* 3. Basement (Yes / No / Any) */}
                 <View style={styles.section}>
                   <View style={styles.sectionTitleRow}>
                     <MaterialCommunityIcons
@@ -364,11 +252,11 @@ export default function DesignFilterModal({
                   </View>
                 </View>
 
-                {/* 5. Car Garage & Parking Capacity */}
+                {/* 4. Car Garage (Yes / No / Any) */}
                 <View style={styles.section}>
                   <View style={styles.sectionTitleRow}>
                     <Ionicons name="car-sport" size={18} color="#059669" />
-                    <Text style={styles.sectionTitle}>Car Garage & Parking</Text>
+                    <Text style={styles.sectionTitle}>Car Garage</Text>
                   </View>
                   <View style={styles.pillGroup}>
                     {[
@@ -395,23 +283,26 @@ export default function DesignFilterModal({
                       );
                     })}
                   </View>
+                </View>
 
-                  <Text style={[styles.subCategoryLabel, { marginTop: 10 }]}>
-                    Minimum Parking Spaces:
-                  </Text>
+                {/* 5. Rooftop Type (Garden / Open Terrace / Any) */}
+                <View style={styles.section}>
+                  <View style={styles.sectionTitleRow}>
+                    <Ionicons name="leaf" size={18} color="#16a34a" />
+                    <Text style={styles.sectionTitle}>Rooftop Type</Text>
+                  </View>
                   <View style={styles.pillGroup}>
                     {[
-                      { label: "Any Spots", value: "all" },
-                      { label: "4+ Cars", value: "4" },
-                      { label: "8+ Cars", value: "8" },
-                      { label: "12+ Cars", value: "12" },
+                      { label: "Any Rooftop", value: "all" },
+                      { label: "🌱 Rooftop Garden", value: "Garden" },
+                      { label: "⛅ Open Terrace", value: "Open Terrace" },
                     ].map((opt) => {
-                      const active = isFilterActive("min_parking", opt.value);
+                      const active = isFilterActive("rooftop_type", opt.value);
                       return (
                         <TouchableOpacity
                           key={opt.value}
                           style={[styles.pill, active && styles.activePill]}
-                          onPress={() => setFilterVal("min_parking", opt.value)}
+                          onPress={() => setFilterVal("rooftop_type", opt.value)}
                         >
                           <Text
                             style={[
@@ -553,7 +444,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
   sectionTitleRow: {
     flexDirection: "row",
@@ -566,12 +457,6 @@ const styles = StyleSheet.create({
     color: "#1e293b",
     marginLeft: 6,
   },
-  subCategoryLabel: {
-    fontSize: 12,
-    color: "#64748b",
-    fontWeight: "600",
-    marginBottom: 6,
-  },
   customInputRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -581,8 +466,7 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginBottom: 10,
+    paddingVertical: 8,
   },
   customInputLabel: {
     fontSize: 13,
@@ -597,19 +481,19 @@ const styles = StyleSheet.create({
     borderColor: "#cbd5e1",
     borderRadius: 8,
     paddingHorizontal: 10,
-    height: 36,
-    minWidth: 120,
+    height: 38,
+    minWidth: 130,
   },
   customTextInput: {
     flex: 1,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#1e293b",
     padding: 0,
   },
   inputUnit: {
     fontSize: 12,
-    color: "#94a3b8",
+    color: "#64748b",
     fontWeight: "600",
     marginLeft: 4,
   },
@@ -620,8 +504,8 @@ const styles = StyleSheet.create({
   },
   pill: {
     backgroundColor: "#f8fafc",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#e2e8f0",

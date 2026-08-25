@@ -1,12 +1,11 @@
 // src/components/designs/DesignFilterForm.jsx
 // -----------------------------------------------------------------------------
-// Interactive on-screen Filter Form collecting all 5 user parameters specified in
-// civilhub_mobile_overview.md:
-//   1. Number of Floors: 5 Story / 10 Story
-//   2. Basement: Yes / No
-//   3. Car Garage: Yes / No
-//   4. Rooftop Type: Garden / Open Terrace
-//   5. Land Amount (Min Katha): 3 katha / 4 katha / 5+ katha
+// Interactive on-screen Filter Form where:
+//   1. Number of Floors: Direct User Input (e.g. 5, 8, 10 stories)
+//   2. Land Amount (Katha): Direct User Input (e.g. 3.5, 4.25, 6.0 Katha)
+//   3. Basement: Yes / No / Any Toggle
+//   4. Car Garage: Yes / No / Any Toggle
+//   5. Rooftop Type: Garden / Open Terrace / Any Toggle
 // -----------------------------------------------------------------------------
 
 import React, { useState } from "react";
@@ -30,7 +29,7 @@ export default function DesignFilterForm({
   // Helper to check if a specific filter value is selected
   const isSelected = (key, val) => filters[key] === val;
 
-  // Toggle or set filter value
+  // Toggle or set filter value for options
   const handleSelect = (key, val) => {
     onChangeFilters({
       ...filters,
@@ -38,13 +37,23 @@ export default function DesignFilterForm({
     });
   };
 
-  // Handle custom katha text
-  const handleCustomKatha = (text) => {
+  // Handle direct user input for Number of Floors
+  const handleFloorsChange = (text) => {
+    const cleaned = text.replace(/[^0-9]/g, "");
+    onChangeFilters({
+      ...filters,
+      custom_floors: cleaned,
+      floors: cleaned || "all",
+    });
+  };
+
+  // Handle direct user input for Land Amount in Katha
+  const handleKathaChange = (text) => {
     const cleaned = text.replace(/[^0-9.]/g, "");
     onChangeFilters({
       ...filters,
       custom_katha: cleaned,
-      min_katha: cleaned ? "all" : filters.min_katha,
+      min_katha: cleaned || "all",
     });
   };
 
@@ -63,7 +72,7 @@ export default function DesignFilterForm({
           <View>
             <Text style={styles.headerTitle}>Architectural Design Filters</Text>
             <Text style={styles.headerSubtitle}>
-              Select your plot criteria to filter 5 & 10-story models
+              Enter your plot specs & amenities to filter models
             </Text>
           </View>
         </View>
@@ -77,49 +86,73 @@ export default function DesignFilterForm({
 
       {expanded && (
         <View style={styles.formBody}>
-          {/* 1. Number of Floors (5 Story / 10 Story) */}
-          <View style={styles.fieldRow}>
-            <View style={styles.fieldLabelRow}>
-              <MaterialCommunityIcons
-                name="office-building"
-                size={16}
-                color="#2563eb"
-              />
-              <Text style={styles.fieldLabel}>Number of Floors</Text>
-            </View>
-            <View style={styles.segmentGroup}>
-              {[
-                { label: "All", value: "all" },
-                { label: "5 Story", value: "5" },
-                { label: "10 Story", value: "10" },
-              ].map((opt) => {
-                const active = isSelected("floors", opt.value);
-                return (
+          {/* User Input 1 & 2: Number of Floors & Land Amount side-by-side */}
+          <View style={styles.inputsRow}>
+            {/* 1. Number of Floors (Entered by user) */}
+            <View style={styles.inputFieldBlock}>
+              <View style={styles.fieldLabelRow}>
+                <MaterialCommunityIcons
+                  name="office-building"
+                  size={15}
+                  color="#2563eb"
+                />
+                <Text style={styles.fieldLabel}>Stories / Floors</Text>
+              </View>
+              <View style={styles.textInputBox}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="e.g. 5 or 10"
+                  placeholderTextColor="#94a3b8"
+                  keyboardType="number-pad"
+                  value={filters.custom_floors || (filters.floors !== "all" ? String(filters.floors) : "")}
+                  onChangeText={handleFloorsChange}
+                />
+                <Text style={styles.inputUnitBadge}>Stories</Text>
+                {(filters.custom_floors || filters.floors !== "all") && (
                   <TouchableOpacity
-                    key={opt.value}
-                    style={[styles.segmentBtn, active && styles.segmentBtnActive]}
-                    onPress={() => handleSelect("floors", opt.value)}
+                    onPress={() => handleFloorsChange("")}
+                    style={styles.clearBtn}
                   >
-                    <Text
-                      style={[
-                        styles.segmentText,
-                        active && styles.segmentTextActive,
-                      ]}
-                    >
-                      {opt.label}
-                    </Text>
+                    <Ionicons name="close-circle" size={15} color="#94a3b8" />
                   </TouchableOpacity>
-                );
-              })}
+                )}
+              </View>
+            </View>
+
+            {/* 2. Land Amount in Katha (Entered by user) */}
+            <View style={styles.inputFieldBlock}>
+              <View style={styles.fieldLabelRow}>
+                <Ionicons name="resize" size={15} color="#d97706" />
+                <Text style={styles.fieldLabel}>Land Size (Katha)</Text>
+              </View>
+              <View style={styles.textInputBox}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="e.g. 3.5, 5.0"
+                  placeholderTextColor="#94a3b8"
+                  keyboardType="decimal-pad"
+                  value={filters.custom_katha || (filters.min_katha !== "all" ? String(filters.min_katha) : "")}
+                  onChangeText={handleKathaChange}
+                />
+                <Text style={styles.inputUnitBadge}>Katha</Text>
+                {(filters.custom_katha || filters.min_katha !== "all") && (
+                  <TouchableOpacity
+                    onPress={() => handleKathaChange("")}
+                    style={styles.clearBtn}
+                  >
+                    <Ionicons name="close-circle" size={15} color="#94a3b8" />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           </View>
 
-          {/* 2. Basement (Yes / No) */}
+          {/* 3. Basement (Yes / No / Any) */}
           <View style={styles.fieldRow}>
             <View style={styles.fieldLabelRow}>
               <MaterialCommunityIcons
                 name="arrow-down-bold-box"
-                size={16}
+                size={15}
                 color="#7c3aed"
               />
               <Text style={styles.fieldLabel}>Basement</Text>
@@ -151,10 +184,10 @@ export default function DesignFilterForm({
             </View>
           </View>
 
-          {/* 3. Car Garage (Yes / No) */}
+          {/* 4. Car Garage (Yes / No / Any) */}
           <View style={styles.fieldRow}>
             <View style={styles.fieldLabelRow}>
-              <Ionicons name="car-sport" size={16} color="#059669" />
+              <Ionicons name="car-sport" size={15} color="#059669" />
               <Text style={styles.fieldLabel}>Car Garage</Text>
             </View>
             <View style={styles.segmentGroup}>
@@ -184,10 +217,10 @@ export default function DesignFilterForm({
             </View>
           </View>
 
-          {/* 4. Rooftop Type (Garden / Open Terrace) */}
-          <View style={styles.fieldRow}>
+          {/* 5. Rooftop Type (Garden / Open Terrace / Any) */}
+          <View style={[styles.fieldRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
             <View style={styles.fieldLabelRow}>
-              <Ionicons name="leaf" size={16} color="#16a34a" />
+              <Ionicons name="leaf" size={15} color="#16a34a" />
               <Text style={styles.fieldLabel}>Rooftop Type</Text>
             </View>
             <View style={styles.segmentGroup}>
@@ -217,64 +250,7 @@ export default function DesignFilterForm({
             </View>
           </View>
 
-          {/* 5. Land Amount (Min Katha): 3 katha / 4 katha / 5+ katha */}
-          <View style={[styles.fieldRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
-            <View style={styles.fieldLabelRow}>
-              <Ionicons name="resize" size={16} color="#d97706" />
-              <Text style={styles.fieldLabel}>Land Amount (Katha)</Text>
-            </View>
-            <View style={styles.segmentGroup}>
-              {[
-                { label: "Any", value: "all" },
-                { label: "3 Katha", value: "3.5" },
-                { label: "4 Katha", value: "4.5" },
-                { label: "5+ Katha", value: "7.5" },
-              ].map((opt) => {
-                const active =
-                  !filters.custom_katha && isSelected("min_katha", opt.value);
-                return (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[styles.segmentBtn, active && styles.segmentBtnActive]}
-                    onPress={() => {
-                      onChangeFilters({
-                        ...filters,
-                        custom_katha: "",
-                        min_katha: filters.min_katha === opt.value ? "all" : opt.value,
-                      });
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.segmentText,
-                        active && styles.segmentTextActive,
-                      ]}
-                    >
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* Optional Custom Exact Katha Input */}
-            <View style={styles.exactInputContainer}>
-              <Text style={styles.exactInputLabel}>Or exact plot size:</Text>
-              <View style={styles.exactInputBox}>
-                <TextInput
-                  style={styles.exactTextInput}
-                  placeholder="e.g. 3.75"
-                  placeholderTextColor="#94a3b8"
-                  keyboardType="decimal-pad"
-                  value={filters.custom_katha || ""}
-                  onChangeText={handleCustomKatha}
-                />
-                <Text style={styles.exactInputUnit}>Katha</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Footer Reset & Result Summary */}
+          {/* Footer Reset & Match Result Summary */}
           <View style={styles.formFooter}>
             <TouchableOpacity
               style={styles.resetBtn}
@@ -282,7 +258,7 @@ export default function DesignFilterForm({
               onPress={onResetFilters}
             >
               <Ionicons name="refresh" size={14} color="#64748b" />
-              <Text style={styles.resetBtnText}>Reset All</Text>
+              <Text style={styles.resetBtnText}>Reset Filters</Text>
             </TouchableOpacity>
 
             <View style={styles.resultBadge}>
@@ -349,13 +325,18 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderTopWidth: 1,
     borderTopColor: "#f1f5f9",
-    paddingTop: 12,
+    paddingTop: 14,
   },
-  fieldRow: {
-    marginBottom: 12,
-    paddingBottom: 10,
+  inputsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 14,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f8fafc",
+    borderBottomColor: "#f1f5f9",
+  },
+  inputFieldBlock: {
+    flex: 1,
   },
   fieldLabelRow: {
     flexDirection: "row",
@@ -366,7 +347,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: "#334155",
-    marginLeft: 6,
+    marginLeft: 5,
+  },
+  textInputBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 40,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1e293b",
+    padding: 0,
+  },
+  inputUnitBadge: {
+    fontSize: 11,
+    color: "#64748b",
+    fontWeight: "600",
+    marginLeft: 4,
+  },
+  clearBtn: {
+    marginLeft: 4,
+    padding: 2,
+  },
+  fieldRow: {
+    marginBottom: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f8fafc",
   },
   segmentGroup: {
     flexDirection: "row",
@@ -398,47 +412,11 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontWeight: "700",
   },
-  exactInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    marginTop: 8,
-    gap: 8,
-  },
-  exactInputLabel: {
-    fontSize: 11,
-    color: "#64748b",
-    fontWeight: "500",
-  },
-  exactInputBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    height: 30,
-    width: 100,
-  },
-  exactTextInput: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#1e293b",
-    padding: 0,
-  },
-  exactInputUnit: {
-    fontSize: 10,
-    color: "#94a3b8",
-    fontWeight: "600",
-    marginLeft: 4,
-  },
   formFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 8,
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: "#f1f5f9",
