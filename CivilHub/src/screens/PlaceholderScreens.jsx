@@ -21,16 +21,6 @@ function PlaceholderContent({ iconName, IconComponent, title, subtitle }) {
   );
 }
 
-export function DesignSuggestionsScreen() {
-  return (
-    <PlaceholderContent
-      IconComponent={MaterialCommunityIcons}
-      iconName="floor-plan"
-      title="Smart Designs"
-      subtitle="AI-powered floor plan & design suggestions are coming soon."
-    />
-  );
-}
 
 export function CostEstimatorScreen() {
   return (

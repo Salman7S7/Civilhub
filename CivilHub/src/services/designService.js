@@ -5,7 +5,7 @@
 // with seamless fallback to curated local mock data when backend is offline.
 // -----------------------------------------------------------------------------
 
-import { MOCK_DESIGNS } from "./mockDesigns";
+import { MOCK_DESIGNS } from "./mockDesigns.js";
 
 const BACKEND_BASE_URL = "http://localhost:4000";
 
