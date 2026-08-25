@@ -1,11 +1,12 @@
 // src/components/designs/DesignFilterModal.jsx
 // -----------------------------------------------------------------------------
 // Interactive filter modal allowing users to filter architectural designs by:
-//   - Number of Floors (5 Story / 10 Story)
+//   - Number of Floors (5 Story, 10 Story, or Custom Story Input)
+//   - Land Area (Preset Pills or Exact Custom Katha Input)
 //   - Basement (Yes / No)
-//   - Car Garage (Yes / No)
+//   - Car Garage & Parking Capacity
 //   - Rooftop Type (Garden / Open Terrace / Helipad)
-//   - Minimum Land (3 Katha / 4 Katha / 5+ Katha)
+//   - Units Per Floor
 // -----------------------------------------------------------------------------
 
 import React, { useState, useEffect } from "react";
@@ -13,10 +14,13 @@ import {
   Modal,
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
   TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { filterDesignsLocally } from "../../services/designService";
@@ -24,10 +28,14 @@ import { MOCK_DESIGNS } from "../../services/mockDesigns";
 
 export const DEFAULT_FILTERS = {
   floors: "all",
+  custom_floors: "",
   has_basement: "all",
   has_garage: "all",
   rooftop_type: "all",
   min_katha: "all",
+  custom_katha: "",
+  units_per_floor: "all",
+  min_parking: "all",
 };
 
 export default function DesignFilterModal({
@@ -66,6 +74,27 @@ export default function DesignFilterModal({
     }));
   };
 
+  // Custom Katha input change handler
+  const handleCustomKathaChange = (text) => {
+    // Only allow numbers and decimal points
+    const cleaned = text.replace(/[^0-9.]/g, "");
+    setDraftFilters((prev) => ({
+      ...prev,
+      custom_katha: cleaned,
+      min_katha: cleaned ? "all" : prev.min_katha, // clear preset if custom entered
+    }));
+  };
+
+  // Custom Floor input change handler
+  const handleCustomFloorChange = (text) => {
+    const cleaned = text.replace(/[^0-9]/g, "");
+    setDraftFilters((prev) => ({
+      ...prev,
+      custom_floors: cleaned,
+      floors: cleaned ? "all" : prev.floors, // clear preset if custom entered
+    }));
+  };
+
   return (
     <Modal
       visible={visible}
@@ -76,7 +105,10 @@ export default function DesignFilterModal({
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.modalOverlay}>
           <TouchableWithoutFeedback>
-            <View style={styles.sheetContainer}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : undefined}
+              style={styles.sheetContainer}
+            >
               {/* Drag Handle Indicator */}
               <View style={styles.handleIndicator} />
 
@@ -85,7 +117,7 @@ export default function DesignFilterModal({
                 <View>
                   <Text style={styles.headerTitle}>Filter Designs</Text>
                   <Text style={styles.headerSubtitle}>
-                    Customize criteria for your plot & building goals
+                    Select presets or enter your exact plot specs
                   </Text>
                 </View>
 
@@ -102,8 +134,87 @@ export default function DesignFilterModal({
                 style={styles.bodyScroll}
                 contentContainerStyle={styles.bodyScrollContent}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
               >
-                {/* 1. Number of Floors */}
+                {/* 1. Custom Plot Size in Katha (Custom Input + Presets) */}
+                <View style={styles.section}>
+                  <View style={styles.sectionTitleRow}>
+                    <Ionicons name="resize" size={18} color="#d97706" />
+                    <Text style={styles.sectionTitle}>
+                      Plot Size (Katha)
+                    </Text>
+                  </View>
+
+                  {/* Custom Number Input */}
+                  <View style={styles.customInputRow}>
+                    <Text style={styles.customInputLabel}>Enter Exact Katha:</Text>
+                    <View style={styles.customInputWrap}>
+                      <TextInput
+                        style={styles.customTextInput}
+                        placeholder="e.g. 3.75, 5.0"
+                        placeholderTextColor="#94a3b8"
+                        keyboardType="decimal-pad"
+                        value={draftFilters.custom_katha}
+                        onChangeText={handleCustomKathaChange}
+                      />
+                      {draftFilters.custom_katha ? (
+                        <TouchableOpacity
+                          onPress={() =>
+                            setDraftFilters((p) => ({ ...p, custom_katha: "" }))
+                          }
+                          style={{ padding: 4 }}
+                        >
+                          <Ionicons
+                            name="close-circle"
+                            size={16}
+                            color="#94a3b8"
+                          />
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={styles.inputUnit}>Katha</Text>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Quick Katha Presets */}
+                  <Text style={styles.subCategoryLabel}>Or Choose Preset:</Text>
+                  <View style={styles.pillGroup}>
+                    {[
+                      { label: "Any Katha", value: "all" },
+                      { label: "≤ 3.5 Katha", value: "3.5" },
+                      { label: "≤ 4.5 Katha", value: "4.5" },
+                      { label: "5.0+ Katha", value: "7.5" },
+                    ].map((opt) => {
+                      const active =
+                        !draftFilters.custom_katha &&
+                        isFilterActive("min_katha", opt.value);
+                      return (
+                        <TouchableOpacity
+                          key={opt.value}
+                          style={[styles.pill, active && styles.activePill]}
+                          onPress={() => {
+                            setDraftFilters((p) => ({
+                              ...p,
+                              custom_katha: "",
+                              min_katha: opt.value,
+                            }));
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.pillText,
+                              active && styles.activePillText,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* 2. Number of Floors (Custom Input + Presets) */}
                 <View style={styles.section}>
                   <View style={styles.sectionTitleRow}>
                     <MaterialCommunityIcons
@@ -113,18 +224,60 @@ export default function DesignFilterModal({
                     />
                     <Text style={styles.sectionTitle}>Number of Floors</Text>
                   </View>
+
+                  {/* Custom Floor Input */}
+                  <View style={styles.customInputRow}>
+                    <Text style={styles.customInputLabel}>Enter Exact Stories:</Text>
+                    <View style={styles.customInputWrap}>
+                      <TextInput
+                        style={styles.customTextInput}
+                        placeholder="e.g. 5, 8, 10"
+                        placeholderTextColor="#94a3b8"
+                        keyboardType="number-pad"
+                        value={draftFilters.custom_floors}
+                        onChangeText={handleCustomFloorChange}
+                      />
+                      {draftFilters.custom_floors ? (
+                        <TouchableOpacity
+                          onPress={() =>
+                            setDraftFilters((p) => ({ ...p, custom_floors: "" }))
+                          }
+                          style={{ padding: 4 }}
+                        >
+                          <Ionicons
+                            name="close-circle"
+                            size={16}
+                            color="#94a3b8"
+                          />
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={styles.inputUnit}>Stories</Text>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Quick Floor Presets */}
+                  <Text style={styles.subCategoryLabel}>Or Choose Preset:</Text>
                   <View style={styles.pillGroup}>
                     {[
                       { label: "All Stories", value: "all" },
                       { label: "5 Story Building", value: "5" },
                       { label: "10 Story Building", value: "10" },
                     ].map((opt) => {
-                      const active = isFilterActive("floors", opt.value);
+                      const active =
+                        !draftFilters.custom_floors &&
+                        isFilterActive("floors", opt.value);
                       return (
                         <TouchableOpacity
                           key={opt.value}
                           style={[styles.pill, active && styles.activePill]}
-                          onPress={() => setFilterVal("floors", opt.value)}
+                          onPress={() => {
+                            setDraftFilters((p) => ({
+                              ...p,
+                              custom_floors: "",
+                              floors: opt.value,
+                            }));
+                          }}
                         >
                           <Text
                             style={[
@@ -140,77 +293,7 @@ export default function DesignFilterModal({
                   </View>
                 </View>
 
-                {/* 2. Basement Requirement */}
-                <View style={styles.section}>
-                  <View style={styles.sectionTitleRow}>
-                    <MaterialCommunityIcons
-                      name="arrow-down-bold-box"
-                      size={18}
-                      color="#7c3aed"
-                    />
-                    <Text style={styles.sectionTitle}>Basement</Text>
-                  </View>
-                  <View style={styles.pillGroup}>
-                    {[
-                      { label: "Any", value: "all" },
-                      { label: "With Basement (Yes)", value: true },
-                      { label: "No Basement", value: false },
-                    ].map((opt) => {
-                      const active = isFilterActive("has_basement", opt.value);
-                      return (
-                        <TouchableOpacity
-                          key={String(opt.value)}
-                          style={[styles.pill, active && styles.activePill]}
-                          onPress={() => setFilterVal("has_basement", opt.value)}
-                        >
-                          <Text
-                            style={[
-                              styles.pillText,
-                              active && styles.activePillText,
-                            ]}
-                          >
-                            {opt.label}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                {/* 3. Car Garage */}
-                <View style={styles.section}>
-                  <View style={styles.sectionTitleRow}>
-                    <Ionicons name="car-sport" size={18} color="#059669" />
-                    <Text style={styles.sectionTitle}>Car Garage / Parking</Text>
-                  </View>
-                  <View style={styles.pillGroup}>
-                    {[
-                      { label: "Any", value: "all" },
-                      { label: "With Garage (Yes)", value: true },
-                      { label: "No Garage", value: false },
-                    ].map((opt) => {
-                      const active = isFilterActive("has_garage", opt.value);
-                      return (
-                        <TouchableOpacity
-                          key={String(opt.value)}
-                          style={[styles.pill, active && styles.activePill]}
-                          onPress={() => setFilterVal("has_garage", opt.value)}
-                        >
-                          <Text
-                            style={[
-                              styles.pillText,
-                              active && styles.activePillText,
-                            ]}
-                          >
-                            {opt.label}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                {/* 4. Rooftop Type */}
+                {/* 3. Rooftop Type */}
                 <View style={styles.section}>
                   <View style={styles.sectionTitleRow}>
                     <Ionicons name="leaf" size={18} color="#16a34a" />
@@ -244,25 +327,125 @@ export default function DesignFilterModal({
                   </View>
                 </View>
 
-                {/* 5. Minimum Land Amount (Katha) */}
+                {/* 4. Basement Requirement */}
                 <View style={styles.section}>
                   <View style={styles.sectionTitleRow}>
-                    <Ionicons name="resize" size={18} color="#d97706" />
-                    <Text style={styles.sectionTitle}>Land Area Threshold</Text>
+                    <MaterialCommunityIcons
+                      name="arrow-down-bold-box"
+                      size={18}
+                      color="#7c3aed"
+                    />
+                    <Text style={styles.sectionTitle}>Basement Requirement</Text>
                   </View>
                   <View style={styles.pillGroup}>
                     {[
-                      { label: "Any Katha", value: "all" },
-                      { label: "3.0 - 3.5 Katha", value: "3.5" },
-                      { label: "4.0 - 4.5 Katha", value: "4.5" },
-                      { label: "5.0+ Katha", value: "7.5" },
+                      { label: "Any", value: "all" },
+                      { label: "With Basement (Yes)", value: true },
+                      { label: "No Basement", value: false },
                     ].map((opt) => {
-                      const active = isFilterActive("min_katha", opt.value);
+                      const active = isFilterActive("has_basement", opt.value);
+                      return (
+                        <TouchableOpacity
+                          key={String(opt.value)}
+                          style={[styles.pill, active && styles.activePill]}
+                          onPress={() => setFilterVal("has_basement", opt.value)}
+                        >
+                          <Text
+                            style={[
+                              styles.pillText,
+                              active && styles.activePillText,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* 5. Car Garage & Parking Capacity */}
+                <View style={styles.section}>
+                  <View style={styles.sectionTitleRow}>
+                    <Ionicons name="car-sport" size={18} color="#059669" />
+                    <Text style={styles.sectionTitle}>Car Garage & Parking</Text>
+                  </View>
+                  <View style={styles.pillGroup}>
+                    {[
+                      { label: "Any", value: "all" },
+                      { label: "With Garage (Yes)", value: true },
+                      { label: "No Garage", value: false },
+                    ].map((opt) => {
+                      const active = isFilterActive("has_garage", opt.value);
+                      return (
+                        <TouchableOpacity
+                          key={String(opt.value)}
+                          style={[styles.pill, active && styles.activePill]}
+                          onPress={() => setFilterVal("has_garage", opt.value)}
+                        >
+                          <Text
+                            style={[
+                              styles.pillText,
+                              active && styles.activePillText,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <Text style={[styles.subCategoryLabel, { marginTop: 10 }]}>
+                    Minimum Parking Spaces:
+                  </Text>
+                  <View style={styles.pillGroup}>
+                    {[
+                      { label: "Any Spots", value: "all" },
+                      { label: "4+ Cars", value: "4" },
+                      { label: "8+ Cars", value: "8" },
+                      { label: "12+ Cars", value: "12" },
+                    ].map((opt) => {
+                      const active = isFilterActive("min_parking", opt.value);
                       return (
                         <TouchableOpacity
                           key={opt.value}
                           style={[styles.pill, active && styles.activePill]}
-                          onPress={() => setFilterVal("min_katha", opt.value)}
+                          onPress={() => setFilterVal("min_parking", opt.value)}
+                        >
+                          <Text
+                            style={[
+                              styles.pillText,
+                              active && styles.activePillText,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* 6. Units Per Floor */}
+                <View style={styles.section}>
+                  <View style={styles.sectionTitleRow}>
+                    <Ionicons name="home-outline" size={18} color="#6366f1" />
+                    <Text style={styles.sectionTitle}>Units Per Floor</Text>
+                  </View>
+                  <View style={styles.pillGroup}>
+                    {[
+                      { label: "Any Layout", value: "all" },
+                      { label: "1 Unit (Single Private)", value: "1" },
+                      { label: "2 Units / Floor", value: "2" },
+                      { label: "3 Units / Floor", value: "3" },
+                    ].map((opt) => {
+                      const active = isFilterActive("units_per_floor", opt.value);
+                      return (
+                        <TouchableOpacity
+                          key={opt.value}
+                          style={[styles.pill, active && styles.activePill]}
+                          onPress={() => setFilterVal("units_per_floor", opt.value)}
                         >
                           <Text
                             style={[
@@ -301,7 +484,7 @@ export default function DesignFilterModal({
                   <Ionicons name="arrow-forward" size={16} color="#ffffff" />
                 </TouchableOpacity>
               </View>
-            </View>
+            </KeyboardAvoidingView>
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
@@ -319,7 +502,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: "85%",
+    maxHeight: "90%",
     paddingBottom: 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
@@ -375,13 +558,60 @@ const styles = StyleSheet.create({
   sectionTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
     color: "#1e293b",
     marginLeft: 6,
+  },
+  subCategoryLabel: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  customInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 10,
+  },
+  customInputLabel: {
+    fontSize: 13,
+    color: "#334155",
+    fontWeight: "600",
+  },
+  customInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 36,
+    minWidth: 120,
+  },
+  customTextInput: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1e293b",
+    padding: 0,
+  },
+  inputUnit: {
+    fontSize: 12,
+    color: "#94a3b8",
+    fontWeight: "600",
+    marginLeft: 4,
   },
   pillGroup: {
     flexDirection: "row",
@@ -390,8 +620,8 @@ const styles = StyleSheet.create({
   },
   pill: {
     backgroundColor: "#f8fafc",
-    paddingHorizontal: 13,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#e2e8f0",
@@ -401,7 +631,7 @@ const styles = StyleSheet.create({
     borderColor: "#2563eb",
   },
   pillText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
     color: "#475569",
   },
