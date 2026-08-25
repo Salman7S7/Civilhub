@@ -3,9 +3,14 @@
 // Main screen for Feature 2: "Smart Design Suggestions (Pinterest-based Filter Gallery)".
 // Features:
 //   - Hero banner with architectural theme & gradient styling
-//   - Direct custom plot size (Katha) and story inputs alongside prebuilt filter chips
-//   - Keyword search bar & multi-parameter filter drawer trigger with active badges
-//   - Quick filter chip bar (5 Story, 10 Story, Garden, Garage, Basement, etc.)
+//   - Interactive On-Screen User Filter Form collecting all 5 core parameters:
+//       1. Number of Floors (5 Story / 10 Story)
+//       2. Basement (Yes / No)
+//       3. Car Garage (Yes / No)
+//       4. Rooftop Type (Garden / Open Terrace)
+//       5. Land Amount (Min Katha: 3 Katha / 4 Katha / 5+ Katha / Custom Katha)
+//   - Keyword search bar & filter drawer trigger with active badges
+//   - Quick filter chip bar
 //   - 2-Column Pinterest-style staggered masonry card gallery
 //   - Favorites / Bookmarking system
 //   - Integrated DesignFilterModal & DesignDetailModal
@@ -31,6 +36,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import DesignCard from "../components/designs/DesignCard";
 import QuickFilterBar from "../components/designs/QuickFilterBar";
+import DesignFilterForm from "../components/designs/DesignFilterForm";
 import DesignFilterModal, {
   DEFAULT_FILTERS,
 } from "../components/designs/DesignFilterModal";
@@ -150,31 +156,6 @@ export default function DesignSuggestionsScreen({ navigation }) {
     loadDesigns(newFilters);
   };
 
-  // Quick inline custom input change handlers
-  const handleQuickKathaChange = (text) => {
-    const cleaned = text.replace(/[^0-9.]/g, "");
-    const updated = {
-      ...modalFilters,
-      custom_katha: cleaned,
-      min_katha: cleaned ? "all" : modalFilters.min_katha,
-    };
-    setModalFilters(updated);
-    setActivePreset("custom");
-    loadDesigns(updated);
-  };
-
-  const handleQuickFloorsChange = (text) => {
-    const cleaned = text.replace(/[^0-9]/g, "");
-    const updated = {
-      ...modalFilters,
-      custom_floors: cleaned,
-      floors: cleaned ? "all" : modalFilters.floors,
-    };
-    setModalFilters(updated);
-    setActivePreset("custom");
-    loadDesigns(updated);
-  };
-
   // Toggle favorite bookmark
   const toggleFavorite = (id) => {
     setFavorites((prev) => {
@@ -223,10 +204,6 @@ export default function DesignSuggestionsScreen({ navigation }) {
   const column1 = displayedDesigns.filter((_, idx) => idx % 2 === 0);
   const column2 = displayedDesigns.filter((_, idx) => idx % 2 === 1);
 
-  const hasCustomSpecs = Boolean(
-    modalFilters.custom_katha || modalFilters.custom_floors
-  );
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
@@ -257,7 +234,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
             <View style={styles.heroTopRow}>
               <View>
                 <Text style={styles.heroEyebrow}>CIVILHUB ARCHITECTURE</Text>
-                <Text style={styles.heroTitle}>Smart Design Gallery</Text>
+                <Text style={styles.heroTitle}>Smart Design Suggestions</Text>
               </View>
               <View style={styles.heroIconWrap}>
                 <MaterialCommunityIcons
@@ -269,8 +246,8 @@ export default function DesignSuggestionsScreen({ navigation }) {
             </View>
 
             <Text style={styles.heroSubtitle}>
-              Pinterest-inspired 5 to 10-story architectural models tailored for
-              Bangladesh plot sizes, parking rules, and rooftop options.
+              Pinterest-inspired 5 & 10-story architectural models filtered by
+              floors, basement, car garage, rooftop, and plot size.
             </Text>
 
             {/* Gallery Stats Row */}
@@ -282,7 +259,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
               <View style={styles.statDivider} />
               <View style={styles.statBadge}>
                 <Text style={styles.statNumber}>5 & 10</Text>
-                <Text style={styles.statLabel}>Stories Optimized</Text>
+                <Text style={styles.statLabel}>Story Options</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statBadge}>
@@ -293,7 +270,19 @@ export default function DesignSuggestionsScreen({ navigation }) {
           </LinearGradient>
         </ImageBackground>
 
-        {/* Search Bar & Filter Controls Container */}
+        {/* 1. Core On-Screen User Filter Form (All 5 Parameters) */}
+        <DesignFilterForm
+          filters={modalFilters}
+          onChangeFilters={(newFilters) => {
+            setModalFilters(newFilters);
+            setActivePreset("custom");
+            loadDesigns(newFilters);
+          }}
+          onResetFilters={resetAllFilters}
+          resultCount={displayedDesigns.length}
+        />
+
+        {/* 2. Search & Quick Filters Bar */}
         <View style={styles.controlsCard}>
           {/* Top Search Input & Filter Drawer Button */}
           <View style={styles.searchRow}>
@@ -301,7 +290,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
               <Ionicons name="search" size={18} color="#64748b" />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search style, rooftop, area..."
+                placeholder="Search style, title, features..."
                 placeholderTextColor="#94a3b8"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -317,7 +306,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
               )}
             </View>
 
-            {/* Filter Modal Trigger Button */}
+            {/* Deep Filter Modal Trigger Button */}
             <TouchableOpacity
               style={[
                 styles.filterTriggerButton,
@@ -327,7 +316,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
               onPress={() => setFilterModalVisible(true)}
             >
               <Ionicons
-                name="options-outline"
+                name="tune-outline"
                 size={18}
                 color={activeFilterCount > 0 ? "#ffffff" : "#1e293b"}
               />
@@ -339,77 +328,11 @@ export default function DesignSuggestionsScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Quick Custom Plot & Stories Input Bar */}
-          <View style={styles.customSpecsBar}>
-            <View style={styles.customSpecField}>
-              <Ionicons name="resize-outline" size={14} color="#d97706" />
-              <Text style={styles.customSpecLabel}>My Plot:</Text>
-              <TextInput
-                style={styles.customSpecInput}
-                placeholder="e.g. 4.5"
-                placeholderTextColor="#94a3b8"
-                keyboardType="decimal-pad"
-                value={modalFilters.custom_katha}
-                onChangeText={handleQuickKathaChange}
-              />
-              <Text style={styles.customSpecSuffix}>Katha</Text>
-            </View>
-
-            <View style={styles.customSpecDivider} />
-
-            <View style={styles.customSpecField}>
-              <MaterialCommunityIcons
-                name="office-building"
-                size={14}
-                color="#2563eb"
-              />
-              <Text style={styles.customSpecLabel}>Stories:</Text>
-              <TextInput
-                style={styles.customSpecInput}
-                placeholder="5 or 10"
-                placeholderTextColor="#94a3b8"
-                keyboardType="number-pad"
-                value={modalFilters.custom_floors}
-                onChangeText={handleQuickFloorsChange}
-              />
-              <Text style={styles.customSpecSuffix}>Fl</Text>
-            </View>
-          </View>
-
           {/* Quick Preset Filter Chips */}
           <QuickFilterBar
             activePreset={activePreset}
             onSelectPreset={handleSelectPreset}
           />
-
-          {/* Active Custom Specs Badge (if set) */}
-          {hasCustomSpecs && (
-            <View style={styles.activeCustomBanner}>
-              <Ionicons name="filter" size={12} color="#2563eb" />
-              <Text style={styles.activeCustomBannerText}>
-                {modalFilters.custom_katha
-                  ? `Max Plot: ${modalFilters.custom_katha} Katha `
-                  : ""}
-                {modalFilters.custom_floors
-                  ? `• ${modalFilters.custom_floors} Stories `
-                  : ""}
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  const updated = {
-                    ...modalFilters,
-                    custom_katha: "",
-                    custom_floors: "",
-                  };
-                  setModalFilters(updated);
-                  loadDesigns(updated);
-                }}
-                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              >
-                <Ionicons name="close" size={14} color="#64748b" />
-              </TouchableOpacity>
-            </View>
-          )}
 
           {/* Tabs: All Designs vs Saved Favorites */}
           <View style={styles.viewToggleRow}>
@@ -459,7 +382,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
         <View style={styles.resultsHeader}>
           <Text style={styles.resultsCountText}>
             Showing {displayedDesigns.length}{" "}
-            {displayedDesigns.length === 1 ? "design" : "designs"}
+            {displayedDesigns.length === 1 ? "architectural design" : "architectural designs"}
           </Text>
 
           {(activeFilterCount > 0 || searchQuery || showOnlyFavorites) && (
@@ -491,8 +414,8 @@ export default function DesignSuggestionsScreen({ navigation }) {
             />
             <Text style={styles.emptyTitle}>No matching designs found</Text>
             <Text style={styles.emptySubtitle}>
-              Try clearing some custom parameters or filter criteria to see more
-              architectural options.
+              Try clearing some filter criteria (such as rooftop type or katha
+              threshold) to see more architectural options.
             </Text>
             <TouchableOpacity
               style={styles.emptyResetBtn}
@@ -576,7 +499,7 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     width: "100%",
-    height: 250,
+    height: 240,
   },
   heroImageRadius: {
     borderBottomLeftRadius: 24,
@@ -622,13 +545,13 @@ const styles = StyleSheet.create({
     color: "#e2e8f0",
     fontSize: 12,
     lineHeight: 18,
-    marginTop: 10,
+    marginTop: 8,
     maxWidth: "95%",
   },
   statsRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 14,
+    marginTop: 12,
     backgroundColor: "rgba(15, 23, 42, 0.6)",
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -659,7 +582,7 @@ const styles = StyleSheet.create({
   controlsCard: {
     backgroundColor: "#ffffff",
     marginHorizontal: 16,
-    marginTop: -16,
+    marginTop: 12,
     borderRadius: 18,
     paddingTop: 14,
     paddingBottom: 8,
@@ -726,70 +649,6 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 10,
     fontWeight: "700",
-  },
-  customSpecsBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f8fafc",
-    marginHorizontal: 14,
-    marginTop: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  customSpecField: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  customSpecLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#475569",
-  },
-  customSpecInput: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#1e293b",
-    backgroundColor: "#ffffff",
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    height: 28,
-  },
-  customSpecSuffix: {
-    fontSize: 10,
-    color: "#94a3b8",
-    fontWeight: "600",
-  },
-  customSpecDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: "#cbd5e1",
-    marginHorizontal: 8,
-  },
-  activeCustomBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#eff6ff",
-    marginHorizontal: 14,
-    marginTop: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    gap: 6,
-  },
-  activeCustomBannerText: {
-    flex: 1,
-    fontSize: 11,
-    color: "#2563eb",
-    fontWeight: "600",
   },
   viewToggleRow: {
     flexDirection: "row",
