@@ -5,14 +5,13 @@
 //   npx expo install react-native-screens react-native-safe-area-context
 // -----------------------------------------------------------------------------
 import React from "react";
+import { Pressable, Text } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import FeasibilityScreen from "../screens/FeasibilityScreen";
-import {
-  DesignSuggestionsScreen,
-  CostEstimatorScreen,
-} from "../screens/PlaceholderScreens";
+import DesignSuggestionsScreen from "../screens/DesignSuggestionsScreen";
+import { CostEstimatorScreen } from "../screens/PlaceholderScreens";
 
 const Tab = createBottomTabNavigator();
 
@@ -25,12 +24,40 @@ const COLORS = {
   background: "#ffffff",
 };
 
-export default function BottomTabNavigator() {
+export default function BottomTabNavigator({ onLogout }) {
   return (
     <Tab.Navigator
       initialRouteName="Feasibility"
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: COLORS.slate,
+          shadowColor: "transparent",
+        },
+        headerTintColor: "#ffffff",
+        headerTitleStyle: {
+          fontSize: 18,
+          fontWeight: "700",
+        },
+        headerRight: () => (
+          <Pressable
+            onPress={onLogout}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginRight: 16,
+              paddingHorizontal: 10,
+              paddingVertical: 8,
+              borderRadius: 10,
+              backgroundColor: "rgba(255,255,255,0.12)",
+            }}
+          >
+            <Ionicons name="log-out-outline" size={18} color="#ffffff" />
+            <Text style={{ color: "#ffffff", fontWeight: "700", marginLeft: 6 }}>
+              Logout
+            </Text>
+          </Pressable>
+        ),
         tabBarActiveTintColor: COLORS.accent,
         tabBarInactiveTintColor: COLORS.inactive,
         tabBarStyle: {
