@@ -162,7 +162,7 @@ export async function searchDesigns(filters = {}) {
 
     if (response.ok) {
       const data = await response.json();
-      if (data && Array.isArray(data.designs) && data.designs.length > 0) {
+      if (data && data.success && Array.isArray(data.designs)) {
         return filterDesignsLocally(data.designs, filters);
       }
     }

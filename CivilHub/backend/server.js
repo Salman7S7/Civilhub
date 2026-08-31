@@ -1,9 +1,16 @@
 // backend/server.js
+// -----------------------------------------------------------------------------
+// CivilHub Mobile Backend:
+// 1. Feature 1: Gemini AI Bangladesh Building Code Proxy
+// 2. Feature 2: Smart Design Suggestions MySQL Filter Engine & API
+// -----------------------------------------------------------------------------
 
 require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const { initDB, query, getStatus } = require("./db");
+const { SEED_DESIGNS } = require("./seedData");
 
 const app = express();
 
@@ -12,37 +19,27 @@ const app = express();
 // ============================================================
 
 app.use(cors());
-
-app.use(
-  express.json({
-    limit: "1mb"
-  })
-);
+app.use(express.json({ limit: "1mb" }));
 
 // ============================================================
 // Configuration
 // ============================================================
 
 const PORT = process.env.PORT || 4000;
-
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-const GEMINI_MODEL =
-  process.env.GEMINI_MODEL || "gemini-3.5-flash";
-
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const GEMINI_URL =
   `https://generativelanguage.googleapis.com/v1beta/models/` +
   `${GEMINI_MODEL}:generateContent`;
 
 // ============================================================
-// Bangladesh Building Code System Context
+// Bangladesh Building Code System Context (Feature 1)
 // ============================================================
 
 const SYSTEM_CONTEXT = `
 You are a senior Bangladesh Civil Engineering and Building Code Expert.
 
 You are knowledgeable about:
-
 - Bangladesh National Building Code (BNBC 2020)
 - RAJUK Imarat Nirman Bidhimala
 - RAJUK building regulations
@@ -52,283 +49,281 @@ You are knowledgeable about:
 - General Pourashava construction guidelines
 
 Rules for your answers:
-
 1. Always answer in the context of Bangladeshi building regulations.
-
-2. When relevant, mention:
-
-   - Floor Area Ratio (FAR)
-   - Setback requirements
-   - Maximum permissible height
-   - Road-width-based restrictions
-   - Plot size
-   - Parking requirements
-   - Building use and occupancy restrictions
-
-3. If the answer depends on RAJUK, CDA, RDA, KDA,
-   or another authority, make a reasonable assumption
-   and clearly state the assumed authority.
-
-4. Do not invent exact legal values when they depend on:
-
-   - Plot size
-   - Road width
-   - Zone
-   - Land-use category
-   - Development authority
-
-5. If an exact value cannot be determined from the
-   information provided, clearly say what information
-   is required.
-
-6. Keep answers concise, structured, and practical.
-
-7. Avoid unnecessary legal jargon.
-
-8. Always include this disclaimer:
-
-"Disclaimer: Final approval depends on the relevant development
-authority and review by a licensed structural/civil engineer."
-
-Now answer the user's question.
+2. When relevant, mention Floor Area Ratio (FAR), setback requirements, maximum permissible height, and road-width-based restrictions.
+3. If the answer depends on RAJUK, CDA, RDA, or KDA, make a reasonable assumption and clearly state the assumed authority.
+4. Keep answers concise, structured, and practical.
+5. Always include this disclaimer:
+"Disclaimer: Final approval depends on the relevant development authority and review by a licensed structural/civil engineer."
 `;
+
+// ============================================================
+// Helper: In-Memory Fallback Filter Engine
+// ============================================================
+
+function filterInMemory(filters = {}) {
+  const { floors, min_katha, basement, garage, rooftop, q, search } = filters;
+  const searchTerm = (q || search || "").toLowerCase().trim();
+
+  return SEED_DESIGNS.map((d, index) => ({ id: index + 1, ...d })).filter(
+    (item) => {
+      if (floors && item.floors !== parseInt(floors, 10)) {
+        return false;
+      }
+      if (min_katha && item.min_katha > parseFloat(min_katha)) {
+        return false;
+      }
+      if (basement !== undefined) {
+        const wantBasement = basement === "true" || basement === "1" || basement === true;
+        if (item.has_basement !== wantBasement) return false;
+      }
+      if (garage !== undefined) {
+        const wantGarage = garage === "true" || garage === "1" || garage === true;
+        if (item.has_garage !== wantGarage) return false;
+      }
+      if (rooftop && item.rooftop_type !== rooftop) {
+        return false;
+      }
+      if (searchTerm) {
+        const matchTitle = item.title.toLowerCase().includes(searchTerm);
+        const matchStyle = item.architectural_style?.toLowerCase().includes(searchTerm);
+        const matchDesc = item.description?.toLowerCase().includes(searchTerm);
+        const matchFeatures = item.features?.some((f) =>
+          f.toLowerCase().includes(searchTerm)
+        );
+        if (!matchTitle && !matchStyle && !matchDesc && !matchFeatures) {
+          return false;
+        }
+      }
+      return true;
+    }
+  );
+}
 
 // ============================================================
 // HEALTH CHECK
 // ============================================================
 
 app.get("/health", (req, res) => {
+  const dbStatus = getStatus();
   res.json({
     ok: true,
     hasKey: Boolean(GEMINI_API_KEY),
-    model: GEMINI_MODEL
+    model: GEMINI_MODEL,
+    database: dbStatus,
   });
 });
 
 // ============================================================
-// DEBUG - LIST AVAILABLE GEMINI MODELS
+// FEATURE 2: SMART DESIGN SUGGESTIONS API
 // ============================================================
 
-app.get("/debug/models", async (req, res) => {
-  try {
-    if (!GEMINI_API_KEY) {
-      return res.status(500).json({
-        error: "Missing GEMINI_API_KEY"
-      });
-    }
+/**
+ * GET /api/designs/search
+ * Filter designs based on query parameters:
+ *   - floors: 5 or 10
+ *   - min_katha: e.g. 3.5, 5.0 (returns designs with min_katha <= value)
+ *   - basement: 'true' / 'false'
+ *   - garage: 'true' / 'false'
+ *   - rooftop: 'Garden' / 'Open Terrace' / 'Helipad'
+ *   - q / search: free-text search string
+ */
+app.get("/api/designs/search", async (req, res) => {
+  const { floors, min_katha, basement, garage, rooftop, q, search } = req.query;
+  const dbStatus = getStatus();
 
-    const modelsUrl =
-      "https://generativelanguage.googleapis.com/v1beta/models";
+  // If MySQL is connected, query the live database
+  if (dbStatus.connected) {
+    try {
+      let sql = "SELECT * FROM designs WHERE 1=1";
+      const queryParams = [];
 
-    const response = await fetch(modelsUrl, {
-      method: "GET",
-
-      headers: {
-        "x-goog-api-key": GEMINI_API_KEY
+      if (floors) {
+        sql += " AND floors = ?";
+        queryParams.push(parseInt(floors, 10));
       }
-    });
+      if (min_katha) {
+        sql += " AND min_katha <= ?";
+        queryParams.push(parseFloat(min_katha));
+      }
+      if (basement !== undefined) {
+        sql += " AND has_basement = ?";
+        queryParams.push(basement === "true" || basement === "1" ? 1 : 0);
+      }
+      if (garage !== undefined) {
+        sql += " AND has_garage = ?";
+        queryParams.push(garage === "true" || garage === "1" ? 1 : 0);
+      }
+      if (rooftop) {
+        sql += " AND rooftop_type = ?";
+        queryParams.push(rooftop);
+      }
 
-    const text = await response.text();
+      const searchTerm = q || search;
+      if (searchTerm && String(searchTerm).trim()) {
+        sql +=
+          " AND (title LIKE ? OR architectural_style LIKE ? OR description LIKE ?)";
+        const pattern = `%${String(searchTerm).trim()}%`;
+        queryParams.push(pattern, pattern, pattern);
+      }
 
-    res
-      .status(response.status)
-      .type("application/json")
-      .send(text);
+      sql += " ORDER BY id ASC";
 
-  } catch (error) {
-    console.error(
-      "Model list error:",
-      error
-    );
+      const rows = await query(sql, queryParams);
 
-    res.status(500).json({
-      error: "Could not list models"
-    });
+      // Parse features JSON if string
+      const parsedRows = rows.map((row) => ({
+        ...row,
+        has_basement: Boolean(row.has_basement),
+        has_garage: Boolean(row.has_garage),
+        features:
+          typeof row.features === "string"
+            ? JSON.parse(row.features)
+            : row.features || [],
+      }));
+
+      return res.json({
+        success: true,
+        source: "mysql",
+        count: parsedRows.length,
+        designs: parsedRows,
+      });
+    } catch (err) {
+      console.error("[MySQL Search Error]:", err);
+      // Fallback to in-memory filter if query fails
+    }
   }
+
+  // In-Memory Fallback
+  const results = filterInMemory(req.query);
+  res.json({
+    success: true,
+    source: "memory_catalog",
+    count: results.length,
+    designs: results,
+  });
+});
+
+/**
+ * GET /api/designs
+ * Retrieve all designs catalog.
+ */
+app.get("/api/designs", async (req, res) => {
+  const dbStatus = getStatus();
+
+  if (dbStatus.connected) {
+    try {
+      const rows = await query("SELECT * FROM designs ORDER BY id ASC;");
+      const parsedRows = rows.map((row) => ({
+        ...row,
+        has_basement: Boolean(row.has_basement),
+        has_garage: Boolean(row.has_garage),
+        features:
+          typeof row.features === "string"
+            ? JSON.parse(row.features)
+            : row.features || [],
+      }));
+      return res.json({ success: true, count: parsedRows.length, designs: parsedRows });
+    } catch (err) {
+      console.error("[MySQL Get All Error]:", err);
+    }
+  }
+
+  const allDesigns = SEED_DESIGNS.map((d, index) => ({ id: index + 1, ...d }));
+  res.json({ success: true, count: allDesigns.length, designs: allDesigns });
+});
+
+/**
+ * GET /api/designs/:id
+ * Retrieve single design details by ID.
+ */
+app.get("/api/designs/:id", async (req, res) => {
+  const { id } = req.params;
+  const designId = parseInt(id, 10);
+  const dbStatus = getStatus();
+
+  if (dbStatus.connected) {
+    try {
+      const rows = await query("SELECT * FROM designs WHERE id = ? LIMIT 1;", [
+        designId,
+      ]);
+      if (rows && rows.length > 0) {
+        const row = rows[0];
+        return res.json({
+          success: true,
+          design: {
+            ...row,
+            has_basement: Boolean(row.has_basement),
+            has_garage: Boolean(row.has_garage),
+            features:
+              typeof row.features === "string"
+                ? JSON.parse(row.features)
+                : row.features || [],
+          },
+        });
+      }
+      return res.status(404).json({ error: "Design not found" });
+    } catch (err) {
+      console.error("[MySQL Get By ID Error]:", err);
+    }
+  }
+
+  const found = SEED_DESIGNS.find((_, idx) => idx + 1 === designId);
+  if (found) {
+    return res.json({ success: true, design: { id: designId, ...found } });
+  }
+  res.status(404).json({ error: "Design not found" });
 });
 
 // ============================================================
-// ASK BUILDING CODE
-//
-// POST:
-// /api/ask-building-code
-//
-// Request body:
-//
-// {
-//   "question": "What is FAR in Bangladesh?"
-// }
-//
-// Response:
-//
-// {
-//   "answer": "..."
-// }
+// FEATURE 1: ASK BUILDING CODE (GEMINI AI PROXY)
 // ============================================================
 
 app.post("/api/ask-building-code", async (req, res) => {
   try {
-
-    // --------------------------------------------------------
-    // Get question
-    // --------------------------------------------------------
-
     const { question } = req.body;
 
-    // --------------------------------------------------------
-    // Validate question
-    // --------------------------------------------------------
-
     if (!question || !String(question).trim()) {
-      return res.status(400).json({
-        error: "Missing 'question' in request body."
-      });
+      return res.status(400).json({ error: "Missing 'question' in request body." });
     }
-
-    // --------------------------------------------------------
-    // Check API key
-    // --------------------------------------------------------
 
     if (!GEMINI_API_KEY) {
       return res.status(500).json({
-        error:
-          "Server is missing GEMINI_API_KEY. Check backend/.env."
+        error: "Server is missing GEMINI_API_KEY. Check backend/.env.",
       });
     }
 
-    // --------------------------------------------------------
-    // Create complete prompt
-    // --------------------------------------------------------
-
-    const fullPrompt = `
-${SYSTEM_CONTEXT}
-
-User question:
-
-${String(question).trim()}
-`;
-
-    // --------------------------------------------------------
-    // Gemini request body
-    // --------------------------------------------------------
+    const fullPrompt = `${SYSTEM_CONTEXT}\n\nUser question:\n${String(question).trim()}`;
 
     const requestBody = {
-      contents: [
-        {
-          role: "user",
-
-          parts: [
-            {
-              text: fullPrompt
-            }
-          ]
-        }
-      ],
-
-      generationConfig: {
-        maxOutputTokens: 800
-      }
+      contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+      generationConfig: { maxOutputTokens: 800 },
     };
 
-    // --------------------------------------------------------
-    // Send request to Gemini
-    // --------------------------------------------------------
-
     const geminiResponse = await fetch(
-      GEMINI_URL,
+      `${GEMINI_URL}?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
-
-        headers: {
-          "Content-Type": "application/json",
-
-          "x-goog-api-key": GEMINI_API_KEY
-        },
-
-        body: JSON.stringify(requestBody)
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
       }
     );
 
-    // --------------------------------------------------------
-    // Gemini API error
-    // --------------------------------------------------------
-
     if (!geminiResponse.ok) {
-
-      const errorText =
-        await geminiResponse.text();
-
-      console.error(
-        "Gemini API error:",
-        geminiResponse.status,
-        errorText
-      );
-
-      return res.status(502).json({
-        error: "Gemini API request failed.",
-
-        status: geminiResponse.status,
-
-        details: errorText
-      });
+      const errorText = await geminiResponse.text();
+      console.error("Gemini API error:", geminiResponse.status, errorText);
+      return res.status(502).json({ error: "Gemini API request failed." });
     }
 
-    // --------------------------------------------------------
-    // Read Gemini response
-    // --------------------------------------------------------
-
-    const data =
-      await geminiResponse.json();
-
-    // --------------------------------------------------------
-    // Extract generated text
-    // --------------------------------------------------------
-
+    const data = await geminiResponse.json();
     const answerText =
-      data?.candidates?.[0]?.content?.parts
-        ?.map(part => part?.text || "")
-        .join("")
-        .trim();
+      data?.candidates?.[0]?.content?.parts?.map((p) => p?.text || "").join("").trim() ||
+      "Unable to process question. Please try again.";
 
-    // --------------------------------------------------------
-    // Empty response
-    // --------------------------------------------------------
-
-    if (!answerText) {
-
-      console.error(
-        "Gemini returned no text:"
-      );
-
-      console.error(
-        JSON.stringify(data, null, 2)
-      );
-
-      return res.status(502).json({
-        error:
-          "Gemini returned an empty response."
-      });
-    }
-
-    // --------------------------------------------------------
-    // Send answer to mobile app
-    // --------------------------------------------------------
-
-    res.json({
-      answer: answerText
-    });
-
+    res.json({ answer: answerText });
   } catch (error) {
-
-    console.error(
-      "Proxy error:",
-      error
-    );
-
-    res.status(500).json({
-      error:
-        "Internal server error."
-    });
+    console.error("Proxy error:", error);
+    res.status(500).json({ error: "Internal server error." });
   }
 });
 
@@ -336,18 +331,13 @@ ${String(question).trim()}
 // START SERVER
 // ============================================================
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  console.log(`====================================================`);
+  console.log(` CivilHub Backend Server running on http://localhost:${PORT}`);
+  console.log(` Gemini model: ${GEMINI_MODEL}`);
+  console.log(` Gemini API key loaded: ${Boolean(GEMINI_API_KEY)}`);
 
-  console.log(
-    `CivilHub backend running on http://localhost:${PORT}`
-  );
-
-  console.log(
-    `Gemini model: ${GEMINI_MODEL}`
-  );
-
-  console.log(
-    `Gemini API key loaded: ${Boolean(GEMINI_API_KEY)}`
-  );
-
+  // Initialize DB asynchronously
+  await initDB();
+  console.log(`====================================================`);
 });
