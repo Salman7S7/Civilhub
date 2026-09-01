@@ -58,17 +58,6 @@ export default function LoginScreen({ onLoginSuccess }) {
 
     setLoading(true);
     try {
-      // TODO: Replace with a real auth call, e.g.:
-      //   const res = await fetch(`${BACKEND_BASE_URL}/api/login`, {
-      //     method: "POST",
-      //     headers: { "Content-Type": "application/json" },
-      //     body: JSON.stringify({ email, password }),
-      //   });
-      //   if (!res.ok) throw new Error("Invalid credentials");
-      //   const { token, user } = await res.json();
-      //   // persist token (e.g. SecureStore) and pass user up.
-      //
-      // Simulated network delay so the loading state is visible in this demo:
       await new Promise((resolve) => setTimeout(resolve, 700));
       onLoginSuccess?.({ email: email.trim() });
     } catch (error) {
