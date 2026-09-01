@@ -11,7 +11,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import FeasibilityScreen from "../screens/FeasibilityScreen";
 import DesignSuggestionsScreen from "../screens/DesignSuggestionsScreen";
-import { CostEstimatorScreen } from "../screens/PlaceholderScreens";
+import CostEstimatorScreen from "../screens/CostEstimatorScreen";
 
 const Tab = createBottomTabNavigator();
 
