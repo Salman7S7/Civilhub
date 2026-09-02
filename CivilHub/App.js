@@ -1,9 +1,7 @@
 // App.js
-// -----------------------------------------------------------------------------
-// App entry point. Wraps the bottom-tab navigator in the required navigation
-// and safe-area providers.
-// -----------------------------------------------------------------------------
+
 import React, { useState } from "react";
+
 import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -17,11 +15,16 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
+
       <NavigationContainer>
         {isLoggedIn ? (
-          <BottomTabNavigator onLogout={() => setIsLoggedIn(false)} />
+          <BottomTabNavigator
+            onLogout={() => setIsLoggedIn(false)}
+          />
         ) : (
-          <LoginScreen onLoginSuccess={() => setIsLoggedIn(true)} />
+          <LoginScreen
+            onLoginSuccess={() => setIsLoggedIn(true)}
+          />
         )}
       </NavigationContainer>
     </SafeAreaProvider>
