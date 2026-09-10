@@ -8,20 +8,22 @@ import {
 
 
 export default function CostDistributionChart({
-  materialCost,
-  laborCost,
-  additionalCost,
+  structure,
+  finishing,
+  electrical,
+  plumbing,
 }) {
 
   const total =
-    materialCost +
-    laborCost +
-    additionalCost;
+    (structure || 0) +
+    (finishing || 0) +
+    (electrical || 0) +
+    (plumbing || 0);
 
 
   const getPercentage = (value) => {
 
-    if (total === 0) {
+    if (!total) {
       return 0;
     }
 
@@ -30,14 +32,17 @@ export default function CostDistributionChart({
   };
 
 
-  const materials =
-    getPercentage(materialCost);
+  const structurePct =
+    getPercentage(structure);
 
-  const labor =
-    getPercentage(laborCost);
+  const finishingPct =
+    getPercentage(finishing);
 
-  const additional =
-    getPercentage(additionalCost);
+  const electricalPct =
+    getPercentage(electrical);
+
+  const plumbingPct =
+    getPercentage(plumbing);
 
 
   return (
@@ -54,21 +59,28 @@ export default function CostDistributionChart({
         <View
           style={[
             styles.materialBar,
-            { flex: materials || 0.001 },
+            { flex: structurePct || 0.001 },
           ]}
         />
 
         <View
           style={[
             styles.laborBar,
-            { flex: labor || 0.001 },
+            { flex: finishingPct || 0.001 },
           ]}
         />
 
         <View
           style={[
             styles.additionalBar,
-            { flex: additional || 0.001 },
+            { flex: electricalPct || 0.001 },
+          ]}
+        />
+
+        <View
+          style={[
+            styles.plumbingBar,
+            { flex: plumbingPct || 0.001 },
           ]}
         />
 
@@ -85,7 +97,7 @@ export default function CostDistributionChart({
           ]} />
 
           <Text style={styles.legendText}>
-            Materials {Math.round(materials)}%
+            Structure {Math.round(structurePct)}%
           </Text>
 
         </View>
@@ -99,7 +111,7 @@ export default function CostDistributionChart({
           ]} />
 
           <Text style={styles.legendText}>
-            Labor {Math.round(labor)}%
+            Finishing {Math.round(finishingPct)}%
           </Text>
 
         </View>
@@ -113,7 +125,21 @@ export default function CostDistributionChart({
           ]} />
 
           <Text style={styles.legendText}>
-            Others {Math.round(additional)}%
+            Electrical {Math.round(electricalPct)}%
+          </Text>
+
+        </View>
+
+
+        <View style={styles.legendItem}>
+
+          <View style={[
+            styles.dot,
+            styles.plumbingDot
+          ]} />
+
+          <Text style={styles.legendText}>
+            Plumbing {Math.round(plumbingPct)}%
           </Text>
 
         </View>
@@ -164,6 +190,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#A9C7F8",
   },
 
+  plumbingBar: {
+    backgroundColor: "#7DD3FC",
+  },
+
   legend: {
     marginTop: 16,
     gap: 9,
@@ -191,6 +221,10 @@ const styles = StyleSheet.create({
 
   additionalDot: {
     backgroundColor: "#A9C7F8",
+  },
+
+  plumbingDot: {
+    backgroundColor: "#7DD3FC",
   },
 
   legendText: {
