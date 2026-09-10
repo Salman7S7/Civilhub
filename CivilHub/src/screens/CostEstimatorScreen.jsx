@@ -9,179 +9,72 @@ import {
   StyleSheet,
 } from "react-native";
 
-import LandUnitSelector from "../components/costEstimator/LandUnitSelector";
 import InputCard from "../components/costEstimator/InputCard";
 import QualitySelector from "../components/costEstimator/QualitySelector";
 import AddonSwitch from "../components/costEstimator/AddonSwitch";
 import LivePriceBadge from "../components/costEstimator/LivePriceBadge";
 import CostSummary from "../components/costEstimator/CostSummary";
 import CostDistributionChart from "../components/costEstimator/CostDistributionChart";
-import MaterialBreakdown from "../components/costEstimator/MaterialBreakdown";
+import PerFloorBreakdown from "../components/costEstimator/PerFloorBreakdown";
 
-
-const PRICES = {
-  standard: {
-    cement: 520,
-    rod: 92,
-    brick: 14,
-    sand: 55,
-    aggregate: 75,
-  },
-
-  premium: {
-    cement: 620,
-    rod: 105,
-    brick: 18,
-    sand: 65,
-    aggregate: 85,
-  },
-
-  economy: {
-    cement: 470,
-    rod: 84,
-    brick: 11,
-    sand: 48,
-    aggregate: 65,
-  },
-};
+import {
+  estimateConstructionCost,
+  formatBDT,
+} from "../services/costEstimator";
 
 
 export default function CostEstimatorScreen() {
 
-  const [land, setLand] = useState("");
-
-  const [landUnit, setLandUnit] =
-    useState("sqft");
-
   const [floors, setFloors] =
-    useState("1");
+    useState("2");
+
+  const [floorArea, setFloorArea] =
+    useState("1000");
 
   const [quality, setQuality] =
     useState("standard");
 
-  const [includeLabor, setIncludeLabor] =
-    useState(true);
-
-  const [includeElectrical, setIncludeElectrical] =
+  const [hasBasement, setHasBasement] =
     useState(false);
 
-  const [includePlumbing, setIncludePlumbing] =
-    useState(false);
-
-  const [includePaint, setIncludePaint] =
+  const [hasGarage, setHasGarage] =
     useState(false);
 
   const [showResult, setShowResult] =
     useState(false);
 
-
-  /*
-   * Convert land into square feet.
-   */
-
-  const landInSqFt = useMemo(() => {
-
-    const value = Number(land) || 0;
-
-    if (landUnit === "katha") {
-      return value * 720;
-    }
-
-    if (landUnit === "decimal") {
-      return value * 435.6;
-    }
-
-    if (landUnit === "bigha") {
-      return value * 14400;
-    }
-
-    return value;
-
-  }, [land, landUnit]);
+  const [error, setError] =
+    useState("");
 
 
-  /*
-   * Estimated built-up area.
-   */
-
-  const builtUpArea =
-    landInSqFt * 0.75 * (Number(floors) || 1);
-
-
-  /*
-   * Material calculation.
-   */
-
-  const prices = PRICES[quality];
-
-  const cementCost =
-    builtUpArea * 0.55 * prices.cement;
-
-  const rodCost =
-    builtUpArea * 0.004 * prices.rod;
-
-  const brickCost =
-    builtUpArea * 13 * prices.brick;
-
-  const sandCost =
-    builtUpArea * 0.045 * prices.sand;
-
-  const aggregateCost =
-    builtUpArea * 0.035 * prices.aggregate;
-
-
-  const materialCost =
-    cementCost +
-    rodCost +
-    brickCost +
-    sandCost +
-    aggregateCost;
-
-
-  /*
-   * Labor.
-   */
-
-  const laborCost =
-    includeLabor
-      ? materialCost * 0.25
-      : 0;
-
-
-  /*
-   * Additional services.
-   */
-
-  const electricalCost =
-    includeElectrical
-      ? builtUpArea * 180
-      : 0;
-
-  const plumbingCost =
-    includePlumbing
-      ? builtUpArea * 120
-      : 0;
-
-  const paintCost =
-    includePaint
-      ? builtUpArea * 90
-      : 0;
-
-
-  const additionalCost =
-    electricalCost +
-    plumbingCost +
-    paintCost;
-
-
-  const totalCost =
-    materialCost +
-    laborCost +
-    additionalCost;
+  const result = useMemo(
+    () =>
+      estimateConstructionCost({
+        floors,
+        floorAreaSqft: floorArea,
+        quality,
+        hasBasement,
+        hasGarage,
+      }),
+    [floors, floorArea, quality, hasBasement, hasGarage]
+  );
 
 
   const calculate = () => {
 
+    if (!floorArea || Number(floorArea) <= 0) {
+      setError("Enter a valid floor area in sqft.");
+      setShowResult(false);
+      return;
+    }
+
+    if (!floors || Number(floors) < 1) {
+      setError("Enter at least 1 floor.");
+      setShowResult(false);
+      return;
+    }
+
+    setError("");
     setShowResult(true);
 
   };
@@ -189,16 +82,14 @@ export default function CostEstimatorScreen() {
 
   const reset = () => {
 
-    setLand("");
-    setLandUnit("sqft");
-    setFloors("1");
+    setFloors("2");
+    setFloorArea("1000");
     setQuality("standard");
 
-    setIncludeLabor(true);
-    setIncludeElectrical(false);
-    setIncludePlumbing(false);
-    setIncludePaint(false);
+    setHasBasement(false);
+    setHasGarage(false);
 
+    setError("");
     setShowResult(false);
 
   };
@@ -226,42 +117,34 @@ export default function CostEstimatorScreen() {
           </Text>
 
           <Text style={styles.subtitle}>
-            Estimate your construction cost quickly
-            and easily.
+            Estimate construction cost by floors, floor
+            area, quality, basement and garage.
           </Text>
 
         </View>
 
 
-        {/* LAND UNIT */}
-
-        <LandUnitSelector
-          value={landUnit}
-          onChange={setLandUnit}
-        />
-
-
-        {/* LAND AREA */}
+        {/* TOTAL FLOORS */}
 
         <InputCard
-          label="Land Area"
-          placeholder="Enter land area"
-          value={land}
-          onChangeText={setLand}
-          keyboardType="numeric"
-          suffix={landUnit}
-        />
-
-
-        {/* NUMBER OF FLOORS */}
-
-        <InputCard
-          label="Number of Floors"
+          label="Total Floors"
           placeholder="e.g. 2"
           value={floors}
           onChangeText={setFloors}
           keyboardType="numeric"
-          suffix="floor"
+          suffix="floors"
+        />
+
+
+        {/* FLOOR AREA */}
+
+        <InputCard
+          label="Floor Area (per floor)"
+          placeholder="e.g. 1000"
+          value={floorArea}
+          onChangeText={setFloorArea}
+          keyboardType="numeric"
+          suffix="sqft"
         />
 
 
@@ -280,43 +163,36 @@ export default function CostEstimatorScreen() {
         />
 
 
-        {/* ADDONS */}
+        {/* EXTRAS */}
 
         <View style={styles.section}>
 
           <Text style={styles.sectionTitle}>
-            Additional Services
+            Extras
           </Text>
 
           <AddonSwitch
-            title="Labor Cost"
-            subtitle="Include construction labor"
-            value={includeLabor}
-            onChange={setIncludeLabor}
+            title="Basement"
+            subtitle="Adds ~90% of one floor at 1.25x rate"
+            value={hasBasement}
+            onChange={setHasBasement}
           />
 
           <AddonSwitch
-            title="Electrical Work"
-            subtitle="Electrical installation"
-            value={includeElectrical}
-            onChange={setIncludeElectrical}
-          />
-
-          <AddonSwitch
-            title="Plumbing Work"
-            subtitle="Plumbing installation"
-            value={includePlumbing}
-            onChange={setIncludePlumbing}
-          />
-
-          <AddonSwitch
-            title="Painting"
-            subtitle="Interior and exterior painting"
-            value={includePaint}
-            onChange={setIncludePaint}
+            title="Garage"
+            subtitle="Adds 250 sqft at 0.8x rate"
+            value={hasGarage}
+            onChange={setHasGarage}
           />
 
         </View>
+
+
+        {error ? (
+          <Text style={styles.error}>
+            {error}
+          </Text>
+        ) : null}
 
 
         {/* CALCULATE */}
@@ -357,27 +233,41 @@ export default function CostEstimatorScreen() {
 
           <>
 
+            <View style={styles.metaCard}>
+
+              <Text style={styles.metaText}>
+                {result.floors} floor(s) ×{" "}
+                {Number(result.floorAreaSqft).toLocaleString()} sqft ={" "}
+                {Math.round(result.totalBuiltUpArea).toLocaleString()} sqft
+                {" "}built-up @ {formatBDT(result.ratePerSqft)}/sqft
+              </Text>
+
+              <Text style={styles.metaTotal}>
+                {formatBDT(result.total)}
+              </Text>
+
+            </View>
+
+
             <CostSummary
-              materialCost={materialCost}
-              laborCost={laborCost}
-              additionalCost={additionalCost}
-              totalCost={totalCost}
+              structure={result.structure}
+              finishing={result.finishing}
+              electrical={result.electrical}
+              plumbing={result.plumbing}
+              totalCost={result.total}
             />
 
 
             <CostDistributionChart
-              materialCost={materialCost}
-              laborCost={laborCost}
-              additionalCost={additionalCost}
+              structure={result.structure}
+              finishing={result.finishing}
+              electrical={result.electrical}
+              plumbing={result.plumbing}
             />
 
 
-            <MaterialBreakdown
-              cementCost={cementCost}
-              rodCost={rodCost}
-              brickCost={brickCost}
-              sandCost={sandCost}
-              aggregateCost={aggregateCost}
+            <PerFloorBreakdown
+              perFloor={result.perFloor}
             />
 
           </>
@@ -442,6 +332,32 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#172B4D",
     marginBottom: 10,
+  },
+
+  error: {
+    color: "#C53030",
+    fontWeight: "700",
+    marginBottom: 10,
+  },
+
+  metaCard: {
+    backgroundColor: "#172B4D",
+    borderRadius: 14,
+    padding: 18,
+    marginTop: 16,
+  },
+
+  metaText: {
+    color: "#CBD5E1",
+    fontSize: 13,
+    lineHeight: 19,
+  },
+
+  metaTotal: {
+    color: "#FFFFFF",
+    fontSize: 26,
+    fontWeight: "900",
+    marginTop: 8,
   },
 
   calculateButton: {
