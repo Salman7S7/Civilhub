@@ -229,6 +229,98 @@ export default function DesignDetailModal({
               </View>
             </View>
 
+            {/* Unit Interior & Room Layout (Per Flat) */}
+            <Text style={styles.sectionHeading}>Unit Interior & Room Layout (Per Flat)</Text>
+            
+            <View style={styles.unitSpecsGrid}>
+              {/* Metric: Bedrooms */}
+              <View style={styles.unitGridCard}>
+                <Ionicons name="bed-outline" size={22} color="#2563eb" />
+                <Text style={styles.gridLabel}>Bedrooms</Text>
+                <Text style={styles.gridValue}>
+                  {design.bedrooms ? `${design.bedrooms} Beds` : "3 Beds"}
+                </Text>
+              </View>
+
+              {/* Metric: Bathrooms */}
+              <View style={styles.unitGridCard}>
+                <MaterialCommunityIcons name="shower" size={22} color="#0284c7" />
+                <Text style={styles.gridLabel}>Bathrooms</Text>
+                <Text style={styles.gridValue}>
+                  {design.bathrooms ? `${design.bathrooms} Baths` : "3 Baths"}
+                </Text>
+              </View>
+
+              {/* Metric: Balconies */}
+              <View style={styles.unitGridCard}>
+                <MaterialCommunityIcons name="balcony" size={22} color="#16a34a" />
+                <Text style={styles.gridLabel}>Balconies</Text>
+                <Text style={styles.gridValue}>
+                  {design.balconies ? `${design.balconies} Balconies` : "2 Balconies"}
+                </Text>
+              </View>
+
+              {/* Metric: Approx Unit Area */}
+              <View style={styles.unitGridCard}>
+                <Ionicons name="scan-outline" size={22} color="#7c3aed" />
+                <Text style={styles.gridLabel}>Per Unit Area</Text>
+                <Text style={styles.gridValue}>
+                  ~{design.unit_size_sqft ? `${design.unit_size_sqft.toLocaleString()} sqft` : "1,500 sqft"}
+                </Text>
+              </View>
+            </View>
+
+            {/* Room & Dining Space Detail Cards */}
+            <View style={styles.spaceDetailsSection}>
+              {/* Dining Space Info */}
+              <View style={styles.spaceCard}>
+                <View style={styles.spaceCardHeader}>
+                  <View style={[styles.spaceIconWrap, { backgroundColor: "#fef3c7" }]}>
+                    <Ionicons name="restaurant" size={18} color="#d97706" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.spaceCardTitle}>Dining Space</Text>
+                    <Text style={styles.spaceCardSubtitle}>Dedicated Meal & Family Space</Text>
+                  </View>
+                </View>
+                <Text style={styles.spaceCardText}>
+                  {design.dining_space || "Spacious dedicated dining area with direct kitchen service access and wash corner."}
+                </Text>
+              </View>
+
+              {/* Drawing & Living Lounge */}
+              <View style={styles.spaceCard}>
+                <View style={styles.spaceCardHeader}>
+                  <View style={[styles.spaceIconWrap, { backgroundColor: "#ede9fe" }]}>
+                    <MaterialCommunityIcons name="sofa" size={18} color="#7c3aed" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.spaceCardTitle}>Drawing & Living Lounge</Text>
+                    <Text style={styles.spaceCardSubtitle}>Formal Living & Guest Reception</Text>
+                  </View>
+                </View>
+                <Text style={styles.spaceCardText}>
+                  {design.drawing_space || "Large formal drawing room with abundant natural light and cross-ventilation verandas."}
+                </Text>
+              </View>
+
+              {/* Kitchen & Utility */}
+              <View style={styles.spaceCard}>
+                <View style={styles.spaceCardHeader}>
+                  <View style={[styles.spaceIconWrap, { backgroundColor: "#e0f2fe" }]}>
+                    <MaterialCommunityIcons name="countertop" size={18} color="#0284c7" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.spaceCardTitle}>Kitchen & Utility Veranda</Text>
+                    <Text style={styles.spaceCardSubtitle}>Culinary & Laundry Corner</Text>
+                  </View>
+                </View>
+                <Text style={styles.spaceCardText}>
+                  {design.kitchen_space || "Modern modular kitchen layout with gas piping, exhaust provision, and washing balcony."}
+                </Text>
+              </View>
+            </View>
+
             {/* Architectural Features List */}
             {design.features && design.features.length > 0 && (
               <View style={styles.featuresSection}>
@@ -471,5 +563,64 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: "#ffffff",
+  },
+  unitSpecsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 16,
+  },
+  unitGridCard: {
+    width: "48%",
+    backgroundColor: "#f8fafc",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  spaceDetailsSection: {
+    marginTop: 6,
+    marginBottom: 10,
+  },
+  spaceCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginBottom: 10,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  spaceCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 8,
+  },
+  spaceIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  spaceCardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  spaceCardSubtitle: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#64748b",
+  },
+  spaceCardText: {
+    fontSize: 13,
+    color: "#334155",
+    lineHeight: 20,
   },
 });
