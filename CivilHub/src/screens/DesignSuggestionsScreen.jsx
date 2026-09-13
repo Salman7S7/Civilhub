@@ -246,7 +246,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
             </View>
 
             <Text style={styles.heroSubtitle}>
-              Pinterest-inspired 5 & 10-story architectural models filtered by
+              Pinterest-inspired architectural models (2 to 14+ stories) filtered by
               floors, basement, car garage, rooftop, and plot size.
             </Text>
 
@@ -258,7 +258,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statBadge}>
-                <Text style={styles.statNumber}>5 & 10</Text>
+                <Text style={styles.statNumber}>2–14+</Text>
                 <Text style={styles.statLabel}>Story Options</Text>
               </View>
               <View style={styles.statDivider} />
