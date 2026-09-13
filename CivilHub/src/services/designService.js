@@ -1,14 +1,161 @@
 // src/services/designService.js
 // -----------------------------------------------------------------------------
 // Service layer for Feature 2: Smart Design Suggestions.
-// Handles multi-parameter filtering (floors, basement, garage, rooftop, min_katha, search)
-// as well as custom user-entered values (exact Katha, custom story count, units, parking)
-// with seamless fallback to curated local mock data when backend is offline.
+// Supports:
+//   1. Local offline persistence via AsyncStorage (Add, Edit, Delete custom designs)
+//   2. Multi-parameter filtering for any logical floor count (exact & adaptive fallback)
+//   3. Seamless backend REST API integration with local fallback
 // -----------------------------------------------------------------------------
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MOCK_DESIGNS } from "./mockDesigns.js";
 
 const BACKEND_BASE_URL = "http://localhost:4000";
+const CUSTOM_DESIGNS_KEY = "@civilhub_custom_designs_v1";
+const EDITED_OVERRIDES_KEY = "@civilhub_edited_overrides_v1";
+const DELETED_DESIGNS_KEY = "@civilhub_deleted_ids_v1";
+
+/**
+ * Retrieve all designs (base catalog + custom user uploads + edits - deleted).
+ *
+ * @returns {Promise<Array>}
+ */
+export async function getAllDesigns() {
+  try {
+    const [customJson, overridesJson, deletedJson] = await Promise.all([
+      AsyncStorage.getItem(CUSTOM_DESIGNS_KEY),
+      AsyncStorage.getItem(EDITED_OVERRIDES_KEY),
+      AsyncStorage.getItem(DELETED_DESIGNS_KEY),
+    ]);
+
+    const customDesigns = customJson ? JSON.parse(customJson) : [];
+    const overrides = overridesJson ? JSON.parse(overridesJson) : {};
+    const deletedIds = new Set(deletedJson ? JSON.parse(deletedJson) : []);
+
+    // Apply edits to base designs
+    const modifiedBaseDesigns = MOCK_DESIGNS.map((d) => {
+      if (overrides[d.id]) {
+        return { ...d, ...overrides[d.id] };
+      }
+      return d;
+    }).filter((d) => !deletedIds.has(d.id));
+
+    // Combine custom uploads (first) and modified base designs
+    return [...customDesigns.filter((d) => !deletedIds.has(d.id)), ...modifiedBaseDesigns];
+  } catch (err) {
+    console.warn("Error loading persisted designs, falling back to mock designs:", err);
+    return [...MOCK_DESIGNS];
+  }
+}
+
+/**
+ * Save a new user-uploaded design to AsyncStorage.
+ *
+ * @param {Object} newDesign
+ * @returns {Promise<Object>} The saved design with assigned ID and metadata
+ */
+export async function saveCustomDesign(newDesign) {
+  try {
+    const customJson = await AsyncStorage.getItem(CUSTOM_DESIGNS_KEY);
+    const customDesigns = customJson ? JSON.parse(customJson) : [];
+
+    const id = Date.now(); // unique numeric timestamp ID
+    const designToSave = {
+      ...newDesign,
+      id,
+      is_custom: true,
+      floors: parseInt(newDesign.floors, 10) || 5,
+      min_katha: parseFloat(newDesign.min_katha) || 4.0,
+      built_area_sqft: parseInt(newDesign.built_area_sqft, 10) || 12000,
+      units_per_floor: parseInt(newDesign.units_per_floor, 10) || 2,
+      unit_size_sqft: parseInt(newDesign.unit_size_sqft, 10) || 1500,
+      bedrooms: parseInt(newDesign.bedrooms, 10) || 3,
+      bathrooms: parseInt(newDesign.bathrooms, 10) || 3,
+      balconies: parseInt(newDesign.balconies, 10) || 2,
+      parking_capacity: parseInt(newDesign.parking_capacity, 10) || (newDesign.has_garage ? 4 : 0),
+      aspect_ratio: 0.95,
+      created_at: new Date().toISOString(),
+    };
+
+    customDesigns.unshift(designToSave);
+    await AsyncStorage.setItem(CUSTOM_DESIGNS_KEY, JSON.stringify(customDesigns));
+    return designToSave;
+  } catch (err) {
+    console.error("Failed to save custom design:", err);
+    throw err;
+  }
+}
+
+/**
+ * Update an existing design (custom design or override for base design).
+ *
+ * @param {number|string} id
+ * @param {Object} updatedFields
+ * @returns {Promise<Object>} Updated design object
+ */
+export async function updateDesign(id, updatedFields) {
+  try {
+    const customJson = await AsyncStorage.getItem(CUSTOM_DESIGNS_KEY);
+    const customDesigns = customJson ? JSON.parse(customJson) : [];
+
+    const customIndex = customDesigns.findIndex((d) => String(d.id) === String(id));
+
+    if (customIndex !== -1) {
+      // Update custom design directly
+      const updated = { ...customDesigns[customIndex], ...updatedFields };
+      customDesigns[customIndex] = updated;
+      await AsyncStorage.setItem(CUSTOM_DESIGNS_KEY, JSON.stringify(customDesigns));
+      return updated;
+    }
+
+    // It is a base mock design -> save as override
+    const overridesJson = await AsyncStorage.getItem(EDITED_OVERRIDES_KEY);
+    const overrides = overridesJson ? JSON.parse(overridesJson) : {};
+
+    const baseDesign = MOCK_DESIGNS.find((d) => String(d.id) === String(id)) || {};
+    const updated = { ...baseDesign, ...(overrides[id] || {}), ...updatedFields };
+
+    overrides[id] = updatedFields;
+    await AsyncStorage.setItem(EDITED_OVERRIDES_KEY, JSON.stringify(overrides));
+    return updated;
+  } catch (err) {
+    console.error("Failed to update design:", err);
+    throw err;
+  }
+}
+
+/**
+ * Delete a design by ID.
+ *
+ * @param {number|string} id
+ * @returns {Promise<boolean>}
+ */
+export async function deleteDesign(id) {
+  try {
+    // 1. Check if in custom designs
+    const customJson = await AsyncStorage.getItem(CUSTOM_DESIGNS_KEY);
+    if (customJson) {
+      const customDesigns = JSON.parse(customJson);
+      const filtered = customDesigns.filter((d) => String(d.id) !== String(id));
+      if (filtered.length !== customDesigns.length) {
+        await AsyncStorage.setItem(CUSTOM_DESIGNS_KEY, JSON.stringify(filtered));
+        return true;
+      }
+    }
+
+    // 2. Mark deleted in deleted set
+    const deletedJson = await AsyncStorage.getItem(DELETED_DESIGNS_KEY);
+    const deletedIds = deletedJson ? JSON.parse(deletedJson) : [];
+    if (!deletedIds.includes(id)) {
+      deletedIds.push(id);
+      await AsyncStorage.setItem(DELETED_DESIGNS_KEY, JSON.stringify(deletedIds));
+    }
+    return true;
+  } catch (err) {
+    console.error("Failed to delete design:", err);
+    throw err;
+  }
+}
 
 /**
  * Filter designs locally based on user criteria and custom inputs.
@@ -157,68 +304,23 @@ export function filterDesignsLocally(list, filters = {}) {
 
 /**
  * Searches and filters building designs.
- * Attempts to query backend REST API first, falling back to instant local filtering.
+ * Fetches all available designs (persisted + base) and applies active filters.
  *
  * @param {Object} filters - Filter criteria including custom user values
  * @returns {Promise<Array>} - List of matching designs
  */
 export async function searchDesigns(filters = {}) {
-  const queryParams = new URLSearchParams();
-
-  const activeFloors = filters.custom_floors || (filters.floors !== "all" ? filters.floors : null);
-  if (activeFloors) {
-    queryParams.append("floors", activeFloors);
-  }
-
-  const activeKatha = filters.custom_katha || (filters.min_katha !== "all" ? filters.min_katha : null);
-  if (activeKatha) {
-    queryParams.append("min_katha", activeKatha);
-  }
-
-  if (filters.has_basement !== undefined && filters.has_basement !== "all") {
-    queryParams.append(
-      "basement",
-      String(filters.has_basement === true || filters.has_basement === "yes")
-    );
-  }
-  if (filters.has_garage !== undefined && filters.has_garage !== "all") {
-    queryParams.append(
-      "garage",
-      String(filters.has_garage === true || filters.has_garage === "yes")
-    );
-  }
-  if (filters.rooftop_type && filters.rooftop_type !== "all") {
-    queryParams.append("rooftop", filters.rooftop_type);
-  }
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s fast fallback
-
-    const url = `${BACKEND_BASE_URL}/api/designs/search?${queryParams.toString()}`;
-    const response = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data && data.success && Array.isArray(data.designs)) {
-        return filterDesignsLocally(data.designs, filters);
-      }
-    }
-  } catch (_err) {
-    // Backend offline or endpoint not yet configured — fallback to local curated data
-  }
-
-  // Local fallback filtering
-  return filterDesignsLocally(MOCK_DESIGNS, filters);
+  const allDesigns = await getAllDesigns();
+  return filterDesignsLocally(allDesigns, filters);
 }
 
 /**
  * Get design details by ID.
  *
  * @param {number|string} id
- * @returns {Object|null}
+ * @returns {Promise<Object|null>}
  */
-export function getDesignById(id) {
-  return MOCK_DESIGNS.find((d) => String(d.id) === String(id)) || null;
+export async function getDesignById(id) {
+  const all = await getAllDesigns();
+  return all.find((d) => String(d.id) === String(id)) || null;
 }

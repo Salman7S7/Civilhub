@@ -41,11 +41,12 @@ import DesignFilterModal, {
   DEFAULT_FILTERS,
 } from "../components/designs/DesignFilterModal";
 import DesignDetailModal from "../components/designs/DesignDetailModal";
+import AddDesignModal from "../components/designs/AddDesignModal";
 import { searchDesigns } from "../services/designService";
 import { MOCK_DESIGNS } from "../services/mockDesigns";
 
 const HERO_IMAGE_URL =
-  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=80";
+  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80";
 
 export default function DesignSuggestionsScreen({ navigation }) {
   // Filter states
@@ -53,6 +54,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
   const [activePreset, setActivePreset] = useState("all");
   const [modalFilters, setModalFilters] = useState(DEFAULT_FILTERS);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [addModalVisible, setAddModalVisible] = useState(false);
 
   // Gallery data & loading
   const [designs, setDesigns] = useState(MOCK_DESIGNS);
@@ -66,6 +68,24 @@ export default function DesignSuggestionsScreen({ navigation }) {
   // Detail Modal state
   const [selectedDesign, setSelectedDesign] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+
+  // Handlers for upload, update, and delete
+  const handleDesignCreated = (newDesign) => {
+    loadDesigns();
+    setSelectedDesign(newDesign);
+    setDetailModalVisible(true);
+  };
+
+  const handleDesignUpdated = (updatedDesign) => {
+    setSelectedDesign(updatedDesign);
+    loadDesigns();
+  };
+
+  const handleDesignDeleted = (_deletedId) => {
+    setDetailModalVisible(false);
+    setSelectedDesign(null);
+    loadDesigns();
+  };
 
   // Calculate active filter count for badge
   const getActiveFilterCount = () => {
@@ -236,13 +256,14 @@ export default function DesignSuggestionsScreen({ navigation }) {
                 <Text style={styles.heroEyebrow}>CIVILHUB ARCHITECTURE</Text>
                 <Text style={styles.heroTitle}>Smart Design Suggestions</Text>
               </View>
-              <View style={styles.heroIconWrap}>
-                <MaterialCommunityIcons
-                  name="floor-plan"
-                  size={24}
-                  color="#ffffff"
-                />
-              </View>
+              <TouchableOpacity
+                style={styles.heroUploadBtn}
+                activeOpacity={0.85}
+                onPress={() => setAddModalVisible(true)}
+              >
+                <Ionicons name="cloud-upload-outline" size={16} color="#ffffff" />
+                <Text style={styles.heroUploadBtnText}>+ Upload</Text>
+              </TouchableOpacity>
             </View>
 
             <Text style={styles.heroSubtitle}>
@@ -385,15 +406,25 @@ export default function DesignSuggestionsScreen({ navigation }) {
             {displayedDesigns.length === 1 ? "architectural design" : "architectural designs"}
           </Text>
 
-          {(activeFilterCount > 0 || searchQuery || showOnlyFavorites) && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            {(activeFilterCount > 0 || searchQuery || showOnlyFavorites) && (
+              <TouchableOpacity
+                onPress={resetAllFilters}
+                style={styles.clearAllBtn}
+              >
+                <Ionicons name="refresh" size={13} color="#2563eb" />
+                <Text style={styles.clearAllText}>Reset</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
-              onPress={resetAllFilters}
-              style={styles.clearAllBtn}
+              style={styles.inlineUploadBtn}
+              activeOpacity={0.8}
+              onPress={() => setAddModalVisible(true)}
             >
-              <Ionicons name="refresh" size={13} color="#2563eb" />
-              <Text style={styles.clearAllText}>Reset Filters</Text>
+              <Ionicons name="add-circle" size={15} color="#2563eb" />
+              <Text style={styles.inlineUploadBtnText}>Upload Design</Text>
             </TouchableOpacity>
-          )}
+          </View>
         </View>
 
         {/* Loading Indicator */}
@@ -481,6 +512,15 @@ export default function DesignSuggestionsScreen({ navigation }) {
         isFavorite={selectedDesign ? favorites.has(selectedDesign.id) : false}
         onToggleFavorite={toggleFavorite}
         onCheckFeasibility={handleCheckFeasibility}
+        onDesignUpdated={handleDesignUpdated}
+        onDesignDeleted={handleDesignDeleted}
+      />
+
+      {/* Architectural Design Upload Modal */}
+      <AddDesignModal
+        visible={addModalVisible}
+        onClose={() => setAddModalVisible(false)}
+        onDesignCreated={handleDesignCreated}
       />
     </SafeAreaView>
   );
@@ -753,5 +793,37 @@ const styles = StyleSheet.create({
   },
   column: {
     flex: 1,
+  },
+  heroUploadBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2563eb",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+  },
+  heroUploadBtnText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  inlineUploadBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    gap: 4,
+  },
+  inlineUploadBtnText: {
+    fontSize: 12,
+    color: "#2563eb",
+    fontWeight: "700",
   },
 });
