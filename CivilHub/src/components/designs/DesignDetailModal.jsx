@@ -34,6 +34,7 @@ export default function DesignDetailModal({
   onCheckFeasibility,
   onDesignUpdated,
   onDesignDeleted,
+  onConsultExpert,
 }) {
   const [imageLoading, setImageLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -809,21 +810,39 @@ export default function DesignDetailModal({
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity
-                style={styles.feasibilityBtn}
-                activeOpacity={0.88}
-                onPress={() => {
-                  onClose();
-                  if (onCheckFeasibility) {
-                    onCheckFeasibility(design);
-                  }
-                }}
-              >
-                <Ionicons name="business" size={18} color="#ffffff" />
-                <Text style={styles.feasibilityBtnText}>
-                  Check Feasibility for this Model
-                </Text>
-              </TouchableOpacity>
+              <View style={{ gap: 10 }}>
+                <TouchableOpacity
+                  style={styles.feasibilityBtn}
+                  activeOpacity={0.88}
+                  onPress={() => {
+                    onClose();
+                    if (onCheckFeasibility) {
+                      onCheckFeasibility(design);
+                    }
+                  }}
+                >
+                  <Ionicons name="business" size={18} color="#ffffff" />
+                  <Text style={styles.feasibilityBtnText}>
+                    Check Feasibility for this Model
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.consultExpertBtn}
+                  activeOpacity={0.88}
+                  onPress={() => {
+                    onClose();
+                    if (onConsultExpert) {
+                      onConsultExpert(design);
+                    }
+                  }}
+                >
+                  <MaterialCommunityIcons name="hard-hat" size={18} color="#ffffff" />
+                  <Text style={styles.consultExpertBtnText}>
+                    Ask Expert about this Design
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         </View>
@@ -1298,5 +1317,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#ffffff",
+  },
+  consultExpertBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1e293b",
+    paddingVertical: 13,
+    borderRadius: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  consultExpertBtnText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });
