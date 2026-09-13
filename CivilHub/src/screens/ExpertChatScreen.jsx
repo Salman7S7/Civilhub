@@ -32,6 +32,7 @@ import {
   clearChatHistory,
   queryAiCivilExpert,
 } from "../services/expertChatService";
+import ExpertDirectoryModal from "../components/chat/ExpertDirectoryModal";
 
 const QUICK_STARTER_PROMPTS = [
   { label: "📐 Setbacks", prompt: "What are the front, rear, and side setback rules under RAJUK?" },
@@ -50,6 +51,7 @@ export default function ExpertChatScreen({ route, navigation, onOpenExpertDirect
   const [isTyping, setIsTyping] = useState(false);
   const [activeContext, setActiveContext] = useState(initialContext);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [directoryVisible, setDirectoryVisible] = useState(false);
 
   const scrollViewRef = useRef(null);
 
@@ -139,16 +141,10 @@ export default function ExpertChatScreen({ route, navigation, onOpenExpertDirect
 
   // Trigger Human Expert Directory
   const handleEscalateToHuman = (attachedContext = null) => {
-    if (onOpenExpertDirectory) {
-      onOpenExpertDirectory(attachedContext || activeContext);
-    } else if (navigation?.navigate) {
-      navigation.navigate("ExpertDirectory", { context: attachedContext || activeContext });
-    } else {
-      Alert.alert(
-        "Consult Licensed Engineer",
-        "Browse verified Bangladeshi Civil Engineers & Architects in the Expert Directory."
-      );
+    if (attachedContext) {
+      setActiveContext(attachedContext);
     }
+    setDirectoryVisible(true);
   };
 
   return (
@@ -396,6 +392,16 @@ export default function ExpertChatScreen({ route, navigation, onOpenExpertDirect
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Verified Human Engineer Directory Modal */}
+      <ExpertDirectoryModal
+        visible={directoryVisible}
+        onClose={() => setDirectoryVisible(false)}
+        onSelectExpert={(newMsg) => {
+          setMessages((prev) => [...prev, newMsg]);
+        }}
+        activeContext={activeContext}
+      />
     </SafeAreaView>
   );
 }
