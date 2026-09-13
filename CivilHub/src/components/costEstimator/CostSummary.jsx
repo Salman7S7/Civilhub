@@ -12,9 +12,10 @@ const money = (value) =>
 
 
 export default function CostSummary({
-  materialCost,
-  laborCost,
-  additionalCost,
+  structure,
+  finishing,
+  electrical,
+  plumbing,
   totalCost,
 }) {
 
@@ -30,11 +31,11 @@ export default function CostSummary({
       <View style={styles.row}>
 
         <Text style={styles.label}>
-          Materials
+          Structure (45%)
         </Text>
 
         <Text style={styles.value}>
-          {money(materialCost)}
+          {money(structure)}
         </Text>
 
       </View>
@@ -43,11 +44,11 @@ export default function CostSummary({
       <View style={styles.row}>
 
         <Text style={styles.label}>
-          Labor
+          Finishing (30%)
         </Text>
 
         <Text style={styles.value}>
-          {money(laborCost)}
+          {money(finishing)}
         </Text>
 
       </View>
@@ -56,11 +57,24 @@ export default function CostSummary({
       <View style={styles.row}>
 
         <Text style={styles.label}>
-          Additional Services
+          Electrical (12%)
         </Text>
 
         <Text style={styles.value}>
-          {money(additionalCost)}
+          {money(electrical)}
+        </Text>
+
+      </View>
+
+
+      <View style={styles.row}>
+
+        <Text style={styles.label}>
+          Plumbing (13%)
+        </Text>
+
+        <Text style={styles.value}>
+          {money(plumbing)}
         </Text>
 
       </View>

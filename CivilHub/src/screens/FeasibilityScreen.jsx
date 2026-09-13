@@ -1,13 +1,12 @@
 // src/screens/FeasibilityScreen.jsx
 // -----------------------------------------------------------------------------
 // Main screen for Feature 1: "Feasibility Checker & Building Code AI Assistant".
-// Composes: gradient hero banner with a background image, the direct
-// feasibility form, and a floating action button that opens the Gemini
-// chatbot modal.
-//
-// Requires: npx expo install expo-linear-gradient
 // -----------------------------------------------------------------------------
+
+// Import core React library and the useState hook for managing component state
 import React, { useState } from "react";
+
+// Import core UI components from React Native for layout and styling
 import {
   View,
   Text,
@@ -17,58 +16,79 @@ import {
   StatusBar,
   ImageBackground,
 } from "react-native";
+
+// Import SafeAreaView to prevent content from hiding behind device notches/status bars
 import { SafeAreaView } from "react-native-safe-area-context";
+
+// Import vector icons package for rendering UI icons (e.g., business, chat)
 import { Ionicons } from "@expo/vector-icons";
+
+// Import LinearGradient component to create gradient overlays on backgrounds
 import { LinearGradient } from "expo-linear-gradient";
 
+// Import custom child components used inside this screen
 import FeasibilityForm from "../components/FeasibilityForm";
 import AIChatbotModal from "../components/AIChatbotModal";
 
-// Real hero photo (Unsplash CDN, no key required). Swap for your own asset
-// via require("../../assets/hero-buildings.jpg") if you'd rather bundle it.
+// Define a constant string holding a public Unsplash CDN URL for the hero banner image
 const HERO_IMAGE_URL =
   "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80";
 
+// Define an array of regional building authority names to display as tags
 const REGION_BADGES = ["RAJUK", "CDA", "RDA", "KDA"];
 
+// Export the main functional component for this screen
 export default function FeasibilityScreen() {
+  // Initialize a state variable 'chatVisible' (default: false) and setter 'setChatVisible' to control the AI modal
   const [chatVisible, setChatVisible] = useState(false);
 
+  // Return the JSX UI structure for the screen
   return (
+    // SafeAreaView ensures content respects top device boundaries, restricted to the top edge
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      {/* Configure the mobile status bar with light text content and a dark background */}
       <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
 
+      {/* ScrollView allows the entire screen content to be vertically scrollable */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Banner: real background image + gradient overlay for text contrast */}
+        {/* ImageBackground sets a background photo and applies image-specific styles like rounded corners */}
         <ImageBackground
           source={{ uri: HERO_IMAGE_URL }}
           style={styles.heroImage}
           imageStyle={styles.heroImageRadius}
         >
+          {/* LinearGradient overlays a dark fading color gradient over the image for text readability */}
           <LinearGradient
             colors={["rgba(15,23,42,0.55)", "rgba(15,23,42,0.85)", "#1e293b"]}
             style={styles.heroGradient}
           >
+            {/* Top row layout container using flexbox for title and icon */}
             <View style={styles.heroTopRow}>
               <View>
+                {/* Small category text banner */}
                 <Text style={styles.heroEyebrow}>CIVILHUB</Text>
+                {/* Main title text */}
                 <Text style={styles.heroTitle}>Feasibility Checker</Text>
               </View>
+              {/* Container wrapping the business building icon */}
               <View style={styles.heroIconWrap}>
                 <Ionicons name="business" size={24} color="#ffffff" />
               </View>
             </View>
 
+            {/* Subtitle description text */}
             <Text style={styles.heroSubtitle}>
               Instantly check what you can build under RAJUK, CDA, RDA, KDA, or
               municipal rules — then ask our AI assistant follow-up questions.
             </Text>
 
+            {/* Container for the array of municipal authority badges */}
             <View style={styles.badgeRow}>
+              {/* Loop through REGION_BADGES array and render a styled view for each */}
               {REGION_BADGES.map((r) => (
                 <View key={r} style={styles.badge}>
                   <Text style={styles.badgeText}>{r}</Text>
@@ -78,28 +98,30 @@ export default function FeasibilityScreen() {
           </LinearGradient>
         </ImageBackground>
 
-        {/* Feasibility Form + Result Card */}
+        {/* Render the core input form component */}
         <FeasibilityForm />
 
-        {/* Bottom spacing so content clears the FAB */}
+        {/* Add an empty bottom view spacing element so content clears the floating action button */}
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Floating AI Assistant Button */}
+      {/* TouchableOpacity acts as a clickable Floating Action Button (FAB) anchored at the bottom center */}
       <TouchableOpacity
         style={styles.fab}
         activeOpacity={0.9}
-        onPress={() => setChatVisible(true)}
+        onPress={() => setChatVisible(true)} // Set chatVisible to true when pressed to open modal
       >
         <Ionicons name="chatbubble-ellipses" size={18} color="#ffffff" />
         <Text style={styles.fabText}>Ask AI Assistant 💬</Text>
       </TouchableOpacity>
 
+      {/* Render the AI Chatbot Modal component, controlling its visibility with state variables */}
       <AIChatbotModal visible={chatVisible} onClose={() => setChatVisible(false)} />
     </SafeAreaView>
   );
 }
 
+// StyleSheet object containing all modular UI component styles
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

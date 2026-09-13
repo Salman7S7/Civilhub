@@ -10,21 +10,21 @@ import {
 
 const options = [
   {
-    key: "economy",
-    title: "Economy",
-    subtitle: "Budget friendly",
-  },
-
-  {
     key: "standard",
     title: "Standard",
-    subtitle: "Recommended",
+    subtitle: "৳2,200 / sqft",
   },
 
   {
     key: "premium",
     title: "Premium",
-    subtitle: "High quality",
+    subtitle: "৳2,800 / sqft",
+  },
+
+  {
+    key: "luxury",
+    title: "Luxury",
+    subtitle: "৳3,600 / sqft",
   },
 ];
 

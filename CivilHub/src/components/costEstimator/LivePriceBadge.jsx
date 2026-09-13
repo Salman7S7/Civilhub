@@ -12,9 +12,9 @@ export default function LivePriceBadge({
 }) {
 
   const qualityText = {
-    economy: "Economy",
     standard: "Standard",
     premium: "Premium",
+    luxury: "Luxury",
   };
 
 
