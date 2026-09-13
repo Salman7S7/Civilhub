@@ -215,6 +215,21 @@ export default function DesignSuggestionsScreen({ navigation }) {
     }
   };
 
+  // Cross-link to Expert Chat Screen
+  const handleConsultExpert = (design) => {
+    setDetailModalVisible(false);
+    if (navigation && navigation.navigate) {
+      navigation.navigate("Ask Expert", {
+        initialContext: {
+          floors: design.floors,
+          katha: design.min_katha,
+          authority: "RAJUK",
+          title: design.title,
+        },
+      });
+    }
+  };
+
   // Filter list by favorites if active
   const displayedDesigns = showOnlyFavorites
     ? designs.filter((d) => favorites.has(d.id))
@@ -514,6 +529,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
         onCheckFeasibility={handleCheckFeasibility}
         onDesignUpdated={handleDesignUpdated}
         onDesignDeleted={handleDesignDeleted}
+        onConsultExpert={handleConsultExpert}
       />
 
       {/* Architectural Design Upload Modal */}
