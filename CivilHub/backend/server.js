@@ -65,39 +65,77 @@ function filterInMemory(filters = {}) {
   const { floors, min_katha, basement, garage, rooftop, q, search } = filters;
   const searchTerm = (q || search || "").toLowerCase().trim();
 
-  return SEED_DESIGNS.map((d, index) => ({ id: index + 1, ...d })).filter(
-    (item) => {
-      if (floors && item.floors !== parseInt(floors, 10)) {
-        return false;
-      }
-      if (min_katha && item.min_katha > parseFloat(min_katha)) {
-        return false;
-      }
-      if (basement !== undefined) {
-        const wantBasement = basement === "true" || basement === "1" || basement === true;
-        if (item.has_basement !== wantBasement) return false;
-      }
-      if (garage !== undefined) {
-        const wantGarage = garage === "true" || garage === "1" || garage === true;
-        if (item.has_garage !== wantGarage) return false;
-      }
-      if (rooftop && item.rooftop_type !== rooftop) {
-        return false;
-      }
-      if (searchTerm) {
-        const matchTitle = item.title.toLowerCase().includes(searchTerm);
-        const matchStyle = item.architectural_style?.toLowerCase().includes(searchTerm);
-        const matchDesc = item.description?.toLowerCase().includes(searchTerm);
-        const matchFeatures = item.features?.some((f) =>
-          f.toLowerCase().includes(searchTerm)
-        );
-        if (!matchTitle && !matchStyle && !matchDesc && !matchFeatures) {
-          return false;
+  const allItems = SEED_DESIGNS.map((d, index) => ({ id: index + 1, ...d }));
+
+  let targetFloor = null;
+  let hasExactFloorMatch = false;
+  let allowedFloorDiff = 0;
+
+  if (floors) {
+    const parsed = parseInt(floors, 10);
+    if (!isNaN(parsed)) {
+      if (parsed > 0 && parsed <= 40) {
+        targetFloor = parsed;
+        hasExactFloorMatch = allItems.some((item) => item.floors === targetFloor);
+        if (!hasExactFloorMatch && allItems.length > 0) {
+          const minDiff = Math.min(
+            ...allItems.map((it) => Math.abs(it.floors - targetFloor))
+          );
+          allowedFloorDiff = Math.max(minDiff, 2);
         }
+      } else {
+        targetFloor = -1;
       }
-      return true;
     }
-  );
+  }
+
+  const filtered = allItems.filter((item) => {
+    if (targetFloor === -1) {
+      return false;
+    }
+    if (targetFloor !== null) {
+      if (hasExactFloorMatch) {
+        if (item.floors !== targetFloor) return false;
+      } else {
+        if (Math.abs(item.floors - targetFloor) > allowedFloorDiff) return false;
+      }
+    }
+    if (min_katha && item.min_katha > parseFloat(min_katha)) {
+      return false;
+    }
+    if (basement !== undefined) {
+      const wantBasement = basement === "true" || basement === "1" || basement === true;
+      if (item.has_basement !== wantBasement) return false;
+    }
+    if (garage !== undefined) {
+      const wantGarage = garage === "true" || garage === "1" || garage === true;
+      if (item.has_garage !== wantGarage) return false;
+    }
+    if (rooftop && item.rooftop_type !== rooftop) {
+      return false;
+    }
+    if (searchTerm) {
+      const matchTitle = item.title.toLowerCase().includes(searchTerm);
+      const matchStyle = item.architectural_style?.toLowerCase().includes(searchTerm);
+      const matchDesc = item.description?.toLowerCase().includes(searchTerm);
+      const matchFeatures = item.features?.some((f) =>
+        f.toLowerCase().includes(searchTerm)
+      );
+      if (!matchTitle && !matchStyle && !matchDesc && !matchFeatures) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  if (targetFloor !== null && !hasExactFloorMatch) {
+    return filtered.sort(
+      (a, b) =>
+        Math.abs(a.floors - targetFloor) - Math.abs(b.floors - targetFloor)
+    );
+  }
+
+  return filtered;
 }
 
 // ============================================================

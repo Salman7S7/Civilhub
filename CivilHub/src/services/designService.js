@@ -31,16 +31,45 @@ export function filterDesignsLocally(list, filters = {}) {
     searchQuery = "",
   } = filters;
 
-  return list.filter((item) => {
-    // 1. Exact Custom Floor Input (takes precedence if entered)
-    if (custom_floors && custom_floors.trim() !== "") {
-      const customFloorNum = parseInt(custom_floors.trim(), 10);
-      if (!isNaN(customFloorNum)) {
-        if (item.floors !== customFloorNum) return false;
+  // Determine target floor and check if exact match exists in the catalog
+  let targetFloor = null;
+  let hasExactFloorMatch = false;
+  let allowedFloorDiff = 0;
+
+  if (custom_floors && custom_floors.trim() !== "") {
+    const parsed = parseInt(custom_floors.trim(), 10);
+    if (!isNaN(parsed)) {
+      // Logical building height range (1 to 40 stories)
+      if (parsed > 0 && parsed <= 40) {
+        targetFloor = parsed;
+        hasExactFloorMatch = list.some((item) => item.floors === targetFloor);
+        if (!hasExactFloorMatch && list.length > 0) {
+          // If no exact match for this logical number, find closest available floor designs
+          const minDiff = Math.min(...list.map((it) => Math.abs(it.floors - targetFloor)));
+          allowedFloorDiff = Math.max(minDiff, 2);
+        }
+      } else {
+        // Out of logical range (e.g. 0 or > 40 stories)
+        targetFloor = -1;
+      }
+    }
+  }
+
+  const filtered = list.filter((item) => {
+    // 1. Floor Matching
+    if (targetFloor === -1) {
+      return false;
+    }
+    if (targetFloor !== null) {
+      if (hasExactFloorMatch) {
+        if (item.floors !== targetFloor) return false;
+      } else {
+        // Show closest architecturally adaptable building models within allowed difference
+        if (Math.abs(item.floors - targetFloor) > allowedFloorDiff) return false;
       }
     } else if (floors !== "all") {
-      // Standard Floor Filter (5 or 10)
-      if (parseInt(floors, 10) !== item.floors) {
+      const presetFloor = parseInt(floors, 10);
+      if (!isNaN(presetFloor) && item.floors !== presetFloor) {
         return false;
       }
     }
@@ -114,6 +143,16 @@ export function filterDesignsLocally(list, filters = {}) {
 
     return true;
   });
+
+  // If we matched adaptive floors (not exact), sort them by closest floor difference
+  if (targetFloor !== null && !hasExactFloorMatch) {
+    return filtered.sort(
+      (a, b) =>
+        Math.abs(a.floors - targetFloor) - Math.abs(b.floors - targetFloor)
+    );
+  }
+
+  return filtered;
 }
 
 /**

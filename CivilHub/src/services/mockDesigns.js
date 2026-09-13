@@ -1,7 +1,7 @@
 // src/services/mockDesigns.js
 // -----------------------------------------------------------------------------
 // Curated Pinterest-style architectural building designs catalog tailored for
-// 5 to 10-story residential and mixed-use developments in Bangladesh.
+// diverse residential and mixed-use developments in Bangladesh (2 to 14+ stories).
 // Matches the MySQL database schema and includes rich spatial metadata.
 // -----------------------------------------------------------------------------
 
@@ -59,20 +59,20 @@ export const MOCK_DESIGNS = [
   {
     id: 3,
     title: "Uttara Urban Apex Tower",
-    floors: 10,
+    floors: 8,
     has_basement: true,
     has_garage: true,
     rooftop_type: "Helipad",
-    min_katha: 6.5,
-    built_area_sqft: 31000,
-    units_per_floor: 3,
-    parking_capacity: 18,
+    min_katha: 5.5,
+    built_area_sqft: 24500,
+    units_per_floor: 2,
+    parking_capacity: 14,
     architectural_style: "High-Tech Minimalist",
     image_url:
       "https://images.unsplash.com/photo-1577495508048-b635879837f1?w=800&auto=format&fit=crop&q=80",
     aspect_ratio: 0.78,
     description:
-      "High-density 10-story commercial & residential hybrid tower engineered with structural steel accents, subterranean dual-level parking, emergency rooftop helipad, and sky lounge.",
+      "Modern 8-story commercial & residential hybrid tower engineered with structural steel accents, subterranean dual-level parking, emergency rooftop helipad, and sky lounge.",
     features: [
       "Certified Rooftop Helipad",
       "Subterranean 2-Level Basement",
@@ -84,20 +84,20 @@ export const MOCK_DESIGNS = [
   {
     id: 4,
     title: "Banani Boutique Enclave",
-    floors: 5,
+    floors: 4,
     has_basement: false,
     has_garage: true,
     rooftop_type: "Open Terrace",
     min_katha: 3.5,
-    built_area_sqft: 8200,
+    built_area_sqft: 6800,
     units_per_floor: 1,
-    parking_capacity: 4,
+    parking_capacity: 3,
     architectural_style: "Scandinavian Minimalist",
     image_url:
       "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop&q=80",
     aspect_ratio: 1.0,
     description:
-      "Smart 5-story boutique residential building designed for compact 3.5 Katha plots. Maximizes floor area ratio (FAR) with expansive open terrace and ground floor car parking.",
+      "Smart 4-story boutique residential building designed for compact 3.5 Katha plots. Maximizes floor area ratio (FAR) with expansive open terrace and ground floor car parking.",
     features: [
       "Expansive Open Sky Terrace",
       "Compact 3.5 Katha Footprint",
@@ -109,20 +109,20 @@ export const MOCK_DESIGNS = [
   {
     id: 5,
     title: "Bashundhara Signature Heights",
-    floors: 10,
+    floors: 12,
     has_basement: true,
     has_garage: true,
     rooftop_type: "Garden",
-    min_katha: 5.0,
-    built_area_sqft: 24000,
+    min_katha: 6.0,
+    built_area_sqft: 29000,
     units_per_floor: 2,
-    parking_capacity: 14,
+    parking_capacity: 16,
     architectural_style: "Modern Tropical",
     image_url:
       "https://images.unsplash.com/photo-1515263487990-61b07816b324?w=800&auto=format&fit=crop&q=80",
     aspect_ratio: 0.9,
     description:
-      "10-story eco-conscious apartment complex with cascading vertical gardens, underground parking, solar array canopy, and panoramic community rooftop deck.",
+      "12-story eco-conscious apartment complex with cascading vertical gardens, underground parking, solar array canopy, and panoramic community rooftop deck.",
     features: [
       "Vertical Green Living Walls",
       "Solar Panel Canopy Roof",
@@ -134,12 +134,12 @@ export const MOCK_DESIGNS = [
   {
     id: 6,
     title: "Mirpur Minimalist Habitat",
-    floors: 5,
+    floors: 6,
     has_basement: false,
     has_garage: false,
     rooftop_type: "Open Terrace",
     min_katha: 3.0,
-    built_area_sqft: 6700,
+    built_area_sqft: 8100,
     units_per_floor: 2,
     parking_capacity: 0,
     architectural_style: "Cost-Effective Urban",
@@ -147,7 +147,7 @@ export const MOCK_DESIGNS = [
       "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
     aspect_ratio: 1.1,
     description:
-      "Budget-optimized 5-story multi-family housing structure engineered for narrow 3 Katha plots. Maximizes interior livable space with open-air community terrace.",
+      "Standard 6-story multi-family housing structure engineered for narrow 3 Katha plots. Maximizes interior livable space with open-air community terrace.",
     features: [
       "Optimized for 3 Katha Narrow Plots",
       "Low Construction Cost per Sqft",
@@ -158,21 +158,21 @@ export const MOCK_DESIGNS = [
   },
   {
     id: 7,
-    title: "Purbachal Green Oasis Duplex",
-    floors: 5,
+    title: "Purbachal Green Oasis Triplex",
+    floors: 3,
     has_basement: true,
     has_garage: true,
     rooftop_type: "Garden",
     min_katha: 4.5,
-    built_area_sqft: 11200,
+    built_area_sqft: 6800,
     units_per_floor: 1,
-    parking_capacity: 6,
+    parking_capacity: 3,
     architectural_style: "Resort-Style Luxury",
     image_url:
       "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&auto=format&fit=crop&q=80",
     aspect_ratio: 0.82,
     description:
-      "Luxurious 5-story residential manor featuring private duplex units, semi-basement garage, perimeter landscape gardens, and an infinity water-feature rooftop.",
+      "Luxurious 3-story residential manor featuring private triplex living, semi-basement garage, perimeter landscape gardens, and an infinity water-feature rooftop.",
     features: [
       "Rooftop Hydroponic Garden",
       "Semi-Basement Parking Garage",
@@ -184,20 +184,20 @@ export const MOCK_DESIGNS = [
   {
     id: 8,
     title: "Chittagong Hillside Grand View",
-    floors: 10,
+    floors: 7,
     has_basement: true,
     has_garage: true,
     rooftop_type: "Open Terrace",
-    min_katha: 5.5,
-    built_area_sqft: 26000,
+    min_katha: 4.5,
+    built_area_sqft: 17500,
     units_per_floor: 2,
-    parking_capacity: 15,
+    parking_capacity: 8,
     architectural_style: "Terraced Modern",
     image_url:
       "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800&auto=format&fit=crop&q=80",
     aspect_ratio: 0.95,
     description:
-      "10-story terraced structure engineered for sloped and standard urban terrain under CDA guidelines. Features deep verandas, reinforced retaining foundation, and open terrace.",
+      "7-story terraced structure engineered for sloped and standard urban terrain under CDA guidelines. Features deep verandas, reinforced retaining foundation, and open terrace.",
     features: [
       "CDA Guideline Optimized",
       "Dual-Level Retaining Basement",
@@ -234,20 +234,20 @@ export const MOCK_DESIGNS = [
   {
     id: 10,
     title: "Baridhara Diplomatic Zenith",
-    floors: 10,
+    floors: 14,
     has_basement: true,
     has_garage: true,
     rooftop_type: "Helipad",
     min_katha: 7.0,
-    built_area_sqft: 34000,
+    built_area_sqft: 42000,
     units_per_floor: 2,
-    parking_capacity: 20,
+    parking_capacity: 22,
     architectural_style: "Ultra-Luxury International",
     image_url:
       "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=800&auto=format&fit=crop&q=80",
     aspect_ratio: 0.8,
     description:
-      "Prestigious 10-story ultra-luxury condominium featuring reinforced structural core, underground double basement, certified rooftop helipad, and private lift lobbies.",
+      "Prestigious 14-story ultra-luxury condominium featuring reinforced structural core, underground double basement, certified rooftop helipad, and private lift lobbies.",
     features: [
       "Executive Rooftop Helipad",
       "Reinforced Double Basement",
@@ -259,20 +259,20 @@ export const MOCK_DESIGNS = [
   {
     id: 11,
     title: "Rajshahi Silk City Heights",
-    floors: 10,
+    floors: 9,
     has_basement: false,
     has_garage: true,
     rooftop_type: "Open Terrace",
     min_katha: 4.5,
-    built_area_sqft: 21000,
+    built_area_sqft: 19500,
     units_per_floor: 3,
-    parking_capacity: 10,
+    parking_capacity: 9,
     architectural_style: "Thermal-Optimized Modern",
     image_url:
       "https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?w=800&auto=format&fit=crop&q=80",
     aspect_ratio: 1.1,
     description:
-      "10-story residential complex specially engineered with hollow-brick exterior insulation, ground floor open garage, and rooftop terrace for northern heat mitigation.",
+      "9-story residential complex specially engineered with hollow-brick exterior insulation, ground floor open garage, and rooftop terrace for northern heat mitigation.",
     features: [
       "RDA Rule Compliant",
       "Thermal Insulation Cavity Walls",
@@ -284,26 +284,126 @@ export const MOCK_DESIGNS = [
   {
     id: 12,
     title: "Khulna Waterfront Vista",
-    floors: 5,
+    floors: 6,
     has_basement: false,
     has_garage: true,
     rooftop_type: "Open Terrace",
     min_katha: 4.0,
-    built_area_sqft: 9200,
+    built_area_sqft: 11200,
     units_per_floor: 2,
-    parking_capacity: 4,
+    parking_capacity: 5,
     architectural_style: "Coastal Modern",
     image_url:
       "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&auto=format&fit=crop&q=80",
     aspect_ratio: 0.95,
     description:
-      "5-story coastal-resilient residential apartment with corrosion-resistant finishes, cantilevered shaded decks, ground garage, and breezy open rooftop terrace.",
+      "6-story coastal-resilient residential apartment with corrosion-resistant finishes, cantilevered shaded decks, ground garage, and breezy open rooftop terrace.",
     features: [
       "KDA Compliance Standard",
       "Salinity Resistant Concrete Mix",
       "Ground Level Covered Parking",
       "Open River Breeze Terrace",
       "Dual Master Bed Floorplans",
+    ],
+  },
+  {
+    id: 13,
+    title: "Sylhet Tea-Estate Modern Duplex",
+    floors: 2,
+    has_basement: false,
+    has_garage: true,
+    rooftop_type: "Open Terrace",
+    min_katha: 3.5,
+    built_area_sqft: 4200,
+    units_per_floor: 1,
+    parking_capacity: 2,
+    architectural_style: "Contemporary Tropical Duplex",
+    image_url:
+      "https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=800&auto=format&fit=crop&q=80",
+    aspect_ratio: 1.1,
+    description:
+      "Serene 2-story luxury private duplex villa with pitched rooflines, private garden porch, garage, and panoramic open terrace overlooking scenic surroundings.",
+    features: [
+      "Single-Family 2-Story Duplex",
+      "Ground Floor Private Lawn",
+      "Covered 2-Car Garage",
+      "Rainwater Runoff Gutter System",
+      "High Ceiling Living Lounge",
+    ],
+  },
+  {
+    id: 14,
+    title: "Uttara Sector 3 Family Residence",
+    floors: 7,
+    has_basement: false,
+    has_garage: true,
+    rooftop_type: "Garden",
+    min_katha: 4.0,
+    built_area_sqft: 14000,
+    units_per_floor: 2,
+    parking_capacity: 7,
+    architectural_style: "Modern Urban Residential",
+    image_url:
+      "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=800&auto=format&fit=crop&q=80",
+    aspect_ratio: 0.95,
+    description:
+      "Elegant 7-story family apartment building designed for standard 4 Katha plots in Sector 3. Includes dedicated ground floor parking bays and landscaped rooftop garden.",
+    features: [
+      "Popular 7-Story Dhaka Layout",
+      "Ground Floor Covered Stilt Garage",
+      "Community Rooftop Garden",
+      "Dual Balconies per Unit",
+      "RAJUK Master Plan Approved",
+    ],
+  },
+  {
+    id: 15,
+    title: "Motijheel Commercial & Living Tower",
+    floors: 11,
+    has_basement: true,
+    has_garage: true,
+    rooftop_type: "Open Terrace",
+    min_katha: 6.0,
+    built_area_sqft: 32000,
+    units_per_floor: 3,
+    parking_capacity: 15,
+    architectural_style: "Commercial-Residential Hybrid",
+    image_url:
+      "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop&q=80",
+    aspect_ratio: 0.88,
+    description:
+      "Dynamic 11-story mixed-use tower with retail ground floor, 2 office floors, 8 residential floors, basement parking, and breezy open terrace.",
+    features: [
+      "11-Story Mixed-Use Design",
+      "Underground Basement Parking",
+      "High Speed Twin Elevators",
+      "Fire Suppression Sprinkler Network",
+      "Wide Central Staircase",
+    ],
+  },
+  {
+    id: 16,
+    title: "Bashundhara Smart Eco-Living",
+    floors: 8,
+    has_basement: true,
+    has_garage: true,
+    rooftop_type: "Garden",
+    min_katha: 5.0,
+    built_area_sqft: 19800,
+    units_per_floor: 2,
+    parking_capacity: 10,
+    architectural_style: "Smart Sustainable",
+    image_url:
+      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&auto=format&fit=crop&q=80",
+    aspect_ratio: 0.92,
+    description:
+      "8-story smart sustainable residential residence equipped with rooftop hydroponics, basement parking, solar backup, and thermal-break glass facades.",
+    features: [
+      "8-Story Medium High-Rise",
+      "Solar Power Integration",
+      "Full Basement Garage",
+      "Rooftop Community Pavilion",
+      "IoT Smart Lighting System",
     ],
   },
 ];

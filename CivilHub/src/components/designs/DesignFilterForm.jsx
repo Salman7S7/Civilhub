@@ -101,7 +101,7 @@ export default function DesignFilterForm({
               <View style={styles.textInputBox}>
                 <TextInput
                   style={styles.textInput}
-                  placeholder="e.g. 5 or 10"
+                  placeholder="e.g. 4, 6, 8, 10..."
                   placeholderTextColor="#94a3b8"
                   keyboardType="number-pad"
                   value={filters.custom_floors || (filters.floors !== "all" ? String(filters.floors) : "")}
