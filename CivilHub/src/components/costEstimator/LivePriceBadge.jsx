@@ -9,6 +9,7 @@ import {
 
 export default function LivePriceBadge({
   quality,
+  rateSource = "mysql",
 }) {
 
   const qualityText = {
@@ -17,29 +18,30 @@ export default function LivePriceBadge({
     luxury: "Luxury",
   };
 
+  const isMySQL = rateSource === "mysql";
 
   return (
 
-    <View style={styles.container}>
+    <View style={[styles.container, isMySQL && styles.mysqlContainer]}>
 
-      <View style={styles.dot} />
+      <View style={[styles.dot, isMySQL && styles.mysqlDot]} />
 
       <View style={styles.textContainer}>
 
         <Text style={styles.title}>
-          Current Material Prices
+          {isMySQL ? "Live Database Rates" : "Current Material Prices"}
         </Text>
 
         <Text style={styles.subtitle}>
-          Using {qualityText[quality]} price level
+          Using {qualityText[quality]} grade • {isMySQL ? "MySQL civilhub_db" : "Baseline formulas"}
         </Text>
 
       </View>
 
-      <View style={styles.badge}>
+      <View style={[styles.badge, isMySQL && styles.mysqlBadge]}>
 
-        <Text style={styles.badgeText}>
-          ESTIMATE
+        <Text style={[styles.badgeText, isMySQL && styles.mysqlBadgeText]}>
+          {isMySQL ? "MYSQL LIVE" : "ESTIMATE"}
         </Text>
 
       </View>
@@ -63,12 +65,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
+  mysqlContainer: {
+    backgroundColor: "#ecfdf5",
+    borderColor: "#a7f3d0",
+  },
+
   dot: {
-    width: 9,
-    height: 9,
+    width: 10,
+    height: 10,
     borderRadius: 5,
     backgroundColor: "#1264D8",
-    marginRight: 10,
+    marginRight: 12,
+  },
+
+  mysqlDot: {
+    backgroundColor: "#059669",
   },
 
   textContainer: {
@@ -76,28 +87,39 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
     color: "#172B4D",
   },
 
   subtitle: {
-    fontSize: 11,
-    color: "#60748D",
+    fontSize: 12,
+    color: "#6B778C",
     marginTop: 2,
   },
 
   badge: {
-    backgroundColor: "#1264D8",
-    paddingHorizontal: 8,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#C9DFFF",
+  },
+
+  mysqlBadge: {
+    backgroundColor: "#d1fae5",
+    borderColor: "#a7f3d0",
   },
 
   badgeText: {
-    color: "#FFFFFF",
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "800",
+    color: "#1264D8",
+  },
+
+  mysqlBadgeText: {
+    color: "#059669",
   },
 
 });

@@ -21,6 +21,8 @@ import PerFloorBreakdown from "../components/costEstimator/PerFloorBreakdown";
 import {
   estimateConstructionCost,
   formatBDT,
+  fetchLiveRatesFromDB,
+  recordEstimateInDB,
 } from "../services/costEstimator";
 
 
@@ -49,6 +51,16 @@ export default function CostEstimatorScreen({ route }) {
 
   const [linkedDesign, setLinkedDesign] =
     useState("");
+
+  const [rateSource, setRateSource] =
+    useState("mysql");
+
+  // Fetch live pricing rates from MySQL database on mount
+  useEffect(() => {
+    fetchLiveRatesFromDB().then((res) => {
+      if (res && res.source) setRateSource(res.source);
+    });
+  }, []);
 
   // Sync inputs when navigated with parameters from Smart Designs
   useEffect(() => {
@@ -102,6 +114,13 @@ export default function CostEstimatorScreen({ route }) {
 
     setError("");
     setShowResult(true);
+
+    // Record the estimate into MySQL cost_estimates table
+    recordEstimateInDB(
+      { floors, floorAreaSqft: floorArea, quality, hasBasement, hasGarage },
+      result,
+      linkedDesign
+    );
 
   };
 
@@ -209,6 +228,7 @@ export default function CostEstimatorScreen({ route }) {
 
         <LivePriceBadge
           quality={quality}
+          rateSource={rateSource}
         />
 
 
