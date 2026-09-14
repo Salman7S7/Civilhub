@@ -230,6 +230,27 @@ export default function DesignSuggestionsScreen({ navigation }) {
     }
   };
 
+  // Cross-link to Cost Estimator Screen
+  const handleEstimateCost = (design, perFloorArea) => {
+    setDetailModalVisible(false);
+    if (navigation && navigation.navigate) {
+      const derivedFloorArea =
+        perFloorArea ||
+        (design.built_area_sqft && design.floors
+          ? Math.round(design.built_area_sqft / design.floors)
+          : (design.units_per_floor || 2) * (design.unit_size_sqft || 1200) || 1200);
+
+      navigation.navigate("Cost Estimator", {
+        floors: String(design.floors || 5),
+        floorArea: String(derivedFloorArea),
+        hasBasement: Boolean(design.has_basement),
+        hasGarage: Boolean(design.has_garage),
+        designTitle: design.title,
+        autoCalculate: true,
+      });
+    }
+  };
+
   // Filter list by favorites if active
   const displayedDesigns = showOnlyFavorites
     ? designs.filter((d) => favorites.has(d.id))
@@ -527,6 +548,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
         isFavorite={selectedDesign ? favorites.has(selectedDesign.id) : false}
         onToggleFavorite={toggleFavorite}
         onCheckFeasibility={handleCheckFeasibility}
+        onEstimateCost={handleEstimateCost}
         onDesignUpdated={handleDesignUpdated}
         onDesignDeleted={handleDesignDeleted}
         onConsultExpert={handleConsultExpert}

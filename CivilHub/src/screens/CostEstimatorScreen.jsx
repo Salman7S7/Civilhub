@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 
 import {
   SafeAreaView,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import InputCard from "../components/costEstimator/InputCard";
 import QualitySelector from "../components/costEstimator/QualitySelector";
@@ -23,7 +24,7 @@ import {
 } from "../services/costEstimator";
 
 
-export default function CostEstimatorScreen() {
+export default function CostEstimatorScreen({ route }) {
 
   const [floors, setFloors] =
     useState("2");
@@ -45,6 +46,31 @@ export default function CostEstimatorScreen() {
 
   const [error, setError] =
     useState("");
+
+  const [linkedDesign, setLinkedDesign] =
+    useState("");
+
+  // Sync inputs when navigated with parameters from Smart Designs
+  useEffect(() => {
+    if (route?.params) {
+      const {
+        floors: pFloors,
+        floorArea: pFloorArea,
+        hasBasement: pBasement,
+        hasGarage: pGarage,
+        designTitle,
+      } = route.params;
+
+      if (pFloors) setFloors(String(pFloors));
+      if (pFloorArea) setFloorArea(String(pFloorArea));
+      if (pBasement !== undefined) setHasBasement(Boolean(pBasement));
+      if (pGarage !== undefined) setHasGarage(Boolean(pGarage));
+      if (designTitle) setLinkedDesign(designTitle);
+
+      setError("");
+      setShowResult(true);
+    }
+  }, [route?.params]);
 
 
   const result = useMemo(
@@ -88,6 +114,7 @@ export default function CostEstimatorScreen() {
 
     setHasBasement(false);
     setHasGarage(false);
+    setLinkedDesign("");
 
     setError("");
     setShowResult(false);
@@ -122,6 +149,28 @@ export default function CostEstimatorScreen() {
           </Text>
 
         </View>
+
+        {/* LINKED DESIGN BANNER */}
+        {linkedDesign ? (
+          <View style={styles.linkedDesignBanner}>
+            <View style={styles.linkedDesignIconWrap}>
+              <Ionicons name="sparkles" size={16} color="#059669" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.linkedDesignSubtitle}>PRE-FILLED FROM SMART DESIGN</Text>
+              <Text style={styles.linkedDesignTitle} numberOfLines={1}>
+                {linkedDesign}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.linkedDesignCloseBtn}
+              onPress={() => setLinkedDesign("")}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close-circle" size={20} color="#94a3b8" />
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
 
         {/* TOTAL FLOORS */}
@@ -387,6 +436,45 @@ const styles = StyleSheet.create({
   resetText: {
     color: "#1264D8",
     fontWeight: "700",
+  },
+
+  linkedDesignBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ecfdf5",
+    borderWidth: 1,
+    borderColor: "#a7f3d0",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    gap: 10,
+  },
+
+  linkedDesignIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#d1fae5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  linkedDesignSubtitle: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#059669",
+    letterSpacing: 0.5,
+  },
+
+  linkedDesignTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#065f46",
+    marginTop: 2,
+  },
+
+  linkedDesignCloseBtn: {
+    padding: 2,
   },
 
 });

@@ -24,6 +24,10 @@ import {
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { updateDesign, deleteDesign } from "../../services/designService";
+import {
+  estimateConstructionCost,
+  formatBDT,
+} from "../../services/costEstimator";
 
 export default function DesignDetailModal({
   visible,
@@ -32,6 +36,7 @@ export default function DesignDetailModal({
   isFavorite = false,
   onToggleFavorite,
   onCheckFeasibility,
+  onEstimateCost,
   onDesignUpdated,
   onDesignDeleted,
   onConsultExpert,
@@ -85,7 +90,33 @@ export default function DesignDetailModal({
 
   if (!design) return null;
 
-  const isTenStory = (parseInt(editFloors, 10) || design.floors) >= 10;
+  const parsedFloors = parseInt(editFloors, 10) || design.floors || 5;
+  const parsedBuiltArea = parseInt(editBuiltArea, 10) || design.built_area_sqft;
+  const perFloorSqft =
+    parsedBuiltArea && parsedFloors
+      ? Math.round(parsedBuiltArea / parsedFloors)
+      : (design.units_per_floor || 2) * (design.unit_size_sqft || 1200) || 1200;
+
+  const currentHasBasement = isEditing ? editHasBasement : Boolean(design.has_basement);
+  const currentHasGarage = isEditing ? editHasGarage : Boolean(design.has_garage);
+
+  const stdEstimate = estimateConstructionCost({
+    floors: parsedFloors,
+    floorAreaSqft: perFloorSqft,
+    quality: "standard",
+    hasBasement: currentHasBasement,
+    hasGarage: currentHasGarage,
+  });
+
+  const luxEstimate = estimateConstructionCost({
+    floors: parsedFloors,
+    floorAreaSqft: perFloorSqft,
+    quality: "luxury",
+    hasBasement: currentHasBasement,
+    hasGarage: currentHasGarage,
+  });
+
+  const isTenStory = parsedFloors >= 10;
 
   const handleShare = async () => {
     try {
@@ -775,8 +806,55 @@ export default function DesignDetailModal({
                   </View>
                 )}
 
+                {/* Estimated Construction Cost Preview Card */}
+                <View style={styles.costPreviewCard}>
+                  <View style={styles.costPreviewHeader}>
+                    <View style={styles.costPreviewIconWrap}>
+                      <MaterialCommunityIcons
+                        name="calculator-variant"
+                        size={20}
+                        color="#059669"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.costPreviewTitle}>Estimated Construction Cost</Text>
+                      <Text style={styles.costPreviewSubtitle}>
+                        Based on ~{perFloorSqft.toLocaleString()} sqft/floor • {parsedFloors} Stories
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.costRangeContainer}>
+                    <View style={styles.costRangeBox}>
+                      <Text style={styles.costRangeLabel}>Standard Quality</Text>
+                      <Text style={styles.costRangeValue}>{formatBDT(stdEstimate.total)}</Text>
+                      <Text style={styles.costRangeRate}>@ ৳2,200/sqft</Text>
+                    </View>
+                    <View style={styles.costRangeDivider} />
+                    <View style={styles.costRangeBox}>
+                      <Text style={styles.costRangeLabel}>Luxury Finish</Text>
+                      <Text style={[styles.costRangeValue, { color: "#7c3aed" }]}>
+                        {formatBDT(luxEstimate.total)}
+                      </Text>
+                      <Text style={styles.costRangeRate}>@ ৳3,600/sqft</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.costDistributionRow}>
+                    <View style={styles.costTagPill}>
+                      <Text style={styles.costTagText}>🏗️ Structure ~45%</Text>
+                    </View>
+                    <View style={styles.costTagPill}>
+                      <Text style={styles.costTagText}>🎨 Finishing ~30%</Text>
+                    </View>
+                    <View style={styles.costTagPill}>
+                      <Text style={styles.costTagText}>⚡ MEP ~25%</Text>
+                    </View>
+                  </View>
+                </View>
+
                 {/* Space for Bottom Bar */}
-                <View style={{ height: 100 }} />
+                <View style={{ height: 110 }} />
               </View>
             )}
           </ScrollView>
@@ -824,6 +902,22 @@ export default function DesignDetailModal({
                   <Ionicons name="business" size={18} color="#ffffff" />
                   <Text style={styles.feasibilityBtnText}>
                     Check Feasibility for this Model
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.estimateCostBtn}
+                  activeOpacity={0.88}
+                  onPress={() => {
+                    onClose();
+                    if (onEstimateCost) {
+                      onEstimateCost(design, perFloorSqft);
+                    }
+                  }}
+                >
+                  <MaterialCommunityIcons name="calculator-variant" size={18} color="#ffffff" />
+                  <Text style={styles.estimateCostBtnText}>
+                    Estimate Cost & Customize
                   </Text>
                 </TouchableOpacity>
 
@@ -1333,5 +1427,114 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 14,
     fontWeight: "700",
+  },
+  estimateCostBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#059669",
+    paddingVertical: 14,
+    borderRadius: 14,
+    gap: 8,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  estimateCostBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  costPreviewCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: "#d1fae5",
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  costPreviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 14,
+  },
+  costPreviewIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#ecfdf5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  costPreviewTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  costPreviewSubtitle: {
+    fontSize: 12,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  costRangeContainer: {
+    flexDirection: "row",
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  costRangeBox: {
+    flex: 1,
+    alignItems: "center",
+  },
+  costRangeDivider: {
+    width: 1,
+    backgroundColor: "#cbd5e1",
+    marginHorizontal: 8,
+  },
+  costRangeLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#64748b",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  costRangeValue: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#059669",
+    marginTop: 4,
+  },
+  costRangeRate: {
+    fontSize: 10,
+    color: "#94a3b8",
+    marginTop: 2,
+  },
+  costDistributionRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+    justifyContent: "space-between",
+  },
+  costTagPill: {
+    flex: 1,
+    backgroundColor: "#f1f5f9",
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  costTagText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#334155",
   },
 });
