@@ -151,7 +151,7 @@ export default function DesignFilterModal({
                     <View style={styles.customInputWrap}>
                       <TextInput
                         style={styles.customTextInput}
-                        placeholder="e.g. 5 or 10"
+                        placeholder="e.g. 4, 6, 8, 10..."
                         placeholderTextColor="#94a3b8"
                         keyboardType="number-pad"
                         value={

@@ -31,7 +31,7 @@ const HERO_IMAGE_URL =
 
 const REGION_BADGES = ["RAJUK", "CDA", "RDA", "KDA"];
 
-export default function FeasibilityScreen() {
+export default function FeasibilityScreen({ navigation }) {
   const [chatVisible, setChatVisible] = useState(false);
 
   return (
@@ -85,14 +85,26 @@ export default function FeasibilityScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Floating AI Assistant Button */}
+      {/* Floating Expert Consultation Button */}
       <TouchableOpacity
         style={styles.fab}
         activeOpacity={0.9}
-        onPress={() => setChatVisible(true)}
+        onPress={() => {
+          if (navigation && navigation.navigate) {
+            navigation.navigate("Ask Expert", {
+              initialContext: {
+                authority: "RAJUK",
+                floors: 6,
+                katha: 4,
+              },
+            });
+          } else {
+            setChatVisible(true);
+          }
+        }}
       >
-        <Ionicons name="chatbubble-ellipses" size={18} color="#ffffff" />
-        <Text style={styles.fabText}>Ask AI Assistant 💬</Text>
+        <Ionicons name="chatbubbles" size={18} color="#ffffff" />
+        <Text style={styles.fabText}>Ask Expert 💬</Text>
       </TouchableOpacity>
 
       <AIChatbotModal visible={chatVisible} onClose={() => setChatVisible(false)} />

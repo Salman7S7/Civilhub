@@ -11,8 +11,13 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import FeasibilityScreen from "../screens/FeasibilityScreen";
 import DesignSuggestionsScreen from "../screens/DesignSuggestionsScreen";
+<<<<<<< HEAD
 import { CostEstimatorScreen } from "../screens/PlaceholderScreens";
 import LandTaxScreen from "../screens/LandTaxScreen";
+=======
+import CostEstimatorScreen from "../screens/CostEstimatorScreen";
+import ExpertChatScreen from "../screens/ExpertChatScreen";
+>>>>>>> 1d77ade9f4136ab751bba05246639194e714c5cd
 
 const Tab = createBottomTabNavigator();
 
@@ -106,12 +111,25 @@ export default function BottomTabNavigator({ onLogout }) {
         }}
       />
       <Tab.Screen
+<<<<<<< HEAD
         name="Land Tax"
         component={LandTaxScreen}
         options={{
           tabBarLabel: "Land Tax",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="receipt-outline" size={size} color={color} />
+=======
+        name="Ask Expert"
+        component={ExpertChatScreen}
+        options={{
+          tabBarLabel: "Ask Expert",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons
+              name="comment-text-multiple"
+              size={size}
+              color={color}
+            />
+>>>>>>> 1d77ade9f4136ab751bba05246639194e714c5cd
           ),
         }}
       />
