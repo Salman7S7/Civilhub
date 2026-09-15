@@ -1,12 +1,4 @@
-// src/screens/LoginScreen.jsx
-// -----------------------------------------------------------------------------
-// Login screen component for user authentication matching CivilHub's visual design.
-// -----------------------------------------------------------------------------
-
-// Import core React library and the useState hook for managing form input and state
 import React, { useState } from "react";
-
-// Import core UI components from React Native
 import {
   View,
   Text,
@@ -19,123 +11,120 @@ import {
   ActivityIndicator,
   ImageBackground,
 } from "react-native";
-
-// Import SafeAreaView to prevent content from hiding behind system bars/notches
 import { SafeAreaView } from "react-native-safe-area-context";
-
-// Import Ionicons package for rendering vector UI icons
 import { Ionicons } from "@expo/vector-icons";
-
-// Import LinearGradient component to apply color fading effects over the header image
 import { LinearGradient } from "expo-linear-gradient";
+import { loginUser, registerUser } from "../services/authService";
 
-// Define a constant string holding the Unsplash CDN URL for the header image
 const HERO_IMAGE_URL =
   "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80";
 
-// Helper function that takes an email string and validates its format using a Regular Expression
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
-// Export the main LoginScreen functional component, accepting an `onLoginSuccess` callback function prop
 export default function LoginScreen({ onLoginSuccess }) {
-  // Define local state hooks for email, password, password visibility toggle, loading status, and error messages
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Asynchronous function that handles local validation and login submission
   const handleLogin = async () => {
-    // Clear any previous error messages before validating
     setErrorMsg("");
 
-    // Check if email or password fields are empty
-    if (!email.trim() || !password.trim()) {
-      setErrorMsg("Please enter both email and password.");
+    if (isRegistering && !name.trim()) {
+      setErrorMsg("Please enter your name.");
       return;
     }
-    // Check if the email format is invalid
+    if (!email.trim() || !password.trim()) {
+      setErrorMsg("Please enter email and password.");
+      return;
+    }
     if (!isValidEmail(email)) {
       setErrorMsg("Please enter a valid email address.");
       return;
     }
-    // Check if password length is less than 6 characters
     if (password.length < 6) {
       setErrorMsg("Password must be at least 6 characters.");
       return;
     }
 
-    // Set loading state to true while processing request
     setLoading(true);
     try {
-      // Simulate network connection delay for demo purposes (replace with actual backend fetch/auth)
-      await new Promise((resolve) => setTimeout(resolve, 700));
-      // Trigger the success callback function, passing the trimmed user email object up
-      onLoginSuccess?.({ email: email.trim() });
+      const result = isRegistering
+        ? await registerUser(name.trim(), email.trim(), password)
+        : await loginUser(email.trim(), password);
+      onLoginSuccess?.(result);
     } catch (error) {
-      // Catch any errors and display the message or a default failure text
       setErrorMsg(error.message || "Login failed. Please try again.");
     } finally {
-      // Reset loading state back to false once complete
       setLoading(false);
     }
   };
 
-  // Return the main JSX structure for the login interface
   return (
-    // SafeAreaView confines content within safe device boundaries at top and bottom
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      {/* KeyboardAvoidingView adjusts layout dynamically when the software keyboard opens on iOS */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* ScrollView allows the content card and banner to be scrollable vertically */}
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ImageBackground renders the header photograph */}
           <ImageBackground
             source={{ uri: HERO_IMAGE_URL }}
             style={styles.hero}
             imageStyle={styles.heroImageRadius}
           >
-            {/* LinearGradient overlays a dark shading over the hero background image */}
             <LinearGradient
               colors={["rgba(15,23,42,0.35)", "rgba(15,23,42,0.85)", "#1e293b"]}
               style={styles.heroGradient}
             >
-              {/* Container box for the brand logo icon */}
               <View style={styles.logoWrap}>
                 <Ionicons name="business" size={30} color="#ffffff" />
               </View>
-              {/* Brand name title text */}
               <Text style={styles.brandName}>CivilHub</Text>
-              {/* Subtitle tag line text */}
               <Text style={styles.brandTagline}>
                 Feasibility checks & building codes, made simple.
               </Text>
             </LinearGradient>
           </ImageBackground>
 
-          {/* Main card container holding the input fields and action buttons */}
           <View style={styles.formCard}>
-            <Text style={styles.welcomeTitle}>Welcome back</Text>
+            <Text style={styles.welcomeTitle}>
+              {isRegistering ? "Create account" : "Welcome back"}
+            </Text>
             <Text style={styles.welcomeSubtitle}>
-              Log in to continue checking feasibility and asking the AI assistant.
+              {isRegistering
+                ? "Sign up to save your account and use CivilHub."
+                : "Log in to continue checking feasibility and asking the AI assistant."}
             </Text>
 
-            {/* Field group wrapper for the email input */}
+            {isRegistering && (
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Name</Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="person-outline" size={18} color="#94a3b8" />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Your full name"
+                    placeholderTextColor="#94a3b8"
+                    value={name}
+                    onChangeText={setName}
+                  />
+                </View>
+              </View>
+            )}
+
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Email</Text>
               <View style={styles.inputWrap}>
                 <Ionicons name="mail-outline" size={18} color="#94a3b8" />
-                {/* TextInput for capturing user email entry */}
                 <TextInput
                   style={styles.input}
                   placeholder="you@example.com"
@@ -149,12 +138,10 @@ export default function LoginScreen({ onLoginSuccess }) {
               </View>
             </View>
 
-            {/* Field group wrapper for the password input */}
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Password</Text>
               <View style={styles.inputWrap}>
                 <Ionicons name="lock-closed-outline" size={18} color="#94a3b8" />
-                {/* TextInput for capturing password text entry securely */}
                 <TextInput
                   style={styles.input}
                   placeholder="••••••••"
@@ -163,7 +150,6 @@ export default function LoginScreen({ onLoginSuccess }) {
                   value={password}
                   onChangeText={setPassword}
                 />
-                {/* Clickable icon button to toggle password visibility */}
                 <TouchableOpacity onPress={() => setShowPassword((s) => !s)} hitSlop={8}>
                   <Ionicons
                     name={showPassword ? "eye-off-outline" : "eye-outline"}
@@ -174,12 +160,10 @@ export default function LoginScreen({ onLoginSuccess }) {
               </View>
             </View>
 
-            {/* Forgot password text action button */}
             <TouchableOpacity style={styles.forgotLink}>
               <Text style={styles.forgotLinkText}>Forgot password?</Text>
             </TouchableOpacity>
 
-            {/* Conditionally render validation error message box if errorMsg exists */}
             {!!errorMsg && (
               <View style={styles.errorBox}>
                 <Ionicons name="alert-circle" size={16} color="#b91c1c" />
@@ -187,42 +171,49 @@ export default function LoginScreen({ onLoginSuccess }) {
               </View>
             )}
 
-            {/* Main login submission button */}
             <TouchableOpacity
               style={styles.loginButton}
               onPress={handleLogin}
               disabled={loading}
               activeOpacity={0.88}
             >
-              {/* Show loading spinner if loading is true, otherwise show button label text and arrow icon */}
               {loading ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
                 <>
-                  <Text style={styles.loginButtonText}>Log In</Text>
+                  <Text style={styles.loginButtonText}>
+                    {isRegistering ? "Sign Up" : "Log In"}
+                  </Text>
                   <Ionicons name="arrow-forward" size={18} color="#ffffff" />
                 </>
               )}
             </TouchableOpacity>
 
-            {/* Divider row separating standard login from social options */}
-            <View style={styles.dividerRow}>
+            {!isRegistering && <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>or</Text>
               <View style={styles.dividerLine} />
-            </View>
+            </View>}
 
-            {/* Alternative social sign-in button for Google */}
-            <TouchableOpacity style={styles.socialButton} activeOpacity={0.85}>
+            {!isRegistering && <TouchableOpacity style={styles.socialButton} activeOpacity={0.85}>
               <Ionicons name="logo-google" size={18} color="#1e293b" />
               <Text style={styles.socialButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
+            </TouchableOpacity>}
 
-            {/* Footer row linking to the sign up screen */}
             <View style={styles.signupRow}>
-              <Text style={styles.signupText}>Don't have an account?</Text>
-              <TouchableOpacity hitSlop={8}>
-                <Text style={styles.signupLink}> Sign up</Text>
+              <Text style={styles.signupText}>
+                {isRegistering ? "Already have an account?" : "Don't have an account?"}
+              </Text>
+              <TouchableOpacity
+                hitSlop={8}
+                onPress={() => {
+                  setIsRegistering((value) => !value);
+                  setErrorMsg("");
+                }}
+              >
+                <Text style={styles.signupLink}>
+                  {isRegistering ? " Log in" : " Sign up"}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -232,7 +223,6 @@ export default function LoginScreen({ onLoginSuccess }) {
   );
 }
 
-// StyleSheet defining layout designs, colors, and typography rules
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -324,6 +314,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
+
   input: {
     flex: 1,
     color: "#0f172a",

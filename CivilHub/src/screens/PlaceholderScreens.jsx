@@ -1,9 +1,4 @@
-// src/screens/PlaceholderScreens.jsx
-// -----------------------------------------------------------------------------
-// Minimal placeholder screens for "Smart Designs" (Feature 2) and
-// "Cost Estimator" (Feature 3), so BottomTabNavigator has valid components
-// to import while those features are built out separately.
-// -----------------------------------------------------------------------------
+
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
