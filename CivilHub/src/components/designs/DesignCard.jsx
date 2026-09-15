@@ -118,6 +118,13 @@ export default function DesignCard({
           {design.architectural_style || "Modern Architectural"}
         </Text>
 
+        {/* Unit Rooms Specs Snippet */}
+        <View style={styles.roomsRow}>
+          <Text style={styles.roomsText} numberOfLines={1}>
+            {design.bedrooms || 3} Bed • {design.bathrooms || 3} Bath • {design.balconies || 2} Balc
+          </Text>
+        </View>
+
         {/* Feature Badges Row */}
         <View style={styles.tagsRow}>
           {/* Rooftop Pill */}
@@ -246,6 +253,14 @@ const styles = StyleSheet.create({
     color: "#64748b",
     marginTop: 2,
     fontWeight: "500",
+  },
+  roomsRow: {
+    marginTop: 4,
+  },
+  roomsText: {
+    fontSize: 11,
+    color: "#2563eb",
+    fontWeight: "600",
   },
   tagsRow: {
     flexDirection: "row",
