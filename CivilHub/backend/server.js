@@ -15,6 +15,8 @@ const jwt = require("jsonwebtoken");
 const { initDB, query, getStatus } = require("./db");
 const { SEED_DESIGNS } = require("./seedData");
 
+const costEstimatorRouter = require("./costEstimator");
+
 const app = express();
 
 // ============================================================
@@ -23,6 +25,16 @@ const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: "2mb" }));
+
+// ============================================================
+// COST ESTIMATOR API
+// No Database Required
+// ============================================================
+
+app.use(
+  "/api/cost-estimator",
+  costEstimatorRouter
+);
 
 // ============================================================
 // Configuration

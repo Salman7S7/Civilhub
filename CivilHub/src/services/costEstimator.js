@@ -21,7 +21,7 @@ export const COST_ESTIMATOR_API =
 | আগে frontend calculation ঠিকমতো কাজ করাব।
 */
 
-export const USE_MOCK_BACKEND = true;
+export const USE_MOCK_BACKEND = false;
 
 /*
 |--------------------------------------------------------------------------
