@@ -11,7 +11,8 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import FeasibilityScreen from "../screens/FeasibilityScreen";
 import DesignSuggestionsScreen from "../screens/DesignSuggestionsScreen";
-import CostEstimatorScreen from "../screens/CostEstimatorScreen";
+import { CostEstimatorScreen } from "../screens/PlaceholderScreens";
+import LandTaxScreen from "../screens/LandTaxScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -101,6 +102,16 @@ export default function BottomTabNavigator({ onLogout }) {
           tabBarLabel: "Cost Estimator",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calculator-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Land Tax"
+        component={LandTaxScreen}
+        options={{
+          tabBarLabel: "Land Tax",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="receipt-outline" size={size} color={color} />
           ),
         }}
       />

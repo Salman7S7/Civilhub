@@ -1,8 +1,3 @@
-// backend/db.js
-// -----------------------------------------------------------------------------
-// MySQL Database Pool Configuration for Feature 2: Smart Design Suggestions
-// -----------------------------------------------------------------------------
-
 require("dotenv").config();
 const mysql = require("mysql2/promise");
 
@@ -20,12 +15,10 @@ const DB_CONFIG = {
 let pool = null;
 let isConnected = false;
 
-/**
- * Initialize MySQL Connection Pool and ensure table exists.
- */
+
 async function initDB() {
   try {
-    // 1. Create database if it does not exist (connect without DB specified first)
+    
     const rootConnection = await mysql.createConnection({
       host: DB_CONFIG.host,
       user: DB_CONFIG.user,
@@ -38,14 +31,13 @@ async function initDB() {
     );
     await rootConnection.end();
 
-    // 2. Create the connection pool with the target database
+ 
     pool = mysql.createPool(DB_CONFIG);
 
-    // Test connection
+
     const testConn = await pool.getConnection();
     testConn.release();
 
-    // 3. Ensure designs table exists
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS designs (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -67,6 +59,17 @@ async function initDB() {
     `;
 
     await pool.query(createTableQuery);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(190) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
     isConnected = true;
     console.log(`[MySQL] Connected to database '${DB_CONFIG.database}' successfully.`);
     return true;
@@ -79,13 +82,6 @@ async function initDB() {
   }
 }
 
-/**
- * Execute a parameterized SQL query.
- *
- * @param {string} sql - SQL query string with ? placeholders
- * @param {Array} params - Parameters array
- * @returns {Promise<Array>} - Query result rows
- */
 async function query(sql, params = []) {
   if (!pool || !isConnected) {
     throw new Error("Database is not connected");
@@ -94,9 +90,6 @@ async function query(sql, params = []) {
   return rows;
 }
 
-/**
- * Check if the database connection is currently active.
- */
 function getStatus() {
   return {
     connected: isConnected,

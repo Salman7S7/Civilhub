@@ -14,7 +14,7 @@
 //   - iOS Simulator:                           http://localhost:4000
 //   - Android Emulator:                        http://10.0.2.2:4000
 //   - Physical phone (same Wi-Fi as your PC):  http://<your-computer-LAN-IP>:4000
-const BACKEND_BASE_URL = "http://localhost:4000";
+import { BACKEND_BASE_URL } from "./apiConfig";
 
 /**
  * Sends a user question to our backend, which forwards it to Gemini with the

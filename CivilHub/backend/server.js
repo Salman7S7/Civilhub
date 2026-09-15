@@ -9,6 +9,8 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const { initDB, query, getStatus } = require("./db");
 const { SEED_DESIGNS } = require("./seedData");
 
@@ -28,6 +30,8 @@ app.use(express.json({ limit: "1mb" }));
 const PORT = process.env.PORT || 4000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const GEMINI_URL =
   `https://generativelanguage.googleapis.com/v1beta/models/` +
   `${GEMINI_MODEL}:generateContent`;
@@ -56,6 +60,34 @@ Rules for your answers:
 5. Always include this disclaimer:
 "Disclaimer: Final approval depends on the relevant development authority and review by a licensed structural/civil engineer."
 `;
+
+function createToken(user) {
+  return jwt.sign(
+    { sub: user.id, email: user.email, name: user.name },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+}
+
+function requireAuth(req, res, next) {
+  if (!JWT_SECRET) {
+    return res.status(500).json({ error: "Server is missing JWT_SECRET." });
+  }
+
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    return res.status(401).json({ error: "Invalid or expired token." });
+  }
+}
 
 // ============================================================
 // Helper: In-Memory Fallback Filter Engine
@@ -112,6 +144,99 @@ app.get("/health", (req, res) => {
     model: GEMINI_MODEL,
     database: dbStatus,
   });
+});
+
+// ============================================================
+// AUTHENTICATION API
+// ============================================================
+
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const name = String(req.body.name || "").trim();
+    const email = String(req.body.email || "").trim().toLowerCase();
+    const password = String(req.body.password || "");
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: "Name, email and password are required." });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "Please enter a valid email address." });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters." });
+    }
+    if (!getStatus().connected) {
+      return res.status(503).json({ error: "Database is not connected." });
+    }
+    if (!JWT_SECRET) {
+      return res.status(500).json({ error: "Server is missing JWT_SECRET." });
+    }
+
+    const existing = await query("SELECT id FROM users WHERE email = ? LIMIT 1", [email]);
+    if (existing.length) {
+      return res.status(409).json({ error: "An account with this email already exists." });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    const result = await query(
+      "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+      [name, email, passwordHash]
+    );
+    const user = { id: result.insertId, name, email };
+
+    return res.status(201).json({ success: true, token: createToken(user), user });
+  } catch (error) {
+    console.error("Registration error:", error);
+    return res.status(500).json({ error: "Could not create account." });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const email = String(req.body.email || "").trim().toLowerCase();
+    const password = String(req.body.password || "");
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
+    }
+    if (!getStatus().connected) {
+      return res.status(503).json({ error: "Database is not connected." });
+    }
+    if (!JWT_SECRET) {
+      return res.status(500).json({ error: "Server is missing JWT_SECRET." });
+    }
+
+    const rows = await query(
+      "SELECT id, name, email, password_hash FROM users WHERE email = ? LIMIT 1",
+      [email]
+    );
+    const user = rows[0];
+    const passwordMatches = user && await bcrypt.compare(password, user.password_hash);
+
+    if (!passwordMatches) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const safeUser = { id: user.id, name: user.name, email: user.email };
+    return res.json({ success: true, token: createToken(safeUser), user: safeUser });
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(500).json({ error: "Could not log in." });
+  }
+});
+
+app.get("/api/auth/me", requireAuth, async (req, res) => {
+  try {
+    const rows = await query(
+      "SELECT id, name, email, created_at FROM users WHERE id = ? LIMIT 1",
+      [req.user.sub]
+    );
+    if (!rows.length) return res.status(404).json({ error: "User not found." });
+    return res.json({ success: true, user: rows[0] });
+  } catch (error) {
+    console.error("Profile error:", error);
+    return res.status(500).json({ error: "Could not load profile." });
+  }
 });
 
 // ============================================================
@@ -301,11 +426,15 @@ app.post("/api/ask-building-code", async (req, res) => {
     };
 
     const geminiResponse = await fetch(
-      `${GEMINI_URL}?key=${GEMINI_API_KEY}`,
+      GEMINI_URL,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": GEMINI_API_KEY,
+        },
         body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(30000),
       }
     );
 
