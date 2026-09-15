@@ -12,6 +12,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import FeasibilityScreen from "../screens/FeasibilityScreen";
 import DesignSuggestionsScreen from "../screens/DesignSuggestionsScreen";
 import CostEstimatorScreen from "../screens/CostEstimatorScreen";
+import ExpertChatScreen from "../screens/ExpertChatScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -101,6 +102,20 @@ export default function BottomTabNavigator({ onLogout }) {
           tabBarLabel: "Cost Estimator",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calculator-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Ask Expert"
+        component={ExpertChatScreen}
+        options={{
+          tabBarLabel: "Ask Expert",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons
+              name="comment-text-multiple"
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
