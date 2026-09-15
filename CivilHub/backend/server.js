@@ -18,6 +18,7 @@ const { SEED_DESIGNS } = require("./seedData");
 const costEstimatorRouter = require("./costEstimator");
 
 const app = express();
+const fallbackUsers = [];
 
 // ============================================================
 // Middleware
@@ -43,7 +44,7 @@ app.use(
 const PORT = process.env.PORT || 4000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || "civilhub-development-secret";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const GEMINI_URL =
   `https://generativelanguage.googleapis.com/v1beta/models/` +
@@ -198,7 +199,6 @@ app.get("/health", (req, res) => {
 });
 
 // ============================================================
-<<<<<<< HEAD
 // AUTHENTICATION API
 // ============================================================
 
@@ -217,11 +217,20 @@ app.post("/api/auth/register", async (req, res) => {
     if (password.length < 6) {
       return res.status(400).json({ error: "Password must be at least 6 characters." });
     }
-    if (!getStatus().connected) {
-      return res.status(503).json({ error: "Database is not connected." });
-    }
     if (!JWT_SECRET) {
       return res.status(500).json({ error: "Server is missing JWT_SECRET." });
+    }
+
+    if (!getStatus().connected) {
+      if (fallbackUsers.some((user) => user.email === email)) {
+        return res.status(409).json({ error: "An account with this email already exists." });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 12);
+      const user = { id: Date.now(), name, email, passwordHash };
+      fallbackUsers.push(user);
+      const safeUser = { id: user.id, name: user.name, email: user.email };
+      return res.status(201).json({ success: true, token: createToken(safeUser), user: safeUser });
     }
 
     const existing = await query("SELECT id FROM users WHERE email = ? LIMIT 1", [email]);
@@ -251,11 +260,20 @@ app.post("/api/auth/login", async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required." });
     }
-    if (!getStatus().connected) {
-      return res.status(503).json({ error: "Database is not connected." });
-    }
     if (!JWT_SECRET) {
       return res.status(500).json({ error: "Server is missing JWT_SECRET." });
+    }
+
+    if (!getStatus().connected) {
+      const user = fallbackUsers.find((candidate) => candidate.email === email);
+      const passwordMatches = user && await bcrypt.compare(password, user.passwordHash);
+
+      if (!passwordMatches) {
+        return res.status(401).json({ error: "Invalid email or password." });
+      }
+
+      const safeUser = { id: user.id, name: user.name, email: user.email };
+      return res.json({ success: true, token: createToken(safeUser), user: safeUser });
     }
 
     const rows = await query(
@@ -293,9 +311,6 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
 
 // ============================================================
 // FEATURE 2: SMART DESIGN SUGGESTIONS API
-=======
-// FEATURE 2: SMART DESIGN SUGGESTIONS API (MySQL PRIMARY)
->>>>>>> 1d77ade9f4136ab751bba05246639194e714c5cd
 // ============================================================
 
 /**

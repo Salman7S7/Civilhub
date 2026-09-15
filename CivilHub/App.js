@@ -7,11 +7,7 @@ import BottomTabNavigator from "./src/navigation/BottomTabNavigator";
 import LoginScreen from "./src/screens/LoginScreen";
 
 export default function App() {
-<<<<<<< HEAD
   const [session, setSession] = useState(null);
-=======
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
->>>>>>> 1d77ade9f4136ab751bba05246639194e714c5cd
 
   return (
     <SafeAreaProvider>
