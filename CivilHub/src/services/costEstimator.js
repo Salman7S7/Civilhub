@@ -1,206 +1,1140 @@
 // src/services/costEstimator.js
-// -----------------------------------------------------------------------------
-// Interactive Cost Estimator — Feature 1 (proposal.md §1 & MySQL Integration).
-//
-// Inputs : total floors, floor area (sqft per floor), material quality grade
-//          (Standard / Premium / Luxury), basement flag, garage flag.
-// Outputs: cost split into structure / finishing / electrical / plumbing
-//          categories, with per-floor breakdown.
-//
-// Syncs rates dynamically from MySQL database (construction_rates table)
-// with built-in Bangladesh 2026 rule-of-thumb baseline defaults.
-// -----------------------------------------------------------------------------
 
-const BACKEND_BASE_URL = "http://localhost:4000";
+import { Platform } from "react-native";
 
-export const QUALITY_GRADES = ["standard", "premium", "luxury"];
+/*
+|--------------------------------------------------------------------------
+| API
+|--------------------------------------------------------------------------
+*/
 
-// Baseline construction rates per sqft (BDT) per quality grade
-export let RATE_PER_SQFT = {
-  standard: 2200,
-  premium: 2800,
-  luxury: 3600,
+export const COST_ESTIMATOR_API =
+  Platform.OS === "android"
+    ? "http://10.0.2.2:4000/api/cost-estimator"
+    : "http://localhost:4000/api/cost-estimator";
+
+/*
+|--------------------------------------------------------------------------
+| IMPORTANT
+|--------------------------------------------------------------------------
+| Backend এখনো connect করছি না।
+| আগে frontend calculation ঠিকমতো কাজ করাব।
+*/
+
+export const USE_MOCK_BACKEND = true;
+
+/*
+|--------------------------------------------------------------------------
+| ROOM DEFAULTS
+|--------------------------------------------------------------------------
+*/
+
+export const ROOM_DEFAULTS = {
+  bedroom: 120,
+  bathroom: 45,
+  living: 180,
+  dining: 120,
+  kitchen: 100,
+  balcony: 40,
+  other: 80,
 };
 
-// Baseline category shares
-export let CATEGORY_SHARE = {
-  structure: 0.45,
-  finishing: 0.3,
-  electrical: 0.12,
-  plumbing: 0.13,
+// Old component compatibility
+export const ROOM_DEFAULT_SIZES = ROOM_DEFAULTS;
+
+/*
+|--------------------------------------------------------------------------
+| QUALITY OPTIONS
+|--------------------------------------------------------------------------
+*/
+
+export const QUALITY_OPTIONS = [
+  {
+    value: "standard",
+    label: "Standard",
+    description: "Demo planning rate",
+  },
+  {
+    value: "premium",
+    label: "Premium",
+    description: "Demo planning rate",
+  },
+  {
+    value: "luxury",
+    label: "Luxury",
+    description: "Demo planning rate",
+  },
+];
+
+/*
+|--------------------------------------------------------------------------
+| DEMO COST RATES
+|--------------------------------------------------------------------------
+| These are NOT official government rates.
+|--------------------------------------------------------------------------
+*/
+
+const QUALITY_RATES = {
+  standard: 3500,
+  premium: 4500,
+  luxury: 6000,
 };
 
-// Extra built-up area assumptions
-export let BASEMENT_AREA_FACTOR = 0.9;
-export let BASEMENT_RATE_FACTOR = 1.25;
-export let GARAGE_AREA_SQFT = 250;
-export let GARAGE_RATE_FACTOR = 0.8;
+/*
+|--------------------------------------------------------------------------
+| COST BREAKDOWN
+|--------------------------------------------------------------------------
+*/
 
-let dbRatesLoaded = false;
+const CATEGORY_SHARES = [
+  ["Materials", 0.48],
+  ["Labour", 0.12],
+  ["Equipment", 0.05],
+  ["Electrical", 0.08],
+  ["Plumbing", 0.07],
+  ["Finishing", 0.12],
+  ["Other", 0.08],
+];
 
-/**
- * Fetch live construction rates from MySQL database.
- *
- * @returns {Promise<Object>}
- */
-export async function fetchLiveRatesFromDB() {
-  try {
-    const res = await fetch(`${BACKEND_BASE_URL}/api/costs/rates`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.rates) {
-        if (data.rates.standard?.rate_per_sqft) RATE_PER_SQFT.standard = data.rates.standard.rate_per_sqft;
-        if (data.rates.premium?.rate_per_sqft) RATE_PER_SQFT.premium = data.rates.premium.rate_per_sqft;
-        if (data.rates.luxury?.rate_per_sqft) RATE_PER_SQFT.luxury = data.rates.luxury.rate_per_sqft;
+/*
+|--------------------------------------------------------------------------
+| DEMO REGULATION RULES
+|--------------------------------------------------------------------------
+| Only for frontend testing.
+|--------------------------------------------------------------------------
+*/
 
-        const std = data.rates.standard;
-        if (std) {
-          if (std.structure_share) CATEGORY_SHARE.structure = std.structure_share;
-          if (std.finishing_share) CATEGORY_SHARE.finishing = std.finishing_share;
-          if (std.electrical_share) CATEGORY_SHARE.electrical = std.electrical_share;
-          if (std.plumbing_share) CATEGORY_SHARE.plumbing = std.plumbing_share;
-          if (std.basement_rate_factor) BASEMENT_RATE_FACTOR = std.basement_rate_factor;
-          if (std.basement_area_factor) BASEMENT_AREA_FACTOR = std.basement_area_factor;
-          if (std.garage_rate_factor) GARAGE_RATE_FACTOR = std.garage_rate_factor;
-          if (std.garage_area_sqft) GARAGE_AREA_SQFT = std.garage_area_sqft;
-        }
+const DEMO_RULES = {
+  rajuk: {
+    residential: {
+      coverage: 0.6,
+      far: 3.5,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
 
-        dbRatesLoaded = true;
-        return { source: "mysql", rates: data.rates };
-      }
-    }
-  } catch (err) {
-    console.warn("Could not fetch live rates from MySQL, using baseline rates:", err.message);
-  }
-  return { source: "baseline", rates: { standard: RATE_PER_SQFT.standard, premium: RATE_PER_SQFT.premium, luxury: RATE_PER_SQFT.luxury } };
-}
+    commercial: {
+      coverage: 0.65,
+      far: 4.0,
+      frontSetback: 6,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
 
-/**
- * Persist an estimate calculation to MySQL database.
- */
-export async function recordEstimateInDB(params, result, designTitle = null) {
-  try {
-    const res = await fetch(`${BACKEND_BASE_URL}/api/costs/estimate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        floors: result.floors,
-        floorAreaSqft: result.floorAreaSqft,
-        quality: result.quality,
-        hasBasement: params.hasBasement,
-        hasGarage: params.hasGarage,
-        designTitle: designTitle || params.designTitle || null,
-      }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      return data;
-    }
-  } catch (err) {
-    console.warn("Could not save estimate to MySQL database:", err.message);
-  }
-  return null;
-}
+    mixed: {
+      coverage: 0.6,
+      far: 3.75,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+  },
 
-export function normalizeQuality(quality) {
-  const q = String(quality || "standard").toLowerCase();
-  return QUALITY_GRADES.includes(q) ? q : "standard";
-}
+  cda: {
+    residential: {
+      coverage: 0.6,
+      far: 3.0,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
 
-/**
- * Estimate construction cost using MySQL rates or baseline.
- *
- * @param {object} params
- * @param {number|string} params.floors - total floors (>= 1)
- * @param {number|string} params.floorAreaSqft - floor area per floor in sqft (> 0)
- * @param {string} params.quality - standard | premium | luxury
- * @param {boolean} params.hasBasement
- * @param {boolean} params.hasGarage
- * @returns {object}
- */
-export function estimateConstructionCost({
-  floors,
-  floorAreaSqft,
-  quality,
-  hasBasement,
-  hasGarage,
-}) {
-  const grade = normalizeQuality(quality);
-  const ratePerSqft = RATE_PER_SQFT[grade] || 2200;
+    commercial: {
+      coverage: 0.65,
+      far: 3.5,
+      frontSetback: 6,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
 
-  const floorCount = Math.max(1, Math.floor(Number(floors) || 1));
-  const areaPerFloor = Math.max(0, Number(floorAreaSqft) || 0);
+    mixed: {
+      coverage: 0.6,
+      far: 3.25,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+  },
 
-  const basement = Boolean(hasBasement);
-  const garage = Boolean(hasGarage);
+  kda: {
+    residential: {
+      coverage: 0.6,
+      far: 3.0,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
 
-  const floorsCost = floorCount * areaPerFloor * ratePerSqft;
+    commercial: {
+      coverage: 0.65,
+      far: 3.5,
+      frontSetback: 6,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
 
-  const basementCost = basement
-    ? areaPerFloor * BASEMENT_AREA_FACTOR * ratePerSqft * BASEMENT_RATE_FACTOR
+    mixed: {
+      coverage: 0.6,
+      far: 3.25,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+  },
+
+  rda: {
+    residential: {
+      coverage: 0.6,
+      far: 3.0,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+
+    commercial: {
+      coverage: 0.65,
+      far: 3.5,
+      frontSetback: 6,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+
+    mixed: {
+      coverage: 0.6,
+      far: 3.25,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+  },
+
+  general: {
+    residential: {
+      coverage: 0.6,
+      far: 2.5,
+      frontSetback: 5,
+      rearSetback: 5,
+      sideSetback: 4,
+    },
+
+    commercial: {
+      coverage: 0.6,
+      far: 2.5,
+      frontSetback: 5,
+      rearSetback: 5,
+      sideSetback: 4,
+    },
+
+    mixed: {
+      coverage: 0.6,
+      far: 2.5,
+      frontSetback: 5,
+      rearSetback: 5,
+      sideSetback: 4,
+    },
+  },
+};
+
+/*
+|--------------------------------------------------------------------------
+| HELPERS
+|--------------------------------------------------------------------------
+*/
+
+const toNumber = (value) => {
+  const number = Number.parseFloat(value);
+
+  return Number.isFinite(number)
+    ? number
     : 0;
+};
 
-  const garageCost = garage
-    ? GARAGE_AREA_SQFT * ratePerSqft * GARAGE_RATE_FACTOR
-    : 0;
+const normalizeAuthority = (value) =>
+  String(value || "general").toLowerCase();
 
-  const baseCost = floorsCost + basementCost + garageCost;
+const normalizeBuildingType = (value) =>
+  String(value || "residential").toLowerCase();
 
-  const structure = baseCost * CATEGORY_SHARE.structure;
-  const finishing = baseCost * CATEGORY_SHARE.finishing;
-  const electrical = baseCost * CATEGORY_SHARE.electrical;
-  const plumbing = baseCost * CATEGORY_SHARE.plumbing;
+const normalizeQuality = (value) => {
+  const quality =
+    String(value || "standard").toLowerCase();
 
-  const total = structure + finishing + electrical + plumbing;
+  return QUALITY_RATES[quality]
+    ? quality
+    : "standard";
+};
 
-  const perFloor = [];
-  for (let i = 1; i <= floorCount; i += 1) {
-    perFloor.push({
-      floor: i,
-      areaSqft: areaPerFloor,
-      cost: areaPerFloor * ratePerSqft,
-    });
+/*
+|--------------------------------------------------------------------------
+| UNIT CONVERSION
+|--------------------------------------------------------------------------
+*/
+
+export function feetToMeter(value) {
+  return toNumber(value) * 0.3048;
+}
+
+export function meterToFeet(value) {
+  return toNumber(value) / 0.3048;
+}
+
+export function sqftToSqm(value) {
+  return toNumber(value) * 0.092903;
+}
+
+export function sqmToSqft(value) {
+  return toNumber(value) / 0.092903;
+}
+
+/*
+|--------------------------------------------------------------------------
+| LAND AREA
+|--------------------------------------------------------------------------
+*/
+
+export function calculateLandArea({
+  length,
+  width,
+  unit = "ft",
+} = {}) {
+  const l = toNumber(length);
+  const w = toNumber(width);
+
+  if (l <= 0 || w <= 0) {
+    return {
+      area: 0,
+      areaSqft: 0,
+      areaSqm: 0,
+    };
   }
-  if (basement) {
-    perFloor.push({
-      floor: 0,
-      label: "Basement",
-      areaSqft: areaPerFloor * BASEMENT_AREA_FACTOR,
-      cost: basementCost,
-    });
-  }
-  if (garage) {
-    perFloor.push({
-      label: "Garage",
-      areaSqft: GARAGE_AREA_SQFT,
-      cost: garageCost,
-    });
+
+  const isMeter =
+    String(unit).toLowerCase().startsWith("m");
+
+  let areaSqft;
+
+  if (isMeter) {
+    areaSqft = sqmToSqft(l * w);
+  } else {
+    areaSqft = l * w;
   }
 
-  const totalBuiltUpArea =
-    floorCount * areaPerFloor +
-    (basement ? areaPerFloor * BASEMENT_AREA_FACTOR : 0) +
-    (garage ? GARAGE_AREA_SQFT : 0);
+  const areaSqm =
+    sqftToSqm(areaSqft);
 
   return {
-    quality: grade,
-    floors: floorCount,
-    floorAreaSqft: areaPerFloor,
-    ratePerSqft,
-    floorsCost,
-    basementCost,
-    garageCost,
-    baseCost,
-    structure,
-    finishing,
-    electrical,
-    plumbing,
-    total,
-    perFloor,
-    totalBuiltUpArea,
+    area: areaSqft,
+    areaSqft,
+    areaSqm,
   };
 }
 
+/*
+|--------------------------------------------------------------------------
+| REGULATION
+|--------------------------------------------------------------------------
+*/
+
+export function getRegulationRules({
+  authority = "general",
+  buildingType = "residential",
+  roadWidth = 0,
+} = {}) {
+  const normalizedAuthority =
+    normalizeAuthority(authority);
+
+  const normalizedBuildingType =
+    normalizeBuildingType(buildingType);
+
+  const selectedRules =
+    DEMO_RULES[
+      normalizedAuthority
+    ]?.[
+      normalizedBuildingType
+    ] ||
+    DEMO_RULES.general.residential;
+
+  return {
+    ...selectedRules,
+
+    authority:
+      normalizedAuthority,
+
+    buildingType:
+      normalizedBuildingType,
+
+    roadWidth:
+      toNumber(roadWidth),
+
+    source:
+      "Frontend demo / sample values",
+
+    effectiveDate:
+      "Demo only",
+
+    isDemo: true,
+  };
+}
+
+/*
+|--------------------------------------------------------------------------
+| FETCH REGULATION
+|--------------------------------------------------------------------------
+*/
+
+export async function fetchRegulationRules(
+  params = {}
+) {
+  /*
+   * Backend OFF for now.
+   */
+
+  if (USE_MOCK_BACKEND) {
+    return getRegulationRules(params);
+  }
+
+  const response =
+    await fetch(
+      `${COST_ESTIMATOR_API}/regulations?authority=${encodeURIComponent(
+        params.authority || "general"
+      )}&buildingType=${encodeURIComponent(
+        params.buildingType || "residential"
+      )}&roadWidth=${toNumber(
+        params.roadWidth
+      )}`
+    );
+
+  if (!response.ok) {
+    throw new Error(
+      "Unable to load regulation rules."
+    );
+  }
+
+  return response.json();
+}
+
+/*
+|--------------------------------------------------------------------------
+| COST RATES
+|--------------------------------------------------------------------------
+*/
+
+export function getCostRates(
+  quality = "standard",
+  buildingType = "residential"
+) {
+  const normalizedQuality =
+    normalizeQuality(quality);
+
+  return {
+    quality:
+      normalizedQuality,
+
+    buildingType,
+
+    ratePerSqft:
+      QUALITY_RATES[
+        normalizedQuality
+      ],
+
+    source:
+      "Frontend demo / sample rate",
+
+    effectiveDate:
+      "Demo only",
+
+    isDemo: true,
+  };
+}
+
+/*
+|--------------------------------------------------------------------------
+| FETCH COST RATES
+|--------------------------------------------------------------------------
+*/
+
+export async function fetchCostRates({
+  quality = "standard",
+  buildingType = "residential",
+} = {}) {
+  if (USE_MOCK_BACKEND) {
+    return getCostRates(
+      quality,
+      buildingType
+    );
+  }
+
+  const response =
+    await fetch(
+      `${COST_ESTIMATOR_API}/rates?quality=${encodeURIComponent(
+        quality
+      )}&buildingType=${encodeURIComponent(
+        buildingType
+      )}`
+    );
+
+  if (!response.ok) {
+    throw new Error(
+      "Unable to load cost rates."
+    );
+  }
+
+  return response.json();
+}
+
+/*
+|--------------------------------------------------------------------------
+| ROOM AREA
+|--------------------------------------------------------------------------
+|
+| Supports:
+|
+| calculateRoomArea({
+|   count: 2,
+|   area: 120
+| })
+|
+| AND:
+|
+| calculateRoomArea({
+|   bedroom: {...},
+|   bathroom: {...}
+| })
+|
+|--------------------------------------------------------------------------
+*/
+
+export function calculateRoomArea(
+  roomsOrConfig = {},
+  maybeSize
+) {
+  if (
+    typeof roomsOrConfig.count !==
+    "undefined"
+  ) {
+    const count =
+      Math.max(
+        0,
+        toNumber(
+          roomsOrConfig.count
+        )
+      );
+
+    const area =
+      Math.max(
+        0,
+        toNumber(
+          roomsOrConfig.area ??
+            roomsOrConfig.size
+        )
+      );
+
+    return count * area;
+  }
+
+  if (
+    typeof maybeSize !==
+    "undefined"
+  ) {
+    return (
+      Math.max(
+        0,
+        toNumber(roomsOrConfig)
+      ) *
+      Math.max(
+        0,
+        toNumber(maybeSize)
+      )
+    );
+  }
+
+  return Object.values(
+    roomsOrConfig || {}
+  ).reduce(
+    (total, room) =>
+      total +
+      calculateRoomArea(room),
+    0
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| GROSS FLOOR AREA
+|--------------------------------------------------------------------------
+*/
+
+export function calculateGrossFloorArea(
+  netRoomArea,
+  allowancePercent = 20
+) {
+  const net =
+    Math.max(
+      0,
+      toNumber(netRoomArea)
+    );
+
+  const allowance =
+    Math.max(
+      0,
+      toNumber(allowancePercent)
+    );
+
+  return (
+    net *
+    (1 + allowance / 100)
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| BUILDABLE FOOTPRINT
+|--------------------------------------------------------------------------
+*/
+
+export function calculateBuildableFootprint({
+  landLength,
+  landWidth,
+  dimensionUnit = "ft",
+  roadFacing = "front",
+  rules,
+} = {}) {
+  const land =
+    calculateLandArea({
+      length: landLength,
+      width: landWidth,
+      unit: dimensionUnit,
+    });
+
+  const coverage =
+    Math.max(
+      0,
+      toNumber(
+        rules?.coverage
+      )
+    );
+
+  const coverageArea =
+    land.areaSqft *
+    coverage;
+
+  let lengthFt =
+    toNumber(landLength);
+
+  let widthFt =
+    toNumber(landWidth);
+
+  if (
+    String(
+      dimensionUnit
+    )
+      .toLowerCase()
+      .startsWith("m")
+  ) {
+    lengthFt =
+      meterToFeet(
+        lengthFt
+      );
+
+    widthFt =
+      meterToFeet(
+        widthFt
+      );
+  }
+
+  const front =
+    toNumber(
+      rules?.frontSetback
+    );
+
+  const rear =
+    toNumber(
+      rules?.rearSetback
+    );
+
+  const side =
+    toNumber(
+      rules?.sideSetback
+    );
+
+  const remainingLength =
+    Math.max(
+      0,
+      lengthFt -
+        front -
+        rear
+    );
+
+  const remainingWidth =
+    Math.max(
+      0,
+      widthFt -
+        side * 2
+    );
+
+  const setbackArea =
+    remainingLength *
+    remainingWidth;
+
+  return {
+    coverageArea,
+
+    setbackArea,
+
+    maxFootprint:
+      Math.max(
+        0,
+        Math.min(
+          coverageArea,
+          setbackArea
+        )
+      ),
+
+    roadFacing,
+  };
+}
+
+/*
+|--------------------------------------------------------------------------
+| COMPLETE ESTIMATE
+|--------------------------------------------------------------------------
+*/
+
+export function calculateEstimate({
+  land,
+  authority,
+  buildingType,
+  floors = [],
+  allowancePercent = 20,
+  quality = "standard",
+  hasBasement = false,
+  hasGarage = false,
+  rules,
+  rates,
+} = {}) {
+  const landInfo =
+    calculateLandArea(
+      land || {}
+    );
+
+  const selectedRules =
+    rules ||
+    getRegulationRules({
+      authority,
+      buildingType,
+      roadWidth:
+        land?.roadWidth,
+    });
+
+  const selectedRates =
+    rates ||
+    getCostRates(
+      quality,
+      buildingType
+    );
+
+  const footprint =
+    calculateBuildableFootprint({
+      landLength:
+        land?.length,
+
+      landWidth:
+        land?.width,
+
+      dimensionUnit:
+        land?.unit || "ft",
+
+      roadFacing:
+        land?.roadFacing ||
+        "front",
+
+      rules:
+        selectedRules,
+    });
+
+  /*
+   * Floor calculations
+   */
+
+  const floorBreakdown =
+    floors.map(
+      (floor, index) => {
+        const netRoomArea =
+          calculateRoomArea(
+            floor?.rooms || {}
+          );
+
+        const grossArea =
+          calculateGrossFloorArea(
+            netRoomArea,
+            allowancePercent
+          );
+
+        return {
+          floor:
+            floor?.floor ||
+            index + 1,
+
+          netRoomArea,
+
+          grossArea,
+        };
+      }
+    );
+
+  const totalGrossFloorArea =
+    floorBreakdown.reduce(
+      (total, floor) =>
+        total +
+        floor.grossArea,
+      0
+    );
+
+  const proposedGroundArea =
+    floorBreakdown[0]
+      ?.grossArea || 0;
+
+  /*
+   * FAR
+   */
+
+  const maxFarArea =
+    landInfo.areaSqft *
+    toNumber(
+      selectedRules.far
+    );
+
+  /*
+   * Maximum buildable footprint
+   */
+
+  const maxBuildableFootprint =
+    footprint.maxFootprint;
+
+  /*
+   * Construction cost
+   */
+
+  const baseRate =
+    toNumber(
+      selectedRates.ratePerSqft
+    ) ||
+    QUALITY_RATES[
+      normalizeQuality(
+        quality
+      )
+    ];
+
+  let costArea =
+    totalGrossFloorArea;
+
+  const basementArea =
+    hasBasement
+      ? maxBuildableFootprint
+      : 0;
+
+  const garageArea =
+    hasGarage
+      ? Math.min(
+          maxBuildableFootprint,
+          250
+        )
+      : 0;
+
+  costArea +=
+    basementArea +
+    garageArea;
+
+  const totalCost =
+    costArea *
+    baseRate;
+
+  /*
+   * Validation
+   */
+
+  const validation = [
+    {
+      label:
+        "Ground coverage",
+
+      value:
+        `${Math.round(
+          proposedGroundArea
+        ).toLocaleString()} / ${Math.round(
+          maxBuildableFootprint
+        ).toLocaleString()} sqft`,
+
+      status:
+        proposedGroundArea <=
+        maxBuildableFootprint
+          ? "pass"
+          : "fail",
+    },
+
+    {
+      label:
+        "FAR area",
+
+      value:
+        `${Math.round(
+          totalGrossFloorArea
+        ).toLocaleString()} / ${Math.round(
+          maxFarArea
+        ).toLocaleString()} sqft`,
+
+      status:
+        totalGrossFloorArea <=
+        maxFarArea
+          ? "pass"
+          : "fail",
+    },
+  ];
+
+  /*
+   * Breakdown
+   */
+
+  const breakdown =
+    CATEGORY_SHARES.map(
+      ([label, percentage]) => ({
+        label,
+
+        percentage:
+          percentage * 100,
+
+        amount:
+          totalCost *
+          percentage,
+      })
+    );
+
+  return {
+    landArea:
+      landInfo.areaSqft,
+
+    maxBuildableFootprint,
+
+    proposedGroundArea,
+
+    totalGrossFloorArea,
+
+    maxFarArea,
+
+    ratePerSqft:
+      baseRate,
+
+    totalCost,
+
+    validation,
+
+    breakdown,
+
+    floorBreakdown,
+
+    rules:
+      selectedRules,
+
+    rates:
+      selectedRates,
+
+    buildingArea: {
+      netRoomArea:
+        floorBreakdown.reduce(
+          (total, floor) =>
+            total +
+            floor.netRoomArea,
+          0
+        ),
+
+      grossFloorArea:
+        totalGrossFloorArea,
+
+      basementArea,
+
+      garageArea,
+    },
+
+    options: {
+      hasBasement,
+      hasGarage,
+      quality,
+    },
+
+    generatedAt:
+      new Date().toISOString(),
+  };
+}
+
+/*
+|--------------------------------------------------------------------------
+| OLD COMPONENT COMPATIBILITY
+|--------------------------------------------------------------------------
+|
+| DesignDetailModal still uses this function.
+|
+|--------------------------------------------------------------------------
+*/
+
+export function estimateConstructionCost({
+  floors = 1,
+  floorAreaSqft = 0,
+  quality = "standard",
+  hasBasement = false,
+  hasGarage = false,
+} = {}) {
+  const floorCount =
+    Math.max(
+      0,
+      toNumber(floors)
+    );
+
+  const floorArea =
+    Math.max(
+      0,
+      toNumber(
+        floorAreaSqft
+      )
+    );
+
+  const normalArea =
+    floorCount *
+    floorArea;
+
+  const basementArea =
+    hasBasement
+      ? floorArea
+      : 0;
+
+  const garageArea =
+    hasGarage
+      ? Math.min(
+          floorArea,
+          250
+        )
+      : 0;
+
+  const totalArea =
+    normalArea +
+    basementArea +
+    garageArea;
+
+  const rate =
+    QUALITY_RATES[
+      normalizeQuality(
+        quality
+      )
+    ];
+
+  const total =
+    totalArea * rate;
+
+  return {
+    total,
+
+    totalCost:
+      total,
+
+    ratePerSqft:
+      rate,
+
+    areaSqft:
+      totalArea,
+  };
+}
+
+/*
+|--------------------------------------------------------------------------
+| SAVE ESTIMATE
+|--------------------------------------------------------------------------
+*/
+
+export async function saveEstimate(
+  payload
+) {
+  /*
+   * Backend OFF.
+   * Local demo save.
+   */
+
+  if (USE_MOCK_BACKEND) {
+    return {
+      success: true,
+
+      id:
+        `DEMO-${Date.now()}`,
+
+      source:
+        "frontend-demo",
+    };
+  }
+
+  const response =
+    await fetch(
+      `${COST_ESTIMATOR_API}/estimates`,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body:
+          JSON.stringify(
+            payload
+          ),
+      }
+    );
+
+  if (!response.ok) {
+    throw new Error(
+      "Unable to save estimate."
+    );
+  }
+
+  return response.json();
+}
+
+/*
+|--------------------------------------------------------------------------
+| BACKWARD COMPATIBILITY
+|--------------------------------------------------------------------------
+*/
+
+export async function fetchLiveRatesFromDB() {
+  return {
+    source:
+      "frontend-demo",
+
+    rates:
+      QUALITY_RATES,
+  };
+}
+
+export async function recordEstimateInDB(
+  estimate
+) {
+  return saveEstimate(
+    estimate
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| FORMATTERS
+|--------------------------------------------------------------------------
+*/
+
 export function formatBDT(value) {
-  return `৳ ${Math.round(value || 0).toLocaleString()}`;
+  return `৳${Math.round(
+    toNumber(value)
+  ).toLocaleString("en-BD")}`;
+}
+
+export function formatSqft(value) {
+  return `${Math.round(
+    toNumber(value)
+  ).toLocaleString("en-US")} sqft`;
 }
