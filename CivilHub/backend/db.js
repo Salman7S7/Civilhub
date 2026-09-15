@@ -1,11 +1,7 @@
-<<<<<<< HEAD
-=======
 // backend/db.js
 // -----------------------------------------------------------------------------
 // MySQL Database Pool Configuration for CivilHub Platform
 // -----------------------------------------------------------------------------
-
->>>>>>> 1d77ade9f4136ab751bba05246639194e714c5cd
 require("dotenv").config();
 const mysql = require("mysql2/promise");
 
@@ -23,19 +19,12 @@ const DB_CONFIG = {
 let pool = null;
 let isConnected = false;
 
-<<<<<<< HEAD
-
-async function initDB() {
-  try {
-    
-=======
 /**
  * Initialize MySQL Connection Pool and ensure all required tables exist.
  */
 async function initDB() {
   try {
     // 1. Create database if it does not exist
->>>>>>> 1d77ade9f4136ab751bba05246639194e714c5cd
     const rootConnection = await mysql.createConnection({
       host: DB_CONFIG.host,
       user: DB_CONFIG.user,
@@ -55,12 +44,7 @@ async function initDB() {
     const testConn = await pool.getConnection();
     testConn.release();
 
-<<<<<<< HEAD
     const createTableQuery = `
-=======
-    // 3. Ensure designs table exists
-    await pool.query(`
->>>>>>> 1d77ade9f4136ab751bba05246639194e714c5cd
       CREATE TABLE IF NOT EXISTS designs (
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(150) NOT NULL,
@@ -86,7 +70,7 @@ async function initDB() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       );
-    `);
+    `;
 
     // Helper to safely add column if not exists
     const addColumnIfNotExists = async (colName, colDef) => {
@@ -181,7 +165,6 @@ async function initDB() {
       console.log("[MySQL] Default construction rates seeded successfully.");
     }
 
-<<<<<<< HEAD
     await pool.query(createTableQuery);
 
     await pool.query(`
@@ -194,8 +177,6 @@ async function initDB() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       );
     `);
-=======
->>>>>>> 1d77ade9f4136ab751bba05246639194e714c5cd
     isConnected = true;
     console.log(`[MySQL] Connected to database '${DB_CONFIG.database}' successfully.`);
     return true;
