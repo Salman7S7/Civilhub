@@ -1,4 +1,5 @@
 // src/services/expertChatService.js
+import { BACKEND_BASE_URL } from "./apiConfig";
 // -----------------------------------------------------------------------------
 // Service layer for Feature: "Chat with Expert" (Hybrid Model).
 // Provides:
@@ -294,7 +295,7 @@ export async function queryAiCivilExpert(userPrompt, activeContext = null) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-    const res = await fetch("http://localhost:4000/api/ask-building-code", {
+    const res = await fetch(`${BACKEND_BASE_URL}/api/ask-building-code`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question: enrichedPrompt }),

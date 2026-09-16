@@ -1,6 +1,6 @@
 // src/services/costEstimator.js
 
-import { Platform } from "react-native";
+import { BACKEND_BASE_URL } from "./apiConfig";
 
 /*
 |--------------------------------------------------------------------------
@@ -9,9 +9,7 @@ import { Platform } from "react-native";
 */
 
 export const COST_ESTIMATOR_API =
-  Platform.OS === "android"
-    ? "http://10.0.2.2:4000/api/cost-estimator"
-    : "http://localhost:4000/api/cost-estimator";
+  `${BACKEND_BASE_URL}/api/cost-estimator`;
 
 /*
 |--------------------------------------------------------------------------

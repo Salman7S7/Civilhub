@@ -15,6 +15,7 @@ const DB_CONFIG = {
   connectionLimit: 10,
   queueLimit: 0,
 };
+const DB_ENABLED = process.env.DB_ENABLED !== "false";
 
 let pool = null;
 let isConnected = false;
@@ -23,6 +24,12 @@ let isConnected = false;
  * Initialize MySQL Connection Pool and ensure all required tables exist.
  */
 async function initDB() {
+  if (!DB_ENABLED) {
+    isConnected = false;
+    console.log("[MySQL] Disabled for local development. Using built-in catalog data.");
+    return false;
+  }
+
   try {
     // 1. Create database if it does not exist
     const rootConnection = await mysql.createConnection({
@@ -199,6 +206,7 @@ async function query(sql, params = []) {
 
 function getStatus() {
   return {
+    enabled: DB_ENABLED,
     connected: isConnected,
     database: DB_CONFIG.database,
     host: DB_CONFIG.host,

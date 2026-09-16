@@ -98,6 +98,16 @@ function ResultCard({ result }) {
         <Ionicons name={c.icon} size={22} color={c.text} />
         <Text style={[styles.resultStatus, { color: c.text }]}>{result.status}</Text>
       </View>
+
+      {result.authority && (
+        <View style={styles.authorityBadgeRow}>
+          <Ionicons name="business" size={13} color="#1d4ed8" />
+          <Text style={styles.authorityBadgeText}>
+            {result.authority.authorityName}
+          </Text>
+        </View>
+      )}
+
       <Text style={styles.resultMessage}>{result.message}</Text>
 
       <View style={styles.resultDivider} />
@@ -106,6 +116,23 @@ function ResultCard({ result }) {
         <Text style={styles.resultRowLabel}>Max Recommended Height</Text>
         <Text style={styles.resultRowValue}>{result.maxRecommendedHeight}</Text>
       </View>
+
+      {result.authority && (
+        <View style={styles.resultRow}>
+          <Text style={styles.resultRowLabel}>Governing Bylaw</Text>
+          <Text style={[styles.resultRowValue, { flex: 1, textAlign: "right" }]}>
+            {result.authority.governingBylaw}
+          </Text>
+        </View>
+      )}
+
+      <View style={styles.resultRow}>
+        <Text style={styles.resultRowLabel}>National Baseline</Text>
+        <Text style={[styles.resultRowValue, { flex: 1, textAlign: "right" }]}>
+          {result.authority?.baselineCode || "BNBC 2020"}
+        </Text>
+      </View>
+
       <View style={styles.resultRow}>
         <Text style={styles.resultRowLabel}>Setback Notes</Text>
         <Text style={[styles.resultRowValue, { flex: 1, textAlign: "right" }]}>
@@ -127,9 +154,14 @@ function ResultCard({ result }) {
       )}
 
       <Text style={styles.disclaimer}>
-        Planning estimate only — confirm with RAJUK/CDA/RDA/KDA Land Use
-        Clearance and a licensed structural engineer before construction.
+        Planning estimate only — confirm with {result.authority?.shortName || "RAJUK/CDA/RDA/KDA"} Land Use
+        Clearance (LUC) and a licensed structural engineer before construction.
       </Text>
+      {result.authority?.officialPortal && (
+        <Text style={styles.portalLink}>
+          Official Portal: {result.authority.officialPortal}
+        </Text>
+      )}
     </View>
   );
 }
@@ -459,5 +491,30 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: "center",
     lineHeight: 14,
+  },
+  authorityBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#eff6ff",
+    borderColor: "#bfdbfe",
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: "flex-start",
+    marginTop: 6,
+    gap: 5,
+  },
+  authorityBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#1d4ed8",
+  },
+  portalLink: {
+    fontSize: 10,
+    color: "#2563eb",
+    textAlign: "center",
+    marginTop: 4,
+    fontWeight: "500",
   },
 });

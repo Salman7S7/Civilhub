@@ -8,6 +8,11 @@
 4. Run `npm install`.
 5. Run `npm start`.
 
+For local development without MySQL, run `DB_ENABLED=false npm start` (or use
+the root project's `npm run backend` command on Windows). The backend will use
+its built-in catalog fallback. Set `DB_ENABLED=true` and configure the MySQL
+values in `.env` when MySQL is available.
+
 The backend creates the `civilhub_db`, `users` and `designs` tables automatically.
 
 ## Authentication endpoints
