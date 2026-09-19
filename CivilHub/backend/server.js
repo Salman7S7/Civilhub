@@ -22,14 +22,42 @@ const app = express();
 const fallbackUsers = [
   {
     id: 1,
-    name: "CivilHub Engineer",
+    name: "CivilHub Client",
     email: "demo@civilhub.com",
+    role: "client",
+    engineerType: null,
     passwordHash: bcrypt.hashSync("password123", 10),
   },
   {
     id: 2,
-    name: "Salman",
+    name: "Client Salman",
     email: "salman@civilhub.com",
+    role: "client",
+    engineerType: null,
+    passwordHash: bcrypt.hashSync("password123", 10),
+  },
+  {
+    id: 3,
+    name: "Ar. Nusrat Jahan",
+    email: "arc@civilhub.com",
+    role: "engineer",
+    engineerType: "architect",
+    passwordHash: bcrypt.hashSync("password123", 10),
+  },
+  {
+    id: 4,
+    name: "Engr. Tanvir Ahmed, PEng",
+    email: "structure@civilhub.com",
+    role: "engineer",
+    engineerType: "structural",
+    passwordHash: bcrypt.hashSync("password123", 10),
+  },
+  {
+    id: 5,
+    name: "Engr. Mohammad Rafiqul",
+    email: "soil@civilhub.com",
+    role: "engineer",
+    engineerType: "soil",
     passwordHash: bcrypt.hashSync("password123", 10),
   },
 ];
@@ -91,7 +119,13 @@ Rules for your answers:
 
 function createToken(user) {
   return jwt.sign(
-    { sub: user.id, email: user.email, name: user.name },
+    {
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role || "client",
+      engineerType: user.engineerType || null,
+    },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }
   );
@@ -221,6 +255,13 @@ app.post("/api/auth/register", async (req, res) => {
     const name = String(req.body.name || "").trim();
     const email = String(req.body.email || "").trim().toLowerCase();
     const password = String(req.body.password || "");
+    const role = req.body.role === "engineer" ? "engineer" : "client";
+    let engineerType = null;
+    if (role === "engineer") {
+      engineerType = ["architect", "structural", "soil"].includes(req.body.engineerType)
+        ? req.body.engineerType
+        : "structural";
+    }
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: "Name, email and password are required." });
@@ -241,9 +282,9 @@ app.post("/api/auth/register", async (req, res) => {
       }
 
       const passwordHash = await bcrypt.hash(password, 12);
-      const user = { id: Date.now(), name, email, passwordHash };
+      const user = { id: Date.now(), name, email, role, engineerType, passwordHash };
       fallbackUsers.push(user);
-      const safeUser = { id: user.id, name: user.name, email: user.email };
+      const safeUser = { id: user.id, name: user.name, email: user.email, role: user.role, engineerType: user.engineerType };
       return res.status(201).json({ success: true, token: createToken(safeUser), user: safeUser });
     }
 
@@ -253,11 +294,20 @@ app.post("/api/auth/register", async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const result = await query(
-      "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-      [name, email, passwordHash]
-    );
-    const user = { id: result.insertId, name, email };
+    let user;
+    try {
+      const result = await query(
+        "INSERT INTO users (name, email, password_hash, role, engineer_type) VALUES (?, ?, ?, ?, ?)",
+        [name, email, passwordHash, role, engineerType]
+      );
+      user = { id: result.insertId, name, email, role, engineerType };
+    } catch {
+      const result = await query(
+        "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+        [name, email, passwordHash]
+      );
+      user = { id: result.insertId, name, email, role, engineerType };
+    }
 
     return res.status(201).json({ success: true, token: createToken(user), user });
   } catch (error) {
@@ -270,6 +320,8 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     const email = String(req.body.email || "").trim().toLowerCase();
     const password = String(req.body.password || "");
+    const reqRole = req.body.role;
+    const reqEngineerType = req.body.engineerType;
 
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required." });
@@ -286,7 +338,9 @@ app.post("/api/auth/login", async (req, res) => {
         return res.status(401).json({ error: "Invalid email or password." });
       }
 
-      const safeUser = { id: user.id, name: user.name, email: user.email };
+      const role = reqRole || user.role || "client";
+      const engineerType = role === "engineer" ? (reqEngineerType || user.engineerType || "structural") : null;
+      const safeUser = { id: user.id, name: user.name, email: user.email, role, engineerType };
       return res.json({ success: true, token: createToken(safeUser), user: safeUser });
     }
 
@@ -301,7 +355,9 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
-    const safeUser = { id: user.id, name: user.name, email: user.email };
+    const role = reqRole || user.role || "client";
+    const engineerType = role === "engineer" ? (reqEngineerType || user.engineer_type || "structural") : null;
+    const safeUser = { id: user.id, name: user.name, email: user.email, role, engineerType };
     return res.json({ success: true, token: createToken(safeUser), user: safeUser });
   } catch (error) {
     console.error("Login error:", error);
