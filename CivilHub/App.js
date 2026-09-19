@@ -14,7 +14,7 @@ export default function App() {
       <StatusBar style="light" />
       <NavigationContainer>
         {session ? (
-          <BottomTabNavigator onLogout={() => setSession(null)} />
+          <BottomTabNavigator session={session} onLogout={() => setSession(null)} />
         ) : (
           <LoginScreen onLoginSuccess={setSession} />
         )}
