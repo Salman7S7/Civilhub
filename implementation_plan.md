@@ -1,69 +1,73 @@
-# Implementation Plan: Authority-Specific Building Rules (RAJUK, CDA, KDA, RDA)
+# Implementation Plan: Client & Engineer Profiles with Dedicated Client-Engineer Chat
 
-Refactor `feasibilityRules.js` and `FeasibilityForm.jsx` from a single generic Dhaka/RAJUK model into authentic, authority-specific rule sets grounded in Bangladesh Government building codes (BNBC 2020) and individual urban development authority bylaws.
+Add two profiles on the login page (Client and Engineer, with 3 engineer disciplines: Architect, Structure Eng, Soil Eng), remove guest login, remove 1-tap direct login, remove all photos/profile pics on login, and restrict all engineer profiles to chat exclusively with Client.
 
-## User Review Required
-
-> [!IMPORTANT]
-> Bangladesh building regulations divide into two layers:
-> 1. **National Baseline (BNBC 2020 - Gazetted Feb 2021)**: Applies nationwide across all districts (e.g., lift mandatory > 6 storeys / 20m, dual fire staircases > 10 storeys / 33m, fire department NOC, structural/soil test signoffs).
-> 2. **Authority-Specific Bylaws & Master Plans**:
->    - **RAJUK (Dhaka)**: *Dhaka Mohanagar Imarat Nirman Bidhimala 2008* & *Detailed Area Plan (DAP 2022–2035)*. Strict 18 ft plot entrance rule, zone-based FAR.
->    - **CDA (Chattogram)**: *Chattogram Imarat Nirman Bidhimala 2008* & *CDA Master Plan*. 3.75m (12.3 ft) public road threshold, strict **Hill Cutting Prohibition** (Environment Conservation Act), and coastal salinity considerations.
->    - **KDA (Khulna)**: *Khulna Development Authority Imarat Nirman Bidhimala* & *Khulna Master Plan*. 3.0m–3.65m (10–12 ft) residential access minimum, soft alluvial soil / salinity foundation clearance.
->    - **RDA (Rajshahi)**: *Rajshahi Development Authority Act 2018* & *RDA Master Plan*. Light-angle/road width ratio provisions, Padma river embankment buffer clearance.
+## User Requirements Checklist
+- [x] Login page: 2 profiles (`Client` and `Engineer`).
+- [x] In Engineer: 3 engineer disciplines (`Architect`, `Structure Eng`, `Soil Eng`).
+- [x] No profile picture or photo whatsoever on login page.
+- [x] No 1-tap direct login system (removed Google 1-tap login).
+- [x] No guest login (removed guest mode).
+- [x] All engineer profiles can talk to Client only (e.g., Structure Eng can chat with Client only; no engineer-to-engineer chat).
+- [x] Keep all existing navbar tabs intact; do not create extra work.
 
 ## Proposed Changes
 
-### Logic & Rule Sets
+### Backend & Authentication Services
 
-#### [MODIFY] [feasibilityRules.js](file:///c:/Users/Salman/Desktop/Civilhub/CivilHub/src/services/feasibilityRules.js)
-- Define `AUTHORITY_CONFIGS` containing verified parameters for:
-  - **`RAJUK`**: Dhaka Mohanagar Imarat Nirman Bidhimala & DAP 2022-2035.
-    - Min Gate Width: 18 ft (plan approval gate frontage).
-    - Road Width bands: Under 12 ft (max 3), 12–19 ft (max 5-6), 20–24 ft (max 7), 25–39 ft (max 10), 40+ ft (max 14–20).
-    - Specific checks: DAP zone FAR variations, CAAB runway elevation clearances.
-  - **`CDA`**: Chattogram Imarat Nirman Bidhimala & CDA Master Plan.
-    - Min Road/Gate: 10 ft private / 12.3 ft (3.75m) public road.
-    - Road Width bands: Under 10 ft (max 2–3), 10–15 ft (max 4–5), 16–23 ft (max 6–7), 24–35 ft (max 8–10), 36+ ft (max 12+).
-    - Specific checks: Mandatory DOE Hill-Cutting Clearance if on or near sloped terrain (Pahartali, Khulshi, Foy's Lake, Nasirabad); coastal salinity protection.
-  - **`KDA`**: Khulna Development Authority Imarat Nirman Bidhimala.
-    - Min Road/Gate: 10 ft for residential plots (not 18 ft).
-    - Road Width bands: Under 10 ft (max 2–3), 10–15 ft (max 4–5), 16–22 ft (max 6–7), 23–32 ft (max 8–9), 33+ ft (max 10+).
-    - Specific checks: Soft coastal alluvial soil geotechnical investigation warning; KDA Master Plan drainage corridor setback.
-  - **`RDA`**: Rajshahi Development Authority Act & Building Regulations.
-    - Min Road/Gate: 10 ft residential.
-    - Road Width bands: Under 10 ft (max 2–3), 10–14 ft (max 4), 15–21 ft (max 6–7), 22–30 ft (max 8), 31+ ft (max 10+).
-    - Specific checks: Padma river embankment buffer zone check; Barind soil seismic considerations.
-- Retain BNBC 2020 national compliance rules for all authorities:
-  - Mandatory Lift above 6 storeys (>20m).
-  - Mandatory 2nd exit / fire staircase above 10 storeys (>33m).
-  - Fire Service & Civil Defence NOC requirement.
-- In `evaluateFeasibility()`:
-  - Dynamically match the authority (`RAJUK`, `CDA`, `KDA`, `RDA`).
-  - Compute `maxAllowedStories`, status, messages, setbacks, and flags based on the chosen authority's exact parameters and official bylaw citations.
-  - Return `governingBylaw`, `authorityName`, and localized legal reference text.
+#### [MODIFY] [server.js](file:///c:/Users/Salman/Desktop/Civilhub/Civilhub/CivilHub/backend/server.js)
+- Update `fallbackUsers` to include:
+  - `client@civilhub.com` (role: `client`)
+  - `structure@civilhub.com` (role: `engineer`, engineerType: `structural`)
+  - `arc@civilhub.com` (role: `engineer`, engineerType: `architect`)
+  - `soil@civilhub.com` (role: `engineer`, engineerType: `soil`)
+- In `POST /api/auth/register`, support `role` (`client` | `engineer`) and `engineerType` (`architect` | `structural` | `soil`).
+- In `POST /api/auth/login`, accept and persist the selected profile role and engineer type in user session.
+
+#### [MODIFY] [authService.js](file:///c:/Users/Salman/Desktop/Civilhub/Civilhub/CivilHub/src/services/authService.js)
+- Update `loginUser(email, password, role, engineerType)` and `registerUser(name, email, password, role, engineerType)`.
+- Support seamless offline demo session with the selected role and engineer discipline.
+- Remove `createGuestSession`.
 
 ---
 
-### UI Components
+### UI Components & Navigation
 
-#### [MODIFY] [FeasibilityForm.jsx](file:///c:/Users/Salman/Desktop/Civilhub/CivilHub/src/components/FeasibilityForm.jsx)
-- Update `ResultCard` to display:
-  - **Governing Bylaw / Code Badge** (e.g. *"Khulna Development Authority (KDA) Imarat Nirman Bidhimala & BNBC 2020"*).
-  - Authority-specific compliance notices and legal caveats.
-  - Clear distinction between national BNBC life-safety rules vs local authority zoning rules.
+#### [MODIFY] [LoginScreen.jsx](file:///c:/Users/Salman/Desktop/Civilhub/Civilhub/CivilHub/src/screens/LoginScreen.jsx)
+- Remove `HERO_IMAGE_URL` and `ImageBackground` (pure modern gradient card design with vector icon, no photos or profile pictures).
+- Remove "Continue as Guest" and "Continue with Google" buttons.
+- Add Profile Selector:
+  - Primary tabs: **Client** (`client`) vs **Engineer** (`engineer`).
+  - When Engineer is active: 3-way toggle for **Architect (Arc)**, **Structure Eng**, and **Soil Eng**.
+- Pass selected profile data to authentication methods.
 
-## Verification Plan
+#### [MODIFY] [App.js](file:///c:/Users/Salman/Desktop/Civilhub/Civilhub/CivilHub/App.js)
+- Pass active `session` object to `BottomTabNavigator`.
 
-### Automated Tests / Lint
-- Test `feasibilityRules.js` evaluation with multiple authority inputs:
-  - `RAJUK` with 20 ft road -> 7 storeys (Conditional, 18 ft gate rule).
-  - `KDA` with 20 ft road -> 6-7 storeys (uses KDA bylaw, soft soil note, no 18 ft gate block).
-  - `CDA` with 20 ft road -> 6-7 storeys (triggers CDA hill-cutting / coastal compliance notes).
-  - `RDA` with 20 ft road -> 6-7 storeys (triggers RDA Padma buffer / Barind note).
+#### [MODIFY] [BottomTabNavigator.jsx](file:///c:/Users/Salman/Desktop/Civilhub/Civilhub/CivilHub/src/navigation/BottomTabNavigator.jsx)
+- Receive `session` prop.
+- Display current profile badge (e.g. `Client`, `Structure Eng`, `Architect`, `Soil Eng`) next to the Logout button.
+- Pass `session` to `ExpertChatScreen`.
+- Preserve all 5 tabs (`Feasibility`, `Smart Designs`, `Cost Estimator`, `Land Tax`, `Ask Expert`).
 
-### Manual Verification
-- Verify in the running web application (`npm run web` at `http://localhost:8081`):
-  - Switch between RAJUK, CDA, KDA, RDA with identical inputs (e.g. 5 katha, 20 ft road, 7 storeys).
-  - Verify that KDA displays KDA-specific bylaws, CDA displays CDA bylaws and terrain warnings, etc.
+---
+
+### Chat Architecture: Client-Only Engineer Messaging
+
+#### [MODIFY] [expertChatService.js](file:///c:/Users/Salman/Desktop/Civilhub/Civilhub/CivilHub/src/services/expertChatService.js)
+- Support thread isolation:
+  - `thread_client_architect`
+  - `thread_client_structural`
+  - `thread_client_soil`
+- Configure discipline-specific welcome messages and consultation triage.
+
+#### [MODIFY] [ExpertChatScreen.jsx](file:///c:/Users/Salman/Desktop/Civilhub/Civilhub/CivilHub/src/screens/ExpertChatScreen.jsx)
+- **If logged in as Engineer** (e.g. Structure Eng):
+  - Fixed to the dedicated engineer-client consultation thread (`thread_client_structural`).
+  - Header displays: "Client Consultation (Talking with Client Only)".
+  - Directory / escalation to other engineers is removed.
+  - Engineer messages render on right, Client messages render on left.
+- **If logged in as Client**:
+  - Client can switch between the 3 engineers using top discipline chips: [ 📐 Architect ] [ 🏗️ Structure Eng ] [ 🧪 Soil Eng ].
+  - Client sends questions directly to the selected engineer's thread.
+  - Client messages render on right, Engineer replies render on left.
