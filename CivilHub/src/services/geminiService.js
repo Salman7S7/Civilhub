@@ -15,10 +15,13 @@
 //   - Android Emulator:                        http://10.0.2.2:4000
 //   - Physical phone (same Wi-Fi as your PC):  http://<your-computer-LAN-IP>:4000
 import { BACKEND_BASE_URL } from "./apiConfig";
+import { generateLocalCivilConsultation } from "./expertChatService";
 
 /**
  * Sends a user question to our backend, which forwards it to Gemini with the
  * BNBC/RAJUK domain context attached, and returns the plain-text answer.
+ *
+ * If backend is offline, automatically falls back to the built-in BNBC civil engine.
  *
  * @param {string} userPrompt - The raw question typed by the user in the chat UI.
  * @returns {Promise<string>} - The AI-generated answer text.
@@ -46,9 +49,17 @@ export async function askBuildingCodeAI(userPrompt) {
       "Sorry, I couldn't generate an answer for that. Please try rephrasing your question."
     );
   } catch (error) {
-    console.error("askBuildingCodeAI failed:", error);
-    throw new Error(
-      "Couldn't reach the Building Code AI Assistant. Make sure the backend server is running (see backend/README), and that BACKEND_BASE_URL in geminiService.js is reachable from this device."
+    console.warn(
+      "askBuildingCodeAI backend unreachable, using local BNBC 2020 engine fallback:",
+      error.message
     );
+    try {
+      return generateLocalCivilConsultation(userPrompt.trim());
+    } catch (_fallbackErr) {
+      return (
+        "BNBC 2020 Guidance: Ensure mandatory road setback (min 1.5m), side setbacks (min 1.0m–1.25m), and confirm FAR with your local development authority (RAJUK/CDA/RDA/KDA).\n\n" +
+        "*Disclaimer: Final approval depends on the relevant authority and a licensed structural engineer.*"
+      );
+    }
   }
 }
