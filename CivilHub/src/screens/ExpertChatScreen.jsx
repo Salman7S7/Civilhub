@@ -1,15 +1,4 @@
 // src/screens/ExpertChatScreen.jsx
-// -----------------------------------------------------------------------------
-// Main screen for Feature: "Chat with Expert" (Hybrid Model).
-// Provides:
-//   1. AI Civil Engineering Consultant triage (BNBC 2020 & RAJUK rules)
-//   2. Active plot/project context banner
-//   3. Quick discussion starter prompt chips
-//   4. Polymorphic message bubbles (User, AI Consultant, Human Engineer)
-//   5. Escalation prompt to connect with licensed human engineers
-//   6. Persistent chat history with AsyncStorage
-// -----------------------------------------------------------------------------
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -22,7 +11,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -30,28 +18,41 @@ import {
   getChatHistory,
   appendChatMessage,
   clearChatHistory,
-  queryAiCivilExpert,
+  queryEngineerExpert,
+  getThreadIdForEngineer,
+  ENGINEER_SPECS,
+  THREAD_STRUCTURAL,
+  THREAD_ARCHITECT,
+  THREAD_SOIL,
 } from "../services/expertChatService";
-import ExpertDirectoryModal from "../components/chat/ExpertDirectoryModal";
 
-const QUICK_STARTER_PROMPTS = [
-  { label: "📐 Setbacks", prompt: "What are the front, rear, and side setback rules under RAJUK?" },
-  { label: "🏗️ Soil & Piling", prompt: "When is cast-in-situ bored piling mandatory according to BNBC 2020?" },
-  { label: "🏢 Permissible FAR", prompt: "How is FAR (Floor Area Ratio) calculated for a multi-story building?" },
-  { label: "💰 Construction Cost", prompt: "What is the average RCC structural cost per sqft in Dhaka right now?" },
-  { label: "🚗 Parking Rules", prompt: "What is the mandatory car parking requirement for residential apartments?" },
+const ENGINEER_CHIPS = [
+  { id: "architect", label: "Arc (Architect)", icon: "drawing" },
+  { id: "structural", label: "Structure Eng", icon: "pillar" },
+  { id: "soil", label: "Soil Eng", icon: "shovel" },
 ];
 
-export default function ExpertChatScreen({ route, navigation, onOpenExpertDirectory }) {
-  // Extract initial context passed from Feasibility or Design Suggestions screens
-  const initialContext = route?.params?.initialContext || null;
+export default function ExpertChatScreen({ route, session }) {
+  const user = session?.user;
+  const isEngineer = user?.role === "engineer";
+  const engineerDiscipline = user?.engineerType || "structural";
 
+  // For Client: can switch which engineer to consult (Arc, Structure Eng, Soil Eng)
+  // For Engineer: locked strictly to their own discipline to talk to Client only!
+  const [selectedDiscipline, setSelectedDiscipline] = useState(
+    isEngineer ? engineerDiscipline : "structural"
+  );
+
+  const activeDiscipline = isEngineer ? engineerDiscipline : selectedDiscipline;
+  const activeThreadId = getThreadIdForEngineer(activeDiscipline);
+  const activeSpec = ENGINEER_SPECS[activeDiscipline] || ENGINEER_SPECS.structural;
+
+  const initialContext = route?.params?.initialContext || null;
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [activeContext, setActiveContext] = useState(initialContext);
   const [loadingHistory, setLoadingHistory] = useState(true);
-  const [directoryVisible, setDirectoryVisible] = useState(false);
 
   const scrollViewRef = useRef(null);
 
@@ -62,61 +63,91 @@ export default function ExpertChatScreen({ route, navigation, onOpenExpertDirect
     }
   }, [route?.params?.initialContext]);
 
-  // Load chat history on mount
+  // Load chat history whenever activeThreadId changes
   useEffect(() => {
+    let isMounted = true;
     async function loadHistory() {
+      setLoadingHistory(true);
       try {
-        const history = await getChatHistory();
-        setMessages(history);
+        const history = await getChatHistory(activeThreadId);
+        if (isMounted) setMessages(history);
       } catch (err) {
         console.error("Failed to load chat history:", err);
       } finally {
-        setLoadingHistory(false);
+        if (isMounted) setLoadingHistory(false);
       }
     }
     loadHistory();
-  }, []);
+    return () => {
+      isMounted = false;
+    };
+  }, [activeThreadId]);
 
-  // Auto-scroll to bottom on new messages or typing
+  // Auto-scroll to bottom
   const scrollToBottom = () => {
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 120);
+    }, 100);
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  // Handle sending a message
+  // Send message
   const handleSend = async (textToSend = inputText) => {
     const trimmed = (textToSend || "").trim();
     if (!trimmed || isTyping) return;
 
     setInputText("");
 
-    // 1. Optimistically append user message
-    try {
-      const savedUserMsg = await appendChatMessage({
-        text: trimmed,
-        senderRole: "user",
-        senderName: "Landowner",
-        attachedContext: activeContext,
-      });
+    if (isEngineer) {
+      // 1. ENGINEER LOGGED IN: Talks to Client only
+      try {
+        const savedEngineerMsg = await appendChatMessage(
+          {
+            text: trimmed,
+            senderRole: "engineer",
+            engineerType: activeDiscipline,
+            senderName: user?.name || activeSpec.name,
+            attachedContext: activeContext,
+          },
+          activeThreadId
+        );
+        setMessages((prev) => [...prev, savedEngineerMsg]);
+      } catch (err) {
+        Alert.alert("Error", err.message || "Failed to send message.");
+      }
+    } else {
+      // 2. CLIENT LOGGED IN: Sends question to active Engineer
+      try {
+        const savedClientMsg = await appendChatMessage(
+          {
+            text: trimmed,
+            senderRole: "client",
+            senderName: user?.name || "Client",
+            attachedContext: activeContext,
+          },
+          activeThreadId
+        );
 
-      setMessages((prev) => [...prev, savedUserMsg]);
-      setIsTyping(true);
+        setMessages((prev) => [...prev, savedClientMsg]);
+        setIsTyping(true);
 
-      // 2. Query AI Civil Engineering Consultant
-      const aiResponse = await queryAiCivilExpert(trimmed, activeContext);
+        // Get engineering response tailored for the selected discipline
+        const expertReply = await queryEngineerExpert(
+          trimmed,
+          activeDiscipline,
+          activeContext
+        );
 
-      // 3. Persist AI response
-      const savedAiMsg = await appendChatMessage(aiResponse);
-      setMessages((prev) => [...prev, savedAiMsg]);
-    } catch (err) {
-      Alert.alert("Error", err.message || "Failed to process message.");
-    } finally {
-      setIsTyping(false);
+        const savedReply = await appendChatMessage(expertReply, activeThreadId);
+        setMessages((prev) => [...prev, savedReply]);
+      } catch (err) {
+        Alert.alert("Error", err.message || "Failed to process consultation.");
+      } finally {
+        setIsTyping(false);
+      }
     }
   };
 
@@ -124,14 +155,14 @@ export default function ExpertChatScreen({ route, navigation, onOpenExpertDirect
   const handleClearHistory = () => {
     Alert.alert(
       "Reset Conversation",
-      "Are you sure you want to clear this engineering consultation thread?",
+      "Are you sure you want to clear this consultation thread?",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Clear All",
+          text: "Clear Thread",
           style: "destructive",
           onPress: async () => {
-            const resetMessages = await clearChatHistory();
+            const resetMessages = await clearChatHistory(activeThreadId);
             setMessages(resetMessages);
           },
         },
@@ -139,12 +170,35 @@ export default function ExpertChatScreen({ route, navigation, onOpenExpertDirect
     );
   };
 
-  // Trigger Human Expert Directory
-  const handleEscalateToHuman = (attachedContext = null) => {
-    if (attachedContext) {
-      setActiveContext(attachedContext);
+  // Quick starter prompts based on user role and discipline
+  const getQuickPrompts = () => {
+    if (isEngineer) {
+      return [
+        "Please provide the architectural floor layout.",
+        "Kindly share the certified soil investigation SPT report.",
+        "What is the front road width and setback clearance?",
+        "Please confirm total story count and basement requirements.",
+      ];
     }
-    setDirectoryVisible(true);
+    if (activeDiscipline === "architect") {
+      return [
+        "What are the mandatory setbacks for my plot under RAJUK?",
+        "How is Floor Area Ratio (FAR) calculated?",
+        "What are the requirements for car parking and open space?",
+      ];
+    }
+    if (activeDiscipline === "soil") {
+      return [
+        "When is cast-in-situ bored piling mandatory under BNBC 2020?",
+        "What SPT N-value is required for shallow footing?",
+        "How many boreholes are needed for a 6-story building?",
+      ];
+    }
+    return [
+      "What column sizing is typical for a 6-story RCC building?",
+      "What are the BNBC 2020 seismic requirements for Dhaka?",
+      "Can you review my beam rebar specifications?",
+    ];
   };
 
   return (
@@ -158,27 +212,25 @@ export default function ExpertChatScreen({ route, navigation, onOpenExpertDirect
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <View style={styles.headerIconCircle}>
-              <MaterialCommunityIcons name="hard-hat" size={22} color="#2563eb" />
+              <MaterialCommunityIcons
+                name={isEngineer ? "hard-hat" : "account-tie"}
+                size={22}
+                color="#2563eb"
+              />
             </View>
             <View>
-              <Text style={styles.headerTitle}>Civil Engineering Expert</Text>
-              <View style={styles.statusRow}>
-                <View style={styles.onlineDot} />
-                <Text style={styles.statusText}>AI Consultant Active (BNBC 2020)</Text>
-              </View>
+              <Text style={styles.headerTitle}>
+                {isEngineer ? "Client Consultation" : activeSpec.roleLabel}
+              </Text>
+              <Text style={styles.headerSubtitle}>
+                {isEngineer
+                  ? "Direct Client Consultation"
+                  : `Consulting ${activeSpec.name}`}
+              </Text>
             </View>
           </View>
 
           <View style={styles.headerRight}>
-            <TouchableOpacity
-              style={styles.headerDirectoryBtn}
-              activeOpacity={0.8}
-              onPress={() => handleEscalateToHuman()}
-            >
-              <Ionicons name="people" size={16} color="#ffffff" />
-              <Text style={styles.headerDirectoryBtnText}>Engineers</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.headerActionBtn}
               onPress={handleClearHistory}
@@ -189,42 +241,74 @@ export default function ExpertChatScreen({ route, navigation, onOpenExpertDirect
           </View>
         </View>
 
-        {/* Active Context Banner */}
+        {/* FOR CLIENT: Switch between 3 Engineers (Arc, Structure Eng, Soil Eng) */}
+        {!isEngineer && (
+          <View style={styles.engineerSwitchBar}>
+            <Text style={styles.engineerSwitchLabel}>Select Engineer to Chat With:</Text>
+            <View style={styles.engineerTabsRow}>
+              {ENGINEER_CHIPS.map((chip) => {
+                const isActive = selectedDiscipline === chip.id;
+                return (
+                  <TouchableOpacity
+                    key={chip.id}
+                    style={[styles.engineerTab, isActive && styles.engineerTabActive]}
+                    activeOpacity={0.75}
+                    onPress={() => setSelectedDiscipline(chip.id)}
+                  >
+                    <MaterialCommunityIcons
+                      name={chip.icon}
+                      size={16}
+                      color={isActive ? "#ffffff" : "#475569"}
+                    />
+                    <Text
+                      style={[
+                        styles.engineerTabText,
+                        isActive && styles.engineerTabTextActive,
+                      ]}
+                    >
+                      {chip.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+
+
+        {/* Active Context Banner if any */}
         {activeContext && (
           <View style={styles.contextBanner}>
             <View style={styles.contextBannerContent}>
-              <MaterialCommunityIcons name="office-building-cog" size={16} color="#1d4ed8" />
+              <MaterialCommunityIcons name="office-building-cog" size={15} color="#1d4ed8" />
               <Text style={styles.contextBannerText} numberOfLines={1}>
-                Active Context:{" "}
-                {activeContext.floors ? `${activeContext.floors} Stories` : ""}
-                {activeContext.katha ? ` • ${activeContext.katha} Katha` : ""}
-                {activeContext.authority ? ` • ${activeContext.authority}` : " • BNBC"}
+                Context: {activeContext.floors ? `${activeContext.floors} Fl ` : ""}
+                {activeContext.katha ? `• ${activeContext.katha} Katha ` : ""}
+                {activeContext.authority ? `• ${activeContext.authority}` : ""}
               </Text>
             </View>
-            <TouchableOpacity
-              onPress={() => setActiveContext(null)}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            >
+            <TouchableOpacity onPress={() => setActiveContext(null)}>
               <Ionicons name="close" size={16} color="#64748b" />
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Quick Discussion Starter Chips */}
+        {/* Quick Starter Chips */}
         <View style={styles.quickChipsWrapper}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.quickChipsContainer}
           >
-            {QUICK_STARTER_PROMPTS.map((item, idx) => (
+            {getQuickPrompts().map((promptText, idx) => (
               <TouchableOpacity
                 key={idx}
                 style={styles.quickChip}
                 activeOpacity={0.7}
-                onPress={() => handleSend(item.prompt)}
+                onPress={() => handleSend(promptText)}
               >
-                <Text style={styles.quickChipText}>{item.label}</Text>
+                <Text style={styles.quickChipText}>{promptText}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -234,7 +318,7 @@ export default function ExpertChatScreen({ route, navigation, onOpenExpertDirect
         {loadingHistory ? (
           <View style={styles.loaderContainer}>
             <ActivityIndicator size="large" color="#2563eb" />
-            <Text style={styles.loaderText}>Loading consultation history...</Text>
+            <Text style={styles.loaderText}>Loading consultation messages...</Text>
           </View>
         ) : (
           <ScrollView
@@ -243,132 +327,109 @@ export default function ExpertChatScreen({ route, navigation, onOpenExpertDirect
             contentContainerStyle={styles.messageListContent}
             showsVerticalScrollIndicator={false}
           >
-            {messages.map((msg) => (
-              <View
-                key={msg.id}
-                style={[
-                  styles.messageRow,
-                  msg.senderRole === "user" ? styles.userRow : styles.expertRow,
-                ]}
-              >
-                {/* AI / Expert Avatar */}
-                {msg.senderRole !== "user" && (
-                  <View
-                    style={[
-                      styles.avatarBadge,
-                      msg.senderRole === "human_expert"
-                        ? styles.humanAvatarBadge
-                        : styles.aiAvatarBadge,
-                    ]}
-                  >
-                    {msg.senderRole === "human_expert" ? (
-                      <MaterialCommunityIcons name="account-tie" size={16} color="#ffffff" />
-                    ) : (
-                      <MaterialCommunityIcons name="robot" size={16} color="#ffffff" />
-                    )}
-                  </View>
-                )}
+            {messages.map((msg) => {
+              // Determine if this bubble belongs to current user
+              const isMyMessage = isEngineer
+                ? msg.senderRole === "engineer"
+                : msg.senderRole === "client" || msg.senderRole === "user";
 
-                {/* Message Bubble */}
+              return (
                 <View
+                  key={msg.id}
                   style={[
-                    styles.bubble,
-                    msg.senderRole === "user"
-                      ? styles.userBubble
-                      : msg.senderRole === "human_expert"
-                      ? styles.humanBubble
-                      : styles.aiBubble,
+                    styles.messageRow,
+                    isMyMessage ? styles.myRow : styles.otherRow,
                   ]}
                 >
-                  {/* Sender Header */}
-                  <View style={styles.bubbleHeader}>
-                    <Text
-                      style={[
-                        styles.senderName,
-                        msg.senderRole === "user"
-                          ? styles.userSenderName
-                          : msg.senderRole === "human_expert"
-                          ? styles.humanSenderName
-                          : styles.aiSenderName,
-                      ]}
-                    >
-                      {msg.senderName}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.timestamp,
-                        msg.senderRole === "user"
-                          ? styles.userTimestamp
-                          : styles.expertTimestamp,
-                      ]}
-                    >
-                      {new Date(msg.timestamp).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </Text>
-                  </View>
-
-                  {/* Body Text */}
-                  <Text
-                    style={[
-                      styles.messageText,
-                      msg.senderRole === "user"
-                        ? styles.userMessageText
-                        : styles.expertMessageText,
-                    ]}
-                  >
-                    {msg.text}
-                  </Text>
-
-                  {/* Attached Project Specs Tag */}
-                  {msg.attachedContext && (
-                    <View style={styles.attachedContextPill}>
-                      <Ionicons name="document-text-outline" size={11} color="#94a3b8" />
-                      <Text style={styles.attachedContextText}>
-                        Ref: {msg.attachedContext.floors ? `${msg.attachedContext.floors}fl ` : ""}
-                        {msg.attachedContext.katha ? `${msg.attachedContext.katha}kt` : ""}
-                      </Text>
+                  {/* Left avatar for other party */}
+                  {!isMyMessage && (
+                    <View style={styles.avatarBadge}>
+                      <MaterialCommunityIcons
+                        name={isEngineer ? "account" : "hard-hat"}
+                        size={16}
+                        color="#ffffff"
+                      />
                     </View>
                   )}
 
-                  {/* Escalation Recommendation Button */}
-                  {msg.isEscalationPrompt && (
-                    <TouchableOpacity
-                      style={styles.escalationButton}
-                      activeOpacity={0.85}
-                      onPress={() => handleEscalateToHuman(msg.attachedContext)}
-                    >
-                      <Ionicons name="shield-checkmark" size={15} color="#ffffff" />
-                      <Text style={styles.escalationButtonText}>
-                        Connect with Licensed Human Engineer
+                  {/* Bubble Content */}
+                  <View
+                    style={[
+                      styles.bubble,
+                      isMyMessage ? styles.myBubble : styles.otherBubble,
+                    ]}
+                  >
+                    <View style={styles.bubbleHeader}>
+                      <Text
+                        style={[
+                          styles.senderName,
+                          isMyMessage
+                            ? styles.mySenderName
+                            : styles.otherSenderName,
+                        ]}
+                      >
+                        {isMyMessage
+                          ? isEngineer
+                            ? `You (${activeSpec.roleLabel})`
+                            : "You (Client)"
+                          : msg.senderName || (isEngineer ? "Client" : activeSpec.roleLabel)}
                       </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            ))}
+                      <Text
+                        style={[
+                          styles.timestamp,
+                          isMyMessage
+                            ? styles.myTimestamp
+                            : styles.otherTimestamp,
+                        ]}
+                      >
+                        {new Date(msg.timestamp).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </Text>
+                    </View>
 
-            {/* AI Typing Indicator */}
-            {isTyping && (
-              <View style={[styles.messageRow, styles.expertRow]}>
-                <View style={[styles.avatarBadge, styles.aiAvatarBadge]}>
-                  <MaterialCommunityIcons name="robot" size={16} color="#ffffff" />
+                    <Text
+                      style={[
+                        styles.messageText,
+                        isMyMessage
+                          ? styles.myMessageText
+                          : styles.otherMessageText,
+                      ]}
+                    >
+                      {msg.text}
+                    </Text>
+                  </View>
                 </View>
-                <View style={[styles.bubble, styles.aiBubble, styles.typingBubble]}>
-                  <ActivityIndicator size="small" color="#93c5fd" />
-                  <Text style={styles.typingText}>Consulting BNBC 2020 rules...</Text>
+              );
+            })}
+
+            {/* Typing Indicator */}
+            {isTyping && (
+              <View style={[styles.messageRow, styles.otherRow]}>
+                <View style={styles.avatarBadge}>
+                  <MaterialCommunityIcons name="hard-hat" size={16} color="#ffffff" />
+                </View>
+                <View style={[styles.bubble, styles.otherBubble, styles.typingBubble]}>
+                  <ActivityIndicator size="small" color="#2563eb" />
+                  <Text style={styles.typingText}>
+                    {activeSpec.name} is preparing consultation...
+                  </Text>
                 </View>
               </View>
             )}
           </ScrollView>
         )}
 
-        {/* Message Input Box */}
+        {/* Input Bar */}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Ask about setbacks, FAR, soil tests, or costs..."
+            placeholder={
+              isEngineer
+                ? "Type message to Client..."
+                : `Ask ${activeSpec.roleLabel}...`
+            }
             placeholderTextColor="#94a3b8"
             value={inputText}
             onChangeText={setInputText}
@@ -387,21 +448,11 @@ export default function ExpertChatScreen({ route, navigation, onOpenExpertDirect
             {isTyping ? (
               <ActivityIndicator size="small" color="#ffffff" />
             ) : (
-              <Ionicons name="send" size={17} color="#ffffff" />
+              <Ionicons name="send" size={16} color="#ffffff" />
             )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-
-      {/* Verified Human Engineer Directory Modal */}
-      <ExpertDirectoryModal
-        visible={directoryVisible}
-        onClose={() => setDirectoryVisible(false)}
-        onSelectExpert={(newMsg) => {
-          setMessages((prev) => [...prev, newMsg]);
-        }}
-        activeContext={activeContext}
-      />
     </SafeAreaView>
   );
 }
@@ -444,54 +495,87 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#0f172a",
   },
-  statusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 2,
-  },
-  onlineDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: "#10b981",
-  },
-  statusText: {
-    fontSize: 11,
+  headerSubtitle: {
+    fontSize: 12,
     color: "#64748b",
-    fontWeight: "500",
+    marginTop: 1,
   },
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-  },
-  headerDirectoryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#2563eb",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  headerDirectoryBtnText: {
-    color: "#ffffff",
-    fontSize: 11,
-    fontWeight: "700",
   },
   headerActionBtn: {
-    padding: 4,
+    padding: 6,
+  },
+  engineerSwitchBar: {
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  engineerSwitchLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#64748b",
+    marginBottom: 6,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  engineerTabsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  engineerTab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
+    borderWidth: 1.5,
+    borderColor: "#cbd5e1",
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    gap: 5,
+  },
+  engineerTabActive: {
+    backgroundColor: "#2563eb",
+    borderColor: "#2563eb",
+  },
+  engineerTabText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#334155",
+  },
+  engineerTabTextActive: {
+    color: "#ffffff",
+  },
+  engineerInfoBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f9ff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#bae6fd",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  engineerInfoBannerText: {
+    fontSize: 12,
+    color: "#0369a1",
+    fontWeight: "600",
+    flex: 1,
   },
   contextBanner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "#eff6ff",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: "#bfdbfe",
+    borderBottomColor: "#dbeafe",
   },
   contextBannerContent: {
     flexDirection: "row",
@@ -501,7 +585,7 @@ const styles = StyleSheet.create({
   },
   contextBannerText: {
     fontSize: 12,
-    color: "#1e40af",
+    color: "#1d4ed8",
     fontWeight: "600",
   },
   quickChipsWrapper: {
@@ -515,153 +599,72 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   quickChip: {
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
+    backgroundColor: "#f1f5f9",
+    borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
   quickChipText: {
-    fontSize: 11,
+    fontSize: 12,
     color: "#334155",
     fontWeight: "600",
   },
   loaderContainer: {
     flex: 1,
-    alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    alignItems: "center",
+    padding: 24,
   },
   loaderText: {
     fontSize: 13,
     color: "#64748b",
+    marginTop: 10,
   },
   messageList: {
     flex: 1,
   },
   messageListContent: {
-    paddingHorizontal: 14,
-    paddingVertical: 16,
-    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
   },
   messageRow: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 8,
   },
-  userRow: {
+  myRow: {
     justifyContent: "flex-end",
   },
-  expertRow: {
+  otherRow: {
     justifyContent: "flex-start",
   },
   avatarBadge: {
     width: 28,
     height: 28,
     borderRadius: 14,
+    backgroundColor: "#2563eb",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
-  },
-  aiAvatarBadge: {
-    backgroundColor: "#1e293b",
-  },
-  humanAvatarBadge: {
-    backgroundColor: "#b45309",
+    marginBottom: 2,
   },
   bubble: {
-    maxWidth: "84%",
+    maxWidth: "82%",
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
-  userBubble: {
+  myBubble: {
     backgroundColor: "#2563eb",
     borderBottomRightRadius: 4,
   },
-  aiBubble: {
-    backgroundColor: "#1e293b",
+  otherBubble: {
+    backgroundColor: "#ffffff",
     borderBottomLeftRadius: 4,
-  },
-  humanBubble: {
-    backgroundColor: "#0f172a",
     borderWidth: 1,
-    borderColor: "#d97706",
-    borderBottomLeftRadius: 4,
-  },
-  bubbleHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 4,
-    gap: 10,
-  },
-  senderName: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  userSenderName: {
-    color: "#dbeafe",
-  },
-  aiSenderName: {
-    color: "#93c5fd",
-  },
-  humanSenderName: {
-    color: "#fbbf24",
-  },
-  timestamp: {
-    fontSize: 9,
-  },
-  userTimestamp: {
-    color: "rgba(255,255,255,0.7)",
-  },
-  expertTimestamp: {
-    color: "#94a3b8",
-  },
-  messageText: {
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  userMessageText: {
-    color: "#ffffff",
-  },
-  expertMessageText: {
-    color: "#f1f5f9",
-  },
-  attachedContextPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 6,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.15)",
-  },
-  attachedContextText: {
-    fontSize: 10,
-    color: "#94a3b8",
-  },
-  escalationButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: "#d97706",
-    marginTop: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  escalationButtonText: {
-    color: "#ffffff",
-    fontSize: 11,
-    fontWeight: "700",
+    borderColor: "#e2e8f0",
   },
   typingBubble: {
     flexDirection: "row",
@@ -670,42 +673,77 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   typingText: {
-    color: "#94a3b8",
     fontSize: 12,
+    color: "#64748b",
+    fontStyle: "italic",
+  },
+  bubbleHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 4,
+  },
+  senderName: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  mySenderName: {
+    color: "#bfdbfe",
+  },
+  otherSenderName: {
+    color: "#2563eb",
+  },
+  timestamp: {
+    fontSize: 10,
+  },
+  myTimestamp: {
+    color: "#bfdbfe",
+  },
+  otherTimestamp: {
+    color: "#94a3b8",
+  },
+  messageText: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  myMessageText: {
+    color: "#ffffff",
+  },
+  otherMessageText: {
+    color: "#1e293b",
   },
   inputContainer: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: "#ffffff",
     borderTopWidth: 1,
     borderTopColor: "#e2e8f0",
-    gap: 8,
+    gap: 10,
   },
   input: {
     flex: 1,
     backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 18,
+    borderColor: "#e2e8f0",
+    borderRadius: 20,
     paddingHorizontal: 14,
-    paddingTop: 8,
-    paddingBottom: 8,
-    maxHeight: 100,
-    fontSize: 13,
+    paddingVertical: 8,
+    fontSize: 14,
+    maxHeight: 90,
     color: "#0f172a",
   },
   sendButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "#2563eb",
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "center",
   },
   sendButtonDisabled: {
     backgroundColor: "#94a3b8",
-    opacity: 0.7,
   },
 });
