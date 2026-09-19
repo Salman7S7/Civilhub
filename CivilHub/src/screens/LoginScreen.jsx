@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { loginUser, registerUser } from "../services/authService";
+import { loginUser, registerUser, createGuestSession } from "../services/authService";
 
 const HERO_IMAGE_URL =
   "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80";
@@ -31,6 +31,11 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const handleGuestLogin = () => {
+    const guest = createGuestSession();
+    onLoginSuccess?.(guest);
+  };
 
   const handleLogin = async () => {
     setErrorMsg("");
@@ -59,7 +64,17 @@ export default function LoginScreen({ onLoginSuccess }) {
         : await loginUser(email.trim(), password);
       onLoginSuccess?.(result);
     } catch (error) {
-      setErrorMsg(error.message || "Login failed. Please try again.");
+      if (
+        error.message?.includes("fetch") ||
+        error.message?.includes("NetworkError") ||
+        error.name === "TypeError"
+      ) {
+        setErrorMsg(
+          "Cannot reach backend server (http://localhost:4000). Tap 'Continue as Guest' below to use the app in offline mode."
+        );
+      } else {
+        setErrorMsg(error.message || "Login failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -187,6 +202,15 @@ export default function LoginScreen({ onLoginSuccess }) {
                   <Ionicons name="arrow-forward" size={18} color="#ffffff" />
                 </>
               )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.guestButton}
+              onPress={handleGuestLogin}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="sparkles-outline" size={16} color="#2563eb" />
+              <Text style={styles.guestButtonText}>Continue as Guest (Offline Mode)</Text>
             </TouchableOpacity>
 
             {!isRegistering && <View style={styles.dividerRow}>
@@ -414,5 +438,22 @@ const styles = StyleSheet.create({
     color: "#2563eb",
     fontWeight: "800",
     fontSize: 13,
+  },
+  guestButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    borderRadius: 14,
+    paddingVertical: 13,
+    marginTop: 10,
+  },
+  guestButtonText: {
+    color: "#2563eb",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

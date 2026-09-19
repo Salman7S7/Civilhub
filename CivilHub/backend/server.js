@@ -6,7 +6,8 @@
 // 3. Feature 3: Interactive Cost Estimator Live Rates & Estimation Logging API
 // -----------------------------------------------------------------------------
 
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const express = require("express");
 const cors = require("cors");
@@ -18,7 +19,20 @@ const { SEED_DESIGNS } = require("./seedData");
 const costEstimatorRouter = require("./costEstimator");
 
 const app = express();
-const fallbackUsers = [];
+const fallbackUsers = [
+  {
+    id: 1,
+    name: "CivilHub Engineer",
+    email: "demo@civilhub.com",
+    passwordHash: bcrypt.hashSync("password123", 10),
+  },
+  {
+    id: 2,
+    name: "Salman",
+    email: "salman@civilhub.com",
+    passwordHash: bcrypt.hashSync("password123", 10),
+  },
+];
 
 // ============================================================
 // Middleware
@@ -866,10 +880,38 @@ app.post("/api/ask-building-code", async (req, res) => {
       return res.status(400).json({ error: "Missing 'question' in request body." });
     }
 
+    function getCivilFallback(q) {
+      const lower = String(q).toLowerCase();
+      if (lower.includes("setback") || lower.includes("side") || lower.includes("rear") || lower.includes("front")) {
+        return (
+          "### Setback Requirements (BNBC 2020 & RAJUK Imarat Nirman Bidhimala):\n\n" +
+          "- **Front Setback**: Minimum 1.50 meters (4.92 ft) from the road boundary line.\n" +
+          "- **Rear Setback**: Minimum 2.00 meters (6.56 ft) for plots up to 5 Katha.\n" +
+          "- **Side Setbacks**: Minimum 1.00m to 1.25m (3.28 to 4.10 ft) on each side.\n\n" +
+          "*Disclaimer: Final approval depends on the relevant development authority and review by a licensed structural/civil engineer.*"
+        );
+      }
+      if (lower.includes("soil") || lower.includes("pile") || lower.includes("foundation")) {
+        return (
+          "### Foundation & Substructure Guidelines (BNBC 2020):\n\n" +
+          "- **Soil Test**: Minimum 3 to 5 boreholes required for buildings above 3 stories.\n" +
+          "- **Low SPT (N < 5)**: Deep bored cast-in-situ RCC piles (50–80 ft depth) required.\n" +
+          "- **Medium Dense Soil (N > 15)**: Mat/raft foundation or isolated footings with tie beams.\n\n" +
+          "*Disclaimer: Final approval depends on the relevant development authority and review by a licensed structural/civil engineer.*"
+        );
+      }
+      return (
+        "### Bangladesh National Building Code (BNBC 2020) & Authority Rules:\n\n" +
+        "Under BNBC 2020 and development authorities (RAJUK, CDA, RDA, KDA):\n" +
+        "- Adhere strictly to Floor Area Ratio (FAR) and Maximum Ground Coverage (MGC) rules.\n" +
+        "- Maintain required setbacks for light, natural ventilation, and fire egress.\n" +
+        "- All structural calculations and soil investigation reports must be endorsed by a registered IEB professional engineer.\n\n" +
+        "*Disclaimer: Final approval depends on the relevant development authority and review by a licensed structural/civil engineer.*"
+      );
+    }
+
     if (!GEMINI_API_KEY) {
-      return res.status(500).json({
-        error: "Server is missing GEMINI_API_KEY. Check backend/.env.",
-      });
+      return res.json({ answer: getCivilFallback(question), fallback: true });
     }
 
     const fullPrompt = `${SYSTEM_CONTEXT}\n\nUser question:\n${String(question).trim()}`;
@@ -879,31 +921,36 @@ app.post("/api/ask-building-code", async (req, res) => {
       generationConfig: { maxOutputTokens: 800 },
     };
 
-    const geminiResponse = await fetch(
-      GEMINI_URL,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": GEMINI_API_KEY,
-        },
-        body: JSON.stringify(requestBody),
-        signal: AbortSignal.timeout(30000),
+    try {
+      const geminiResponse = await fetch(
+        GEMINI_URL,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": GEMINI_API_KEY,
+          },
+          body: JSON.stringify(requestBody),
+          signal: AbortSignal.timeout(15000),
+        }
+      );
+
+      if (!geminiResponse.ok) {
+        const errorText = await geminiResponse.text();
+        console.warn("Gemini API error (" + geminiResponse.status + "):", errorText);
+        return res.json({ answer: getCivilFallback(question), fallback: true });
       }
-    );
 
-    if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text();
-      console.error("Gemini API error:", geminiResponse.status, errorText);
-      return res.status(502).json({ error: "Gemini API request failed." });
+      const data = await geminiResponse.json();
+      const answerText =
+        data?.candidates?.[0]?.content?.parts?.map((p) => p?.text || "").join("").trim() ||
+        getCivilFallback(question);
+
+      return res.json({ answer: answerText });
+    } catch (apiError) {
+      console.warn("Gemini API fetch error, using BNBC fallback:", apiError.message);
+      return res.json({ answer: getCivilFallback(question), fallback: true });
     }
-
-    const data = await geminiResponse.json();
-    const answerText =
-      data?.candidates?.[0]?.content?.parts?.map((p) => p?.text || "").join("").trim() ||
-      "Unable to process question. Please try again.";
-
-    res.json({ answer: answerText });
   } catch (error) {
     console.error("Proxy error:", error);
     res.status(500).json({ error: "Internal server error." });

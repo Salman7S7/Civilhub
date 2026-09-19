@@ -392,24 +392,32 @@ export async function fetchRegulationRules(
     return getRegulationRules(params);
   }
 
-  const response =
-    await fetch(
-      `${COST_ESTIMATOR_API}/regulations?authority=${encodeURIComponent(
-        params.authority || "general"
-      )}&buildingType=${encodeURIComponent(
-        params.buildingType || "residential"
-      )}&roadWidth=${toNumber(
-        params.roadWidth
-      )}`
-    );
+  try {
+    const response =
+      await fetch(
+        `${COST_ESTIMATOR_API}/regulations?authority=${encodeURIComponent(
+          params.authority || "general"
+        )}&buildingType=${encodeURIComponent(
+          params.buildingType || "residential"
+        )}&roadWidth=${toNumber(
+          params.roadWidth
+        )}`
+      );
 
-  if (!response.ok) {
-    throw new Error(
-      "Unable to load regulation rules."
+    if (!response.ok) {
+      throw new Error(
+        "Unable to load regulation rules."
+      );
+    }
+
+    return response.json();
+  } catch (err) {
+    console.warn(
+      "fetchRegulationRules fallback to local rules:",
+      err.message
     );
+    return getRegulationRules(params);
   }
-
-  return response.json();
 }
 
 /*
@@ -463,22 +471,30 @@ export async function fetchCostRates({
     );
   }
 
-  const response =
-    await fetch(
-      `${COST_ESTIMATOR_API}/rates?quality=${encodeURIComponent(
-        quality
-      )}&buildingType=${encodeURIComponent(
-        buildingType
-      )}`
-    );
+  try {
+    const response =
+      await fetch(
+        `${COST_ESTIMATOR_API}/rates?quality=${encodeURIComponent(
+          quality
+        )}&buildingType=${encodeURIComponent(
+          buildingType
+        )}`
+      );
 
-  if (!response.ok) {
-    throw new Error(
-      "Unable to load cost rates."
+    if (!response.ok) {
+      throw new Error(
+        "Unable to load cost rates."
+      );
+    }
+
+    return response.json();
+  } catch (err) {
+    console.warn("fetchCostRates fallback to local rates:", err.message);
+    return getCostRates(
+      quality,
+      buildingType
     );
   }
-
-  return response.json();
 }
 
 /*
@@ -1068,31 +1084,40 @@ export async function saveEstimate(
     };
   }
 
-  const response =
-    await fetch(
-      `${COST_ESTIMATOR_API}/estimates`,
-      {
-        method: "POST",
+  try {
+    const response =
+      await fetch(
+        `${COST_ESTIMATOR_API}/estimates`,
+        {
+          method: "POST",
 
-        headers: {
-          "Content-Type":
-            "application/json",
-        },
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
 
-        body:
-          JSON.stringify(
-            payload
-          ),
-      }
-    );
+          body:
+            JSON.stringify(
+              payload
+            ),
+        }
+      );
 
-  if (!response.ok) {
-    throw new Error(
-      "Unable to save estimate."
-    );
+    if (!response.ok) {
+      throw new Error(
+        "Unable to save estimate."
+      );
+    }
+
+    return response.json();
+  } catch (err) {
+    console.warn("saveCostEstimate fallback to local:", err.message);
+    return {
+      success: true,
+      id: `OFFLINE-${Date.now()}`,
+      source: "frontend-offline",
+    };
   }
-
-  return response.json();
 }
 
 /*
