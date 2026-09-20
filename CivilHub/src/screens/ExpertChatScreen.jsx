@@ -107,7 +107,19 @@ export default function ExpertChatScreen({ route, session }) {
   // Sync route params when navigated with new parameters
   useEffect(() => {
     if (route?.params?.initialContext) {
-      setActiveContext(route.params.initialContext);
+      const ctx = route.params.initialContext;
+      setActiveContext(ctx);
+      if (!inputText) {
+        if (ctx.title) {
+          setInputText(
+            `Hi, I would like to consult about the design "${ctx.title}" (${ctx.floors || 5} floors on ${ctx.katha || 4} Katha plot). Could you review this?`
+          );
+        } else if (ctx.floors) {
+          setInputText(
+            `Hi, I have a question about building a ${ctx.floors}-story structure on a ${ctx.katha || 4} Katha plot.`
+          );
+        }
+      }
     }
   }, [route?.params?.initialContext]);
 
@@ -283,6 +295,14 @@ export default function ExpertChatScreen({ route, session }) {
 
   // Quick starter prompts based on chat mode, user role, and discipline
   const getQuickPrompts = () => {
+    if (activeContext?.title) {
+      return [
+        `Is "${activeContext.title}" compliant with ${activeContext.authority || "RAJUK"} rules?`,
+        `What are the structural requirements for this ${activeContext.floors || 5}-story model?`,
+        `Can we customize the room layout of "${activeContext.title}"?`,
+        `What is the estimated cost and timeline for this design?`,
+      ];
+    }
     if (chatMode === "ai") {
       return [
         "Can I build 7 stories on a 20ft road under RAJUK?",
@@ -690,7 +710,8 @@ export default function ExpertChatScreen({ route, session }) {
                 <View style={styles.contextBannerContent}>
                   <MaterialCommunityIcons name="office-building-cog" size={15} color="#1d4ed8" />
                   <Text style={styles.contextBannerText} numberOfLines={1}>
-                    Context: {activeContext.floors ? `${activeContext.floors} Fl ` : ""}
+                    {activeContext.title ? `Design: "${activeContext.title}" • ` : "Context: "}
+                    {activeContext.floors ? `${activeContext.floors} Fl ` : ""}
                     {activeContext.katha ? `• ${activeContext.katha} Katha ` : ""}
                     {activeContext.authority ? `• ${activeContext.authority}` : ""}
                   </Text>

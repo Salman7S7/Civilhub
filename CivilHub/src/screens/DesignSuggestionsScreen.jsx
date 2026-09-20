@@ -211,6 +211,9 @@ export default function DesignSuggestionsScreen({ navigation }) {
       navigation.navigate("Feasibility", {
         floors: design.floors,
         katha: design.min_katha,
+        designTitle: design.title,
+        authority: "RAJUK",
+        roadWidth: "20",
       });
     }
   };
@@ -243,6 +246,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
       navigation.navigate("Cost Estimator", {
         floors: String(design.floors || 5),
         floorArea: String(derivedFloorArea),
+        katha: design.min_katha,
         hasBasement: Boolean(design.has_basement),
         hasGarage: Boolean(design.has_garage),
         designTitle: design.title,

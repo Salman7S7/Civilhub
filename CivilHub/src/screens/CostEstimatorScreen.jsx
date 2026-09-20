@@ -584,6 +584,91 @@ export default function CostEstimatorScreen({ route }) {
 
   const [error, setError] = useState("");
 
+  const [modelBanner, setModelBanner] = useState(null);
+
+  /* -------------------------------------------------------
+     SYNC INCOMING PARAMS (FROM SMART DESIGNS)
+  ------------------------------------------------------- */
+  useEffect(() => {
+    if (route?.params) {
+      const {
+        floors: paramFloors,
+        floorArea: paramFloorArea,
+        katha: paramKatha,
+        hasBasement: paramBasement,
+        hasGarage: paramGarage,
+        designTitle: paramTitle,
+        autoCalculate,
+      } = route.params;
+
+      if (paramTitle || paramFloors || paramKatha) {
+        if (paramTitle) {
+          setModelBanner({
+            title: paramTitle,
+            floors: paramFloors,
+            floorArea: paramFloorArea,
+            katha: paramKatha,
+          });
+        }
+        if (paramFloors) {
+          setFloorCount(String(paramFloors));
+        }
+        if (paramBasement !== undefined) {
+          setHasBasement(Boolean(paramBasement));
+        }
+        if (paramGarage !== undefined) {
+          setHasGarage(Boolean(paramGarage));
+        }
+
+        const kathaNum = toNumber(paramKatha) || 4;
+        const totalSqft = kathaNum * 720;
+        const widthVal = Math.round(Math.sqrt(totalSqft * 0.6));
+        const lengthVal = Math.round(totalSqft / widthVal);
+        setLandLength(String(lengthVal));
+        setLandWidth(String(widthVal));
+        setDimensionUnit("ft");
+        setRoadWidth("25");
+
+        const parsedFloorsCount = clamp(Math.round(toNumber(paramFloors)) || 5, 1, 30);
+        const configuredFloors = createFloorConfiguration(parsedFloorsCount);
+        setFloors(configuredFloors);
+
+        if (autoCalculate) {
+          try {
+            const rules = getRegulationRules({
+              authority: "rajuk",
+              buildingType: "residential",
+              roadWidth: 25,
+            });
+            const rates = getCostRates("standard", "residential");
+            const result = calculateEstimate({
+              land: {
+                length: lengthVal,
+                width: widthVal,
+                unit: "ft",
+                roadWidth: 25,
+                roadFacing: "front",
+              },
+              authority: "rajuk",
+              buildingType: "residential",
+              floors: configuredFloors,
+              allowancePercent: 20,
+              quality: "standard",
+              hasBasement: Boolean(paramBasement),
+              hasGarage: Boolean(paramGarage),
+              rules,
+              rates,
+            });
+            setEstimateResult(result);
+            setActiveStep(5);
+          } catch (calcErr) {
+            console.error("Auto calculation error:", calcErr);
+          }
+        }
+      }
+    }
+  }, [route?.params]);
+
   /* =======================================================
      DERIVED LAND AREA
   ======================================================= */
@@ -1107,6 +1192,85 @@ export default function CostEstimatorScreen({ route }) {
             </Text>
           </View>
         </View>
+
+        {/* =================================================
+            MODEL CUSTOMIZATION BANNER
+        ================================================= */}
+        {modelBanner && (
+          <View style={styles.modelBannerCard}>
+            <View style={styles.modelBannerHeader}>
+              <View style={styles.modelBannerIconWrap}>
+                <Ionicons name="sparkles" size={18} color="#2563eb" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modelBannerTitle}>
+                  Customizing Model: {modelBanner.title}
+                </Text>
+                <Text style={styles.modelBannerSubtitle}>
+                  {modelBanner.floors ? `${modelBanner.floors} Floors` : ""}
+                  {modelBanner.katha ? ` • ${modelBanner.katha} Katha Plot` : ""}
+                  {modelBanner.floorArea ? ` • ~${modelBanner.floorArea} sqft/floor` : ""}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modelBannerClose}
+                onPress={() => setModelBanner(null)}
+              >
+                <Ionicons name="close" size={16} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modelBannerActions}>
+              <TouchableOpacity
+                style={[
+                  styles.modelBannerBtn,
+                  activeStep === 3 && styles.modelBannerBtnActive,
+                ]}
+                onPress={() => goToStep(3)}
+              >
+                <Ionicons
+                  name="layers-outline"
+                  size={14}
+                  color={activeStep === 3 ? "#ffffff" : "#1d4ed8"}
+                />
+                <Text
+                  style={[
+                    styles.modelBannerBtnText,
+                    activeStep === 3 && styles.modelBannerBtnTextActive,
+                  ]}
+                >
+                  Customize Rooms & Floors
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modelBannerBtn,
+                  activeStep === 5 && styles.modelBannerBtnActive,
+                ]}
+                onPress={() => {
+                  if (!estimateResult) {
+                    handleCalculate();
+                  } else {
+                    setActiveStep(5);
+                  }
+                }}
+              >
+                <Ionicons
+                  name="calculator-outline"
+                  size={14}
+                  color={activeStep === 5 ? "#ffffff" : "#1d4ed8"}
+                />
+                <Text
+                  style={[
+                    styles.modelBannerBtnText,
+                    activeStep === 5 && styles.modelBannerBtnTextActive,
+                  ]}
+                >
+                  View Cost Result
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* =================================================
             PROGRESS
@@ -3615,5 +3779,71 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     fontSize: 9,
     marginLeft: 6,
+  },
+
+  /* -------------------------------------------------------
+     MODEL BANNER
+  ------------------------------------------------------- */
+  modelBannerCard: {
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+  },
+  modelBannerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  modelBannerIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#dbeafe",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  modelBannerTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1e3a8a",
+  },
+  modelBannerSubtitle: {
+    fontSize: 12,
+    color: "#3b82f6",
+    marginTop: 2,
+  },
+  modelBannerClose: {
+    padding: 4,
+  },
+  modelBannerActions: {
+    flexDirection: "row",
+    marginTop: 10,
+    gap: 8,
+  },
+  modelBannerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#93c5fd",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 6,
+  },
+  modelBannerBtnActive: {
+    backgroundColor: "#2563eb",
+    borderColor: "#2563eb",
+  },
+  modelBannerBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1d4ed8",
+  },
+  modelBannerBtnTextActive: {
+    color: "#ffffff",
   },
 });
