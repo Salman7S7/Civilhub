@@ -11,6 +11,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -101,6 +103,8 @@ export default function ExpertChatScreen({ route, session }) {
   const [isTyping, setIsTyping] = useState(false);
   const [activeContext, setActiveContext] = useState(initialContext);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [inspectModalVisible, setInspectModalVisible] = useState(false);
+  const [selectedInspectDesign, setSelectedInspectDesign] = useState(null);
 
   const scrollViewRef = useRef(null);
 
@@ -704,21 +708,97 @@ export default function ExpertChatScreen({ route, session }) {
               </View>
             )}
 
-            {/* Active Context Banner if any */}
+            {/* Active Context Banner / Attached Design Preview */}
             {activeContext && (
-              <View style={styles.contextBanner}>
-                <View style={styles.contextBannerContent}>
-                  <MaterialCommunityIcons name="office-building-cog" size={15} color="#1d4ed8" />
-                  <Text style={styles.contextBannerText} numberOfLines={1}>
-                    {activeContext.title ? `Design: "${activeContext.title}" • ` : "Context: "}
-                    {activeContext.floors ? `${activeContext.floors} Fl ` : ""}
-                    {activeContext.katha ? `• ${activeContext.katha} Katha ` : ""}
-                    {activeContext.authority ? `• ${activeContext.authority}` : ""}
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => setActiveContext(null)}>
-                  <Ionicons name="close" size={16} color="#64748b" />
-                </TouchableOpacity>
+              <View style={activeContext.title ? styles.attachedPreviewCard : styles.contextBanner}>
+                {activeContext.title ? (
+                  <>
+                    <View style={styles.attachedPreviewHeader}>
+                      <View style={styles.attachedPreviewIcon}>
+                        <MaterialCommunityIcons name="office-building-cog" size={18} color="#2563eb" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.attachedPreviewTitle} numberOfLines={1}>
+                          Attached Model: {activeContext.title}
+                        </Text>
+                        <Text style={styles.attachedPreviewSubtitle}>
+                          {activeContext.floors} Floors • {activeContext.katha} Katha Plot • {activeContext.bedrooms || 3} Bed • {activeContext.bathrooms || 3} Bath
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.attachedPreviewClose}
+                        onPress={() => setActiveContext(null)}
+                      >
+                        <Ionicons name="close" size={16} color="#64748b" />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Quick Consultation Intent Chips */}
+                    <View style={styles.intentChipsRow}>
+                      <TouchableOpacity
+                        style={styles.intentChip}
+                        activeOpacity={0.75}
+                        onPress={() =>
+                          handleSend(
+                            `What are the mandatory setbacks, road width, and FAR rules for "${activeContext.title}" under ${activeContext.authority || "RAJUK"}?`
+                          )
+                        }
+                      >
+                        <Text style={styles.intentChipText}>🏛️ FAR & Setbacks</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.intentChip}
+                        activeOpacity={0.75}
+                        onPress={() =>
+                          handleSend(
+                            `What are the structural foundation and soil SPT requirements for this ${activeContext.floors}-story model under BNBC 2020?`
+                          )
+                        }
+                      >
+                        <Text style={styles.intentChipText}>🏗️ Structural & Soil</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.intentChip}
+                        activeOpacity={0.75}
+                        onPress={() =>
+                          handleSend(
+                            `Can you provide cost breakdown and budget optimization advice for "${activeContext.title}"?`
+                          )
+                        }
+                      >
+                        <Text style={styles.intentChipText}>💰 Cost Advice</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.intentChip}
+                        activeOpacity={0.75}
+                        onPress={() =>
+                          handleSend(
+                            `Can we customize the room layout and unit dimensions of "${activeContext.title}"?`
+                          )
+                        }
+                      >
+                        <Text style={styles.intentChipText}>📐 Custom Layout</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.contextBannerContent}>
+                      <MaterialCommunityIcons name="office-building-cog" size={15} color="#1d4ed8" />
+                      <Text style={styles.contextBannerText} numberOfLines={1}>
+                        Context: {activeContext.floors ? `${activeContext.floors} Fl ` : ""}
+                        {activeContext.katha ? `• ${activeContext.katha} Katha ` : ""}
+                        {activeContext.authority ? `• ${activeContext.authority}` : ""}
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setActiveContext(null)}>
+                      <Ionicons name="close" size={16} color="#64748b" />
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             )}
 
@@ -836,6 +916,93 @@ export default function ExpertChatScreen({ route, session }) {
                           </Text>
                         </View>
 
+                        {/* Attached Design Specification Card */}
+                        {msg.attachedContext && msg.attachedContext.title && (
+                          <View style={styles.designCardBubble}>
+                            <View style={styles.designCardHeader}>
+                              <View style={styles.designCardIconBadge}>
+                                <MaterialCommunityIcons name="floor-plan" size={18} color="#2563eb" />
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.designCardTitle} numberOfLines={1}>
+                                  {msg.attachedContext.title}
+                                </Text>
+                                <Text style={styles.designCardSubtitle}>
+                                  {msg.attachedContext.architectural_style || "Architectural Model"} • {msg.attachedContext.authority || "RAJUK"}
+                                </Text>
+                              </View>
+                            </View>
+
+                            {msg.attachedContext.image_url ? (
+                              <Image
+                                source={{ uri: msg.attachedContext.image_url }}
+                                style={styles.designCardImage}
+                                resizeMode="cover"
+                              />
+                            ) : null}
+
+                            <View style={styles.designCardGrid}>
+                              <View style={styles.designCardChip}>
+                                <Ionicons name="layers-outline" size={12} color="#1e40af" />
+                                <Text style={styles.designCardChipText}>
+                                  {msg.attachedContext.floors} Floors
+                                </Text>
+                              </View>
+                              <View style={styles.designCardChip}>
+                                <Ionicons name="expand-outline" size={12} color="#1e40af" />
+                                <Text style={styles.designCardChipText}>
+                                  {msg.attachedContext.katha} Katha
+                                </Text>
+                              </View>
+                              {msg.attachedContext.built_area_sqft ? (
+                                <View style={styles.designCardChip}>
+                                  <Ionicons name="business-outline" size={12} color="#1e40af" />
+                                  <Text style={styles.designCardChipText}>
+                                    {Number(msg.attachedContext.built_area_sqft).toLocaleString()} sqft
+                                  </Text>
+                                </View>
+                              ) : null}
+                              {msg.attachedContext.bedrooms ? (
+                                <View style={styles.designCardChip}>
+                                  <Ionicons name="bed-outline" size={12} color="#1e40af" />
+                                  <Text style={styles.designCardChipText}>
+                                    {msg.attachedContext.bedrooms} Bed • {msg.attachedContext.bathrooms || 2} Bath
+                                  </Text>
+                                </View>
+                              ) : null}
+                              {msg.attachedContext.parking_capacity ? (
+                                <View style={styles.designCardChip}>
+                                  <Ionicons name="car-outline" size={12} color="#1e40af" />
+                                  <Text style={styles.designCardChipText}>
+                                    {msg.attachedContext.parking_capacity} Parking
+                                  </Text>
+                                </View>
+                              ) : null}
+                              {msg.attachedContext.rooftop_type ? (
+                                <View style={styles.designCardChip}>
+                                  <Ionicons name="leaf-outline" size={12} color="#1e40af" />
+                                  <Text style={styles.designCardChipText}>
+                                    {msg.attachedContext.rooftop_type} Roof
+                                  </Text>
+                                </View>
+                              ) : null}
+                            </View>
+
+                            <TouchableOpacity
+                              style={styles.inspectSpecsBtn}
+                              onPress={() => {
+                                setSelectedInspectDesign(msg.attachedContext);
+                                setInspectModalVisible(true);
+                              }}
+                              activeOpacity={0.8}
+                            >
+                              <Ionicons name="information-circle-outline" size={14} color="#2563eb" />
+                              <Text style={styles.inspectSpecsBtnText}>View Model Specifications</Text>
+                              <Ionicons name="chevron-forward" size={13} color="#2563eb" />
+                            </TouchableOpacity>
+                          </View>
+                        )}
+
                         <Text
                           style={[
                             styles.messageText,
@@ -929,6 +1096,147 @@ export default function ExpertChatScreen({ route, session }) {
           </>
         )}
       </KeyboardAvoidingView>
+
+      {/* Full Design Specifications Modal */}
+      <Modal
+        visible={inspectModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setInspectModalVisible(false)}
+      >
+        <View style={styles.specsModalOverlay}>
+          <View style={styles.specsModalContent}>
+            <View style={styles.specsModalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.specsModalTitle} numberOfLines={1}>
+                  {selectedInspectDesign?.title || "Design Specifications"}
+                </Text>
+                <Text style={styles.specsModalSubtitle}>
+                  {selectedInspectDesign?.architectural_style || "Architectural Design"} • {selectedInspectDesign?.authority || "RAJUK"}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setInspectModalVisible(false)}
+                style={styles.specsModalCloseBtn}
+              >
+                <Ionicons name="close" size={20} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.specsModalBody} showsVerticalScrollIndicator={false}>
+              {selectedInspectDesign?.image_url ? (
+                <Image
+                  source={{ uri: selectedInspectDesign.image_url }}
+                  style={styles.specsModalImage}
+                  resizeMode="cover"
+                />
+              ) : null}
+
+              <View style={styles.specsSection}>
+                <Text style={styles.specsSectionTitle}>Land & Structural Parameters</Text>
+                <View style={styles.specsRow}>
+                  <Text style={styles.specsRowLabel}>Minimum Land Required</Text>
+                  <Text style={styles.specsRowValue}>
+                    {selectedInspectDesign?.katha} Katha ({Math.round((Number(selectedInspectDesign?.katha) || 0) * 720)} sqft)
+                  </Text>
+                </View>
+                <View style={styles.specsRow}>
+                  <Text style={styles.specsRowLabel}>Total Story Count</Text>
+                  <Text style={styles.specsRowValue}>{selectedInspectDesign?.floors} Stories</Text>
+                </View>
+                <View style={styles.specsRow}>
+                  <Text style={styles.specsRowLabel}>Gross Built-up Area</Text>
+                  <Text style={styles.specsRowValue}>
+                    {selectedInspectDesign?.built_area_sqft ? Number(selectedInspectDesign.built_area_sqft).toLocaleString() : "N/A"} sqft
+                  </Text>
+                </View>
+                <View style={styles.specsRow}>
+                  <Text style={styles.specsRowLabel}>Average Area / Floor</Text>
+                  <Text style={styles.specsRowValue}>
+                    {selectedInspectDesign?.built_area_sqft && selectedInspectDesign?.floors
+                      ? Math.round(Number(selectedInspectDesign.built_area_sqft) / Number(selectedInspectDesign.floors))
+                      : "N/A"} sqft
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.specsSection}>
+                <Text style={styles.specsSectionTitle}>Floor Plan & Interior Layout</Text>
+                <View style={styles.specsRow}>
+                  <Text style={styles.specsRowLabel}>Units Per Floor</Text>
+                  <Text style={styles.specsRowValue}>{selectedInspectDesign?.units_per_floor || 2} Units</Text>
+                </View>
+                <View style={styles.specsRow}>
+                  <Text style={styles.specsRowLabel}>Approx. Unit Size</Text>
+                  <Text style={styles.specsRowValue}>
+                    {selectedInspectDesign?.unit_size_sqft ? `${selectedInspectDesign.unit_size_sqft} sqft` : "N/A"}
+                  </Text>
+                </View>
+                <View style={styles.specsRow}>
+                  <Text style={styles.specsRowLabel}>Bedrooms / Unit</Text>
+                  <Text style={styles.specsRowValue}>{selectedInspectDesign?.bedrooms || "3"} Beds</Text>
+                </View>
+                <View style={styles.specsRow}>
+                  <Text style={styles.specsRowLabel}>Bathrooms / Unit</Text>
+                  <Text style={styles.specsRowValue}>{selectedInspectDesign?.bathrooms || "3"} Baths</Text>
+                </View>
+                <View style={styles.specsRow}>
+                  <Text style={styles.specsRowLabel}>Balconies / Unit</Text>
+                  <Text style={styles.specsRowValue}>{selectedInspectDesign?.balconies || "2"} Balconies</Text>
+                </View>
+                {selectedInspectDesign?.drawing_space ? (
+                  <View style={styles.specsRow}>
+                    <Text style={styles.specsRowLabel}>Drawing Space</Text>
+                    <Text style={styles.specsRowValue}>{selectedInspectDesign.drawing_space}</Text>
+                  </View>
+                ) : null}
+                {selectedInspectDesign?.dining_space ? (
+                  <View style={styles.specsRow}>
+                    <Text style={styles.specsRowLabel}>Dining Space</Text>
+                    <Text style={styles.specsRowValue}>{selectedInspectDesign.dining_space}</Text>
+                  </View>
+                ) : null}
+                {selectedInspectDesign?.kitchen_space ? (
+                  <View style={styles.specsRow}>
+                    <Text style={styles.specsRowLabel}>Kitchen Space</Text>
+                    <Text style={styles.specsRowValue}>{selectedInspectDesign.kitchen_space}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={styles.specsSection}>
+                <Text style={styles.specsSectionTitle}>Amenities & Infrastructure</Text>
+                <View style={styles.specsRow}>
+                  <Text style={styles.specsRowLabel}>Basement</Text>
+                  <Text style={styles.specsRowValue}>{selectedInspectDesign?.has_basement ? "Included" : "None"}</Text>
+                </View>
+                <View style={styles.specsRow}>
+                  <Text style={styles.specsRowLabel}>Parking Capacity</Text>
+                  <Text style={styles.specsRowValue}>
+                    {selectedInspectDesign?.parking_capacity ? `${selectedInspectDesign.parking_capacity} Cars` : "Ground Floor"}
+                  </Text>
+                </View>
+                <View style={styles.specsRow}>
+                  <Text style={styles.specsRowLabel}>Rooftop Specification</Text>
+                  <Text style={styles.specsRowValue}>{selectedInspectDesign?.rooftop_type || "Standard"}</Text>
+                </View>
+                <View style={styles.specsRow}>
+                  <Text style={styles.specsRowLabel}>Governing Code Baseline</Text>
+                  <Text style={styles.specsRowValue}>{selectedInspectDesign?.authority || "RAJUK"} (BNBC 2020)</Text>
+                </View>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.specsCloseBtn}
+              onPress={() => setInspectModalVisible(false)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.specsCloseBtnText}>Close Specifications</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1574,5 +1882,251 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: "#94a3b8",
+  },
+
+  /* -------------------------------------------------------
+     ATTACHED DESIGN PREVIEW CARD & INTENT CHIPS
+  ------------------------------------------------------- */
+  attachedPreviewCard: {
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    borderRadius: 14,
+    padding: 12,
+    marginHorizontal: 16,
+    marginVertical: 8,
+  },
+  attachedPreviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  attachedPreviewIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#dbeafe",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  attachedPreviewTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1e3a8a",
+  },
+  attachedPreviewSubtitle: {
+    fontSize: 11,
+    color: "#3b82f6",
+    marginTop: 2,
+    fontWeight: "500",
+  },
+  attachedPreviewClose: {
+    padding: 4,
+  },
+  intentChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(191, 219, 254, 0.6)",
+    paddingTop: 8,
+  },
+  intentChip: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#93c5fd",
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  intentChipText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#1d4ed8",
+  },
+
+  /* -------------------------------------------------------
+     EMBEDDED DESIGN SPECIFICATION CARD (IN BUBBLE)
+  ------------------------------------------------------- */
+  designCardBubble: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    padding: 12,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  designCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  designCardIconBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: "#eff6ff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  designCardTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  designCardSubtitle: {
+    fontSize: 11,
+    color: "#64748b",
+    marginTop: 1,
+  },
+  designCardImage: {
+    width: "100%",
+    height: 120,
+    borderRadius: 8,
+    marginBottom: 10,
+    backgroundColor: "#e2e8f0",
+  },
+  designCardGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 10,
+  },
+  designCardChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    gap: 4,
+  },
+  designCardChipText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#1e40af",
+  },
+  inspectSpecsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    gap: 5,
+  },
+  inspectSpecsBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#2563eb",
+  },
+
+  /* -------------------------------------------------------
+     FULL SPECS MODAL
+  ------------------------------------------------------- */
+  specsModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    justifyContent: "center",
+    padding: 16,
+  },
+  specsModalContent: {
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    maxHeight: "85%",
+    padding: 18,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  specsModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+    paddingBottom: 12,
+    marginBottom: 12,
+  },
+  specsModalTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#0f172a",
+  },
+  specsModalSubtitle: {
+    fontSize: 12,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  specsModalCloseBtn: {
+    padding: 6,
+    borderRadius: 16,
+    backgroundColor: "#f1f5f9",
+  },
+  specsModalBody: {
+    flexGrow: 0,
+  },
+  specsModalImage: {
+    width: "100%",
+    height: 160,
+    borderRadius: 12,
+    marginBottom: 14,
+  },
+  specsSection: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  specsSectionTitle: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#1e293b",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  specsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  specsRowLabel: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  specsRowValue: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  specsCloseBtn: {
+    backgroundColor: "#2563eb",
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 12,
+  },
+  specsCloseBtnText: {
+    color: "#ffffff",
+    fontWeight: "700",
+    fontSize: 13,
   },
 });

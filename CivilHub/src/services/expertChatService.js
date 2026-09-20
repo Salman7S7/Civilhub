@@ -486,12 +486,22 @@ export async function queryAiExpert(userPrompt, activeContext = null) {
   let contextHeader = "";
   if (activeContext) {
     const ctxParts = [];
-    if (activeContext.floors) ctxParts.push(`Story Count: ${activeContext.floors}`);
-    if (activeContext.katha) ctxParts.push(`Plot Size: ${activeContext.katha} Katha`);
+    if (activeContext.title) ctxParts.push(`Model Title: "${activeContext.title}"`);
+    if (activeContext.architectural_style) ctxParts.push(`Style: ${activeContext.architectural_style}`);
+    if (activeContext.floors) ctxParts.push(`Stories: ${activeContext.floors}`);
+    if (activeContext.katha) ctxParts.push(`Plot: ${activeContext.katha} Katha`);
+    if (activeContext.built_area_sqft) ctxParts.push(`Built Area: ${activeContext.built_area_sqft} sqft`);
+    if (activeContext.units_per_floor) ctxParts.push(`Units/Floor: ${activeContext.units_per_floor}`);
+    if (activeContext.unit_size_sqft) ctxParts.push(`Unit Size: ~${activeContext.unit_size_sqft} sqft`);
+    if (activeContext.bedrooms) ctxParts.push(`Bedrooms: ${activeContext.bedrooms}`);
+    if (activeContext.bathrooms) ctxParts.push(`Bathrooms: ${activeContext.bathrooms}`);
+    if (activeContext.balconies) ctxParts.push(`Balconies: ${activeContext.balconies}`);
+    if (activeContext.parking_capacity) ctxParts.push(`Parking: ${activeContext.parking_capacity} cars`);
+    if (activeContext.rooftop_type) ctxParts.push(`Rooftop: ${activeContext.rooftop_type}`);
     if (activeContext.roadWidth) ctxParts.push(`Road Width: ${activeContext.roadWidth} ft`);
     if (activeContext.authority) ctxParts.push(`Authority: ${activeContext.authority}`);
     if (ctxParts.length > 0) {
-      contextHeader = `[Project Context: ${ctxParts.join(", ")}]\n[Specialty: Building Code & BNBC 2020]\n\n`;
+      contextHeader = `[Attached Architectural Model: ${ctxParts.join(", ")}]\n[Specialty: Building Code & BNBC 2020]\n\n`;
     }
   }
 
