@@ -7,9 +7,21 @@ const AsyncStorage = AsyncStorageModule?.default || AsyncStorageModule;
 
 export const CHAT_STORAGE_KEY = "@civilhub_chat_messages_v2";
 
+export const THREAD_AI = "thread_client_ai";
 export const THREAD_STRUCTURAL = "thread_client_structural";
 export const THREAD_ARCHITECT = "thread_client_architect";
 export const THREAD_SOIL = "thread_client_soil";
+
+export const AI_SPEC = {
+  id: "ai",
+  name: "CivilHub AI Assistant",
+  title: "Building Code & BNBC AI (Gemini)",
+  roleLabel: "AI Expert",
+  license: "Google Gemini • BNBC 2020",
+  threadId: THREAD_AI,
+  greeting:
+    "Hello! I am your CivilHub AI Assistant powered by Google Gemini and BNBC 2020.\n\nI can answer questions regarding Floor Area Ratio (FAR), road setbacks, story height limits, seismic design rules, and municipal approvals across RAJUK, CDA, RDA, and KDA.",
+};
 
 export const ENGINEER_SPECS = {
   architect: {
@@ -51,6 +63,20 @@ export function getThreadIdForEngineer(engineerType) {
 }
 
 export function getDefaultWelcomeForThread(threadId) {
+  if (threadId === THREAD_AI) {
+    return [
+      {
+        id: "msg_welcome_ai",
+        threadId: THREAD_AI,
+        senderRole: "ai",
+        engineerType: "ai",
+        senderName: AI_SPEC.name,
+        text: AI_SPEC.greeting,
+        timestamp: new Date().toISOString(),
+        attachedContext: null,
+      },
+    ];
+  }
   if (threadId === THREAD_ARCHITECT) {
     return [
       {
@@ -123,12 +149,16 @@ export async function appendChatMessage(messagePayload, threadId = THREAD_STRUCT
 
   const senderRole = messagePayload.senderRole || "client";
 
+  let fallbackSenderName = "Client";
+  if (senderRole === "ai") fallbackSenderName = AI_SPEC.name;
+  else if (senderRole === "engineer") fallbackSenderName = "Engineer";
+
   const messageToSave = {
     id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
     threadId,
     senderRole,
     engineerType: messagePayload.engineerType || null,
-    senderName: messagePayload.senderName || (senderRole === "client" ? "Client" : "Engineer"),
+    senderName: messagePayload.senderName || fallbackSenderName,
     text: messagePayload.text.trim(),
     timestamp: new Date().toISOString(),
     attachedContext: messagePayload.attachedContext || null,
@@ -259,3 +289,68 @@ export async function queryEngineerExpert(userPrompt, engineerType = "structural
     attachedContext: activeContext || null,
   };
 }
+
+/**
+ * Query Gemini AI Building Code Expert
+ */
+export async function queryAiExpert(userPrompt, activeContext = null) {
+  if (!userPrompt || !userPrompt.trim()) {
+    throw new Error("Please enter a question.");
+  }
+
+  const trimmedPrompt = userPrompt.trim();
+
+  // Context enrichment
+  let contextHeader = "";
+  if (activeContext) {
+    const ctxParts = [];
+    if (activeContext.floors) ctxParts.push(`Story Count: ${activeContext.floors}`);
+    if (activeContext.katha) ctxParts.push(`Plot Size: ${activeContext.katha} Katha`);
+    if (activeContext.roadWidth) ctxParts.push(`Road Width: ${activeContext.roadWidth} ft`);
+    if (activeContext.authority) ctxParts.push(`Authority: ${activeContext.authority}`);
+    if (ctxParts.length > 0) {
+      contextHeader = `[Project Context: ${ctxParts.join(", ")}]\n[Specialty: Building Code & BNBC 2020]\n\n`;
+    }
+  }
+
+  const enrichedPrompt = `${contextHeader}${trimmedPrompt}`;
+
+  let answerText = "";
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+    const res = await fetch(`${BACKEND_BASE_URL}/api/ask-building-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: enrichedPrompt }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.answer) {
+        answerText = data.answer;
+      }
+    }
+  } catch (_netErr) {
+    // Backend offline or unreachable
+  }
+
+  if (!answerText) {
+    answerText = generateDisciplineAdvice(trimmedPrompt, "structural", activeContext);
+  }
+
+  return {
+    text: answerText,
+    senderRole: "ai",
+    engineerType: "ai",
+    senderName: AI_SPEC.name,
+    attachedContext: activeContext || null,
+  };
+}
+
+export const generateLocalCivilConsultation = generateDisciplineAdvice;
+

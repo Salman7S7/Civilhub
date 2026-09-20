@@ -19,8 +19,11 @@ import {
   appendChatMessage,
   clearChatHistory,
   queryEngineerExpert,
+  queryAiExpert,
   getThreadIdForEngineer,
+  AI_SPEC,
   ENGINEER_SPECS,
+  THREAD_AI,
   THREAD_STRUCTURAL,
   THREAD_ARCHITECT,
   THREAD_SOIL,
@@ -37,15 +40,25 @@ export default function ExpertChatScreen({ route, session }) {
   const isEngineer = user?.role === "engineer";
   const engineerDiscipline = user?.engineerType || "structural";
 
-  // For Client: can switch which engineer to consult (Arc, Structure Eng, Soil Eng)
-  // For Engineer: locked strictly to their own discipline to talk to Client only!
+  // 2 Chat Options: "ai" (Chat with AI Expert) vs "human" (Chat with Human Expert)
+  // Default to "ai" for clients; default to "human" for engineers (client consultation)
+  const [chatMode, setChatMode] = useState(isEngineer ? "human" : "ai");
+
+  // For Client in Human mode: select which engineer to consult
+  // For Engineer: locked strictly to their own discipline to talk to Client
   const [selectedDiscipline, setSelectedDiscipline] = useState(
     isEngineer ? engineerDiscipline : "structural"
   );
 
   const activeDiscipline = isEngineer ? engineerDiscipline : selectedDiscipline;
-  const activeThreadId = getThreadIdForEngineer(activeDiscipline);
-  const activeSpec = ENGINEER_SPECS[activeDiscipline] || ENGINEER_SPECS.structural;
+  const activeThreadId =
+    chatMode === "ai"
+      ? THREAD_AI
+      : getThreadIdForEngineer(activeDiscipline);
+  const activeSpec =
+    chatMode === "ai"
+      ? AI_SPEC
+      : ENGINEER_SPECS[activeDiscipline] || ENGINEER_SPECS.structural;
 
   const initialContext = route?.params?.initialContext || null;
   const [messages, setMessages] = useState([]);
@@ -101,8 +114,32 @@ export default function ExpertChatScreen({ route, session }) {
 
     setInputText("");
 
-    if (isEngineer) {
-      // 1. ENGINEER LOGGED IN: Talks to Client only
+    if (chatMode === "ai") {
+      // 1. CHAT WITH AI EXPERT (Powered by Google Gemini)
+      try {
+        const savedUserMsg = await appendChatMessage(
+          {
+            text: trimmed,
+            senderRole: "client",
+            senderName: user?.name || "Client",
+            attachedContext: activeContext,
+          },
+          THREAD_AI
+        );
+
+        setMessages((prev) => [...prev, savedUserMsg]);
+        setIsTyping(true);
+
+        const aiReply = await queryAiExpert(trimmed, activeContext);
+        const savedReply = await appendChatMessage(aiReply, THREAD_AI);
+        setMessages((prev) => [...prev, savedReply]);
+      } catch (err) {
+        Alert.alert("Error", err.message || "Failed to process AI question.");
+      } finally {
+        setIsTyping(false);
+      }
+    } else if (isEngineer) {
+      // 2. ENGINEER LOGGED IN: Talks to Client in Human mode
       try {
         const savedEngineerMsg = await appendChatMessage(
           {
@@ -119,7 +156,7 @@ export default function ExpertChatScreen({ route, session }) {
         Alert.alert("Error", err.message || "Failed to send message.");
       }
     } else {
-      // 2. CLIENT LOGGED IN: Sends question to active Engineer
+      // 3. CLIENT LOGGED IN: Sends question to active Human Engineer
       try {
         const savedClientMsg = await appendChatMessage(
           {
@@ -155,7 +192,7 @@ export default function ExpertChatScreen({ route, session }) {
   const handleClearHistory = () => {
     Alert.alert(
       "Reset Conversation",
-      "Are you sure you want to clear this consultation thread?",
+      `Are you sure you want to clear this ${chatMode === "ai" ? "AI" : "consultation"} thread?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -170,8 +207,17 @@ export default function ExpertChatScreen({ route, session }) {
     );
   };
 
-  // Quick starter prompts based on user role and discipline
+  // Quick starter prompts based on chat mode, user role, and discipline
   const getQuickPrompts = () => {
+    if (chatMode === "ai") {
+      return [
+        "Can I build 7 stories on a 20ft road under RAJUK?",
+        "What is the mandatory FAR setback rule?",
+        "Minimum road width for a 10-story building?",
+        "When is soil SPT testing mandatory under BNBC 2020?",
+        "What is the maximum ground coverage (MGC) for residential?",
+      ];
+    }
     if (isEngineer) {
       return [
         "Please provide the architectural floor layout.",
@@ -211,21 +257,36 @@ export default function ExpertChatScreen({ route, session }) {
         {/* Header Bar */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <View style={styles.headerIconCircle}>
-              <MaterialCommunityIcons
-                name={isEngineer ? "hard-hat" : "account-tie"}
-                size={22}
-                color="#2563eb"
-              />
+            <View
+              style={[
+                styles.headerIconCircle,
+                chatMode === "ai" && styles.headerIconCircleAI,
+              ]}
+            >
+              {chatMode === "ai" ? (
+                <Ionicons name="sparkles" size={20} color="#4f46e5" />
+              ) : (
+                <MaterialCommunityIcons
+                  name={isEngineer ? "hard-hat" : "account-tie"}
+                  size={22}
+                  color="#2563eb"
+                />
+              )}
             </View>
             <View>
               <Text style={styles.headerTitle}>
-                {isEngineer ? "Client Consultation" : activeSpec.roleLabel}
+                {chatMode === "ai"
+                  ? "CivilHub AI Assistant"
+                  : isEngineer
+                  ? "Client Consultation"
+                  : activeSpec.roleLabel}
               </Text>
               <Text style={styles.headerSubtitle}>
-                {isEngineer
+                {chatMode === "ai"
+                  ? "Powered by Google Gemini & BNBC 2020"
+                  : isEngineer
                   ? "Direct Client Consultation"
-                  : `Consulting ${activeSpec.name}`}
+                  : `Consulting ${activeSpec.name} (${activeSpec.license})`}
               </Text>
             </View>
           </View>
@@ -241,10 +302,59 @@ export default function ExpertChatScreen({ route, session }) {
           </View>
         </View>
 
-        {/* FOR CLIENT: Switch between 3 Engineers (Arc, Structure Eng, Soil Eng) */}
-        {!isEngineer && (
+        {/* 2 OPTIONS TOGGLE: Chat with AI Expert vs Chat with Human Expert */}
+        <View style={styles.modeToggleBar}>
+          <TouchableOpacity
+            style={[
+              styles.modeTab,
+              chatMode === "ai" && styles.modeTabActiveAI,
+            ]}
+            onPress={() => setChatMode("ai")}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="sparkles"
+              size={15}
+              color={chatMode === "ai" ? "#ffffff" : "#4f46e5"}
+            />
+            <Text
+              style={[
+                styles.modeTabText,
+                chatMode === "ai" && styles.modeTabTextActive,
+              ]}
+            >
+              Chat with AI Expert
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.modeTab,
+              chatMode === "human" && styles.modeTabActiveHuman,
+            ]}
+            onPress={() => setChatMode("human")}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons
+              name={isEngineer ? "account-group" : "account-hard-hat"}
+              size={16}
+              color={chatMode === "human" ? "#ffffff" : "#2563eb"}
+            />
+            <Text
+              style={[
+                styles.modeTabText,
+                chatMode === "human" && styles.modeTabTextActive,
+              ]}
+            >
+              {isEngineer ? "Client Chat" : "Chat with Human Expert"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* FOR CLIENT IN HUMAN MODE: Switch between 3 Engineers (Arc, Structure Eng, Soil Eng) */}
+        {chatMode === "human" && !isEngineer && (
           <View style={styles.engineerSwitchBar}>
-            <Text style={styles.engineerSwitchLabel}>Select Engineer to Chat With:</Text>
+            <Text style={styles.engineerSwitchLabel}>Select Human Engineer to Consult:</Text>
             <View style={styles.engineerTabsRow}>
               {ENGINEER_CHIPS.map((chip) => {
                 const isActive = selectedDiscipline === chip.id;
@@ -272,6 +382,24 @@ export default function ExpertChatScreen({ route, session }) {
                 );
               })}
             </View>
+          </View>
+        )}
+
+        {/* FOR CLIENT IN AI MODE: Quick hint with switch to human */}
+        {chatMode === "ai" && !isEngineer && (
+          <View style={styles.aiHintBanner}>
+            <View style={styles.aiHintLeft}>
+              <Ionicons name="information-circle-outline" size={15} color="#4f46e5" />
+              <Text style={styles.aiHintText}>
+                Instant BNBC 2020 answers from Gemini AI. Need IEB sealed drawings?
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.aiHintBtn}
+              onPress={() => setChatMode("human")}
+            >
+              <Text style={styles.aiHintBtnText}>Ask Human</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -328,9 +456,11 @@ export default function ExpertChatScreen({ route, session }) {
             showsVerticalScrollIndicator={false}
           >
             {messages.map((msg) => {
+              const isAi = msg.senderRole === "ai";
+              const isEng = msg.senderRole === "engineer";
               // Determine if this bubble belongs to current user
               const isMyMessage = isEngineer
-                ? msg.senderRole === "engineer"
+                ? isEng
                 : msg.senderRole === "client" || msg.senderRole === "user";
 
               return (
@@ -343,12 +473,21 @@ export default function ExpertChatScreen({ route, session }) {
                 >
                   {/* Left avatar for other party */}
                   {!isMyMessage && (
-                    <View style={styles.avatarBadge}>
-                      <MaterialCommunityIcons
-                        name={isEngineer ? "account" : "hard-hat"}
-                        size={16}
-                        color="#ffffff"
-                      />
+                    <View
+                      style={[
+                        styles.avatarBadge,
+                        isAi && styles.avatarBadgeAI,
+                      ]}
+                    >
+                      {isAi ? (
+                        <Ionicons name="sparkles" size={14} color="#ffffff" />
+                      ) : (
+                        <MaterialCommunityIcons
+                          name={isEngineer ? "account" : "hard-hat"}
+                          size={16}
+                          color="#ffffff"
+                        />
+                      )}
                     </View>
                   )}
 
@@ -356,7 +495,11 @@ export default function ExpertChatScreen({ route, session }) {
                   <View
                     style={[
                       styles.bubble,
-                      isMyMessage ? styles.myBubble : styles.otherBubble,
+                      isMyMessage
+                        ? styles.myBubble
+                        : isAi
+                        ? styles.aiBubble
+                        : styles.otherBubble,
                     ]}
                   >
                     <View style={styles.bubbleHeader}>
@@ -365,6 +508,8 @@ export default function ExpertChatScreen({ route, session }) {
                           styles.senderName,
                           isMyMessage
                             ? styles.mySenderName
+                            : isAi
+                            ? styles.aiSenderName
                             : styles.otherSenderName,
                         ]}
                       >
@@ -372,7 +517,7 @@ export default function ExpertChatScreen({ route, session }) {
                           ? isEngineer
                             ? `You (${activeSpec.roleLabel})`
                             : "You (Client)"
-                          : msg.senderName || (isEngineer ? "Client" : activeSpec.roleLabel)}
+                          : msg.senderName || (isAi ? "CivilHub AI Assistant" : activeSpec.roleLabel)}
                       </Text>
                       <Text
                         style={[
@@ -394,6 +539,8 @@ export default function ExpertChatScreen({ route, session }) {
                         styles.messageText,
                         isMyMessage
                           ? styles.myMessageText
+                          : isAi
+                          ? styles.aiMessageText
                           : styles.otherMessageText,
                       ]}
                     >
@@ -407,13 +554,33 @@ export default function ExpertChatScreen({ route, session }) {
             {/* Typing Indicator */}
             {isTyping && (
               <View style={[styles.messageRow, styles.otherRow]}>
-                <View style={styles.avatarBadge}>
-                  <MaterialCommunityIcons name="hard-hat" size={16} color="#ffffff" />
+                <View
+                  style={[
+                    styles.avatarBadge,
+                    chatMode === "ai" && styles.avatarBadgeAI,
+                  ]}
+                >
+                  {chatMode === "ai" ? (
+                    <Ionicons name="sparkles" size={14} color="#ffffff" />
+                  ) : (
+                    <MaterialCommunityIcons name="hard-hat" size={16} color="#ffffff" />
+                  )}
                 </View>
-                <View style={[styles.bubble, styles.otherBubble, styles.typingBubble]}>
-                  <ActivityIndicator size="small" color="#2563eb" />
+                <View
+                  style={[
+                    styles.bubble,
+                    chatMode === "ai" ? styles.aiBubble : styles.otherBubble,
+                    styles.typingBubble,
+                  ]}
+                >
+                  <ActivityIndicator
+                    size="small"
+                    color={chatMode === "ai" ? "#4f46e5" : "#2563eb"}
+                  />
                   <Text style={styles.typingText}>
-                    {activeSpec.name} is preparing consultation...
+                    {chatMode === "ai"
+                      ? "Gemini AI is analyzing building codes..."
+                      : `${activeSpec.name} is preparing consultation...`}
                   </Text>
                 </View>
               </View>
@@ -426,7 +593,9 @@ export default function ExpertChatScreen({ route, session }) {
           <TextInput
             style={styles.input}
             placeholder={
-              isEngineer
+              chatMode === "ai"
+                ? "Ask AI about BNBC, setbacks, FAR, approvals..."
+                : isEngineer
                 ? "Type message to Client..."
                 : `Ask ${activeSpec.roleLabel}...`
             }
@@ -440,6 +609,7 @@ export default function ExpertChatScreen({ route, session }) {
           <TouchableOpacity
             style={[
               styles.sendButton,
+              chatMode === "ai" && styles.sendButtonAI,
               (!inputText.trim() || isTyping) && styles.sendButtonDisabled,
             ]}
             onPress={() => handleSend()}
@@ -490,6 +660,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#dbeafe",
   },
+  headerIconCircleAI: {
+    backgroundColor: "#eef2ff",
+    borderColor: "#c7d2fe",
+  },
   headerTitle: {
     fontSize: 15,
     fontWeight: "700",
@@ -506,6 +680,76 @@ const styles = StyleSheet.create({
   },
   headerActionBtn: {
     padding: 6,
+  },
+  modeToggleBar: {
+    flexDirection: "row",
+    backgroundColor: "#f1f5f9",
+    padding: 6,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  modeTab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 9,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    gap: 6,
+  },
+  modeTabActiveAI: {
+    backgroundColor: "#4f46e5",
+    borderColor: "#4338ca",
+  },
+  modeTabActiveHuman: {
+    backgroundColor: "#2563eb",
+    borderColor: "#1d4ed8",
+  },
+  modeTabText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  modeTabTextActive: {
+    color: "#ffffff",
+  },
+  aiHintBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#eef2ff",
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e7ff",
+  },
+  aiHintLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+    marginRight: 8,
+  },
+  aiHintText: {
+    fontSize: 11,
+    color: "#4338ca",
+    fontWeight: "500",
+  },
+  aiHintBtn: {
+    backgroundColor: "#4f46e5",
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  aiHintBtnText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#ffffff",
   },
   engineerSwitchBar: {
     backgroundColor: "#f8fafc",
@@ -650,6 +894,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 2,
   },
+  avatarBadgeAI: {
+    backgroundColor: "#4f46e5",
+  },
   bubble: {
     maxWidth: "82%",
     borderRadius: 16,
@@ -665,6 +912,17 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
     borderWidth: 1,
     borderColor: "#e2e8f0",
+  },
+  aiBubble: {
+    backgroundColor: "#ffffff",
+    borderBottomLeftRadius: 4,
+    borderWidth: 1.5,
+    borderColor: "#c7d2fe",
+    shadowColor: "#4f46e5",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   typingBubble: {
     flexDirection: "row",
@@ -694,6 +952,9 @@ const styles = StyleSheet.create({
   otherSenderName: {
     color: "#2563eb",
   },
+  aiSenderName: {
+    color: "#4f46e5",
+  },
   timestamp: {
     fontSize: 10,
   },
@@ -712,6 +973,9 @@ const styles = StyleSheet.create({
   },
   otherMessageText: {
     color: "#1e293b",
+  },
+  aiMessageText: {
+    color: "#0f172a",
   },
   inputContainer: {
     flexDirection: "row",
@@ -742,6 +1006,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#2563eb",
     justifyContent: "center",
     alignItems: "center",
+  },
+  sendButtonAI: {
+    backgroundColor: "#4f46e5",
   },
   sendButtonDisabled: {
     backgroundColor: "#94a3b8",
