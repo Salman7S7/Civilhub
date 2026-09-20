@@ -85,7 +85,7 @@ app.use(
 
 const PORT = process.env.PORT || 4000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-flash-lite-latest";
 const JWT_SECRET = process.env.JWT_SECRET || "civilhub-development-secret";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const GEMINI_URL =
@@ -964,39 +964,40 @@ app.post("/api/ask-building-code", async (req, res) => {
       generationConfig: { maxOutputTokens: 800 },
     };
 
-    try {
-      const geminiResponse = await fetch(
-        GEMINI_URL,
-        {
+    const candidateModels = Array.from(
+      new Set([GEMINI_MODEL, "gemini-flash-lite-latest", "gemini-3.8-flash", "gemini-3.5-flash"])
+    );
+
+    let lastError = null;
+    for (const model of candidateModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+        const geminiResponse = await fetch(url, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": GEMINI_API_KEY,
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody),
           signal: AbortSignal.timeout(15000),
+        });
+
+        if (geminiResponse.ok) {
+          const data = await geminiResponse.json();
+          const answerText =
+            data?.candidates?.[0]?.content?.parts?.map((p) => p?.text || "").join("").trim();
+          if (answerText) {
+            return res.json({ answer: answerText, model });
+          }
+        } else {
+          const errorText = await geminiResponse.text();
+          console.warn(`[Gemini] Model ${model} returned (${geminiResponse.status}):`, errorText);
+          lastError = `Gemini API error (${geminiResponse.status})`;
         }
-      );
-
-      if (!geminiResponse.ok) {
-        const errorText = await geminiResponse.text();
-        console.warn("Gemini API error (" + geminiResponse.status + "):", errorText);
-        return res.status(502).json({ error: `Gemini API error (${geminiResponse.status}).` });
+      } catch (callErr) {
+        console.warn(`[Gemini] Model ${model} call failed:`, callErr.message);
+        lastError = callErr.message;
       }
-
-      const data = await geminiResponse.json();
-      const answerText =
-        data?.candidates?.[0]?.content?.parts?.map((p) => p?.text || "").join("").trim() || "";
-
-      if (!answerText) {
-        return res.status(502).json({ error: "Gemini API returned an empty response." });
-      }
-
-      return res.json({ answer: answerText });
-    } catch (apiError) {
-      console.warn("Gemini API fetch error:", apiError.message);
-      return res.status(500).json({ error: `Failed to reach Gemini API: ${apiError.message}` });
     }
+
+    return res.status(502).json({ error: `Gemini API error: ${lastError || "No response received"}` });
   } catch (error) {
     console.error("Proxy error:", error);
     res.status(500).json({ error: "Internal server error." });
