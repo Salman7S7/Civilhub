@@ -111,25 +111,56 @@ export default function ExpertChatScreen({ route, session }) {
     }
   }, [route?.params?.initialContext]);
 
-  // Load chat history whenever activeThreadId changes
+  // Load chat history and poll for new messages in background every 2.5 seconds
   useEffect(() => {
     let isMounted = true;
-    async function loadHistory() {
-      setLoadingHistory(true);
+
+    async function loadHistory(isPolling = false) {
+      if (!isPolling) setLoadingHistory(true);
       try {
         const history = await getChatHistory(activeThreadId);
-        if (isMounted) setMessages(history);
+        if (isMounted) {
+          setMessages((prev) => {
+            // Check if messages changed before triggering state update to prevent jitter
+            if (
+              history.length !== prev.length ||
+              (history.length > 0 && prev.length > 0 && history[history.length - 1].id !== prev[prev.length - 1].id)
+            ) {
+              return history;
+            }
+            return prev;
+          });
+        }
       } catch (err) {
-        console.error("Failed to load chat history:", err);
+        if (!isPolling) console.error("Failed to load chat history:", err);
       } finally {
-        if (isMounted) setLoadingHistory(false);
+        if (isMounted && !isPolling) setLoadingHistory(false);
       }
     }
-    loadHistory();
+
+    loadHistory(false);
+
+    // Poll every 2.5 seconds for incoming messages from client / engineer
+    const intervalId = setInterval(() => {
+      if (isMounted && !isTyping) {
+        loadHistory(true);
+      }
+    }, 2500);
+
     return () => {
       isMounted = false;
+      clearInterval(intervalId);
     };
-  }, [activeThreadId]);
+  }, [activeThreadId, isTyping]);
+
+  const handleManualRefresh = async () => {
+    try {
+      const history = await getChatHistory(activeThreadId);
+      setMessages(history);
+    } catch (err) {
+      console.warn("Failed to manually refresh chat:", err);
+    }
+  };
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
@@ -364,15 +395,26 @@ export default function ExpertChatScreen({ route, session }) {
                 </Text>
               </View>
             ) : (
-              <TouchableOpacity
-                style={styles.headerActionBtn}
-                onPress={handleClearHistory}
-                activeOpacity={0.7}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                accessibilityLabel="Clear chat history"
-              >
-                <Ionicons name="trash-outline" size={19} color="#ef4444" />
-              </TouchableOpacity>
+              <View style={styles.headerActionsRow}>
+                <TouchableOpacity
+                  style={styles.headerActionBtnSync}
+                  onPress={handleManualRefresh}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  accessibilityLabel="Refresh messages"
+                >
+                  <Ionicons name="refresh" size={17} color="#2563eb" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.headerActionBtn}
+                  onPress={handleClearHistory}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  accessibilityLabel="Clear chat history"
+                >
+                  <Ionicons name="trash-outline" size={19} color="#ef4444" />
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         </View>
@@ -918,6 +960,18 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  headerActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  headerActionBtnSync: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#dbeafe",
   },
   headerActionBtn: {
     padding: 8,
