@@ -31,7 +31,7 @@ const HERO_IMAGE_URL =
 
 const REGION_BADGES = ["RAJUK", "CDA", "RDA", "KDA"]; // List of region names to show as badges
 
-export default function FeasibilityScreen({ navigation }) { // The main screen component, receives navigation prop
+export default function FeasibilityScreen({ navigation, route }) { // The main screen component, receives navigation and route props
   const [chatVisible, setChatVisible] = useState(false); // State to control if the chatbot modal is visible
 
   return (
@@ -79,7 +79,7 @@ export default function FeasibilityScreen({ navigation }) { // The main screen c
         </ImageBackground>
 
         {/* Feasibility Form + Result Card */}
-        <FeasibilityForm />
+        <FeasibilityForm initialParams={route?.params} />
 
         {/* Bottom spacing so content clears the FAB */}
         <View style={{ height: 100 }} />
