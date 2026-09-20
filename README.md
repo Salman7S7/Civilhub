@@ -38,33 +38,87 @@ CivilHub is a comprehensive civil engineering, architectural planning, and build
 
 ## Architecture and System Design
 
+### System Component Architecture
+
+```mermaid
+graph TD
+    subgraph ClientLayer["Client Layer (Expo / React Native)"]
+        UI["Mobile & Web Interfaces"]
+        Nav["Role-Based Bottom Tab Navigator"]
+        Storage["AsyncStorage Local Cache"]
+    end
+
+    subgraph BackendLayer["Backend Service (Node.js & Express)"]
+        API["Express REST API (Port 4000)"]
+        AuthService["Session & Role Controller"]
+        FeasibilityEngine["Regulatory Engine (BNBC 2020)"]
+        CostEngine["5-Step Cost Estimator Engine"]
+    end
+
+    subgraph PersistenceAndAI["Persistence & External Services"]
+        MySQL[("MySQL Database")]
+        Gemini["Google Gemini API (@google/genai)"]
+    end
+
+    UI --> Nav
+    Nav --> Storage
+    UI -->|HTTP / REST API| API
+    API --> AuthService
+    API --> FeasibilityEngine
+    API --> CostEngine
+
+    API -->|mysql2/promise pool| MySQL
+    API -->|Prompt & Context| Gemini
+
+    subgraph DatabaseSchema["MySQL Database Schema"]
+        direction TB
+        T1["experts"]
+        T2["consultation_messages"]
+        T3["architectural_designs"]
+        T4["cost_estimates"]
+    end
+
+    MySQL --- DatabaseSchema
 ```
-+-------------------------------------------------------------+
-|                      Client Layer (Expo)                     |
-|  - React Native / Expo Web & Mobile                          |
-|  - Bottom Tab Navigation (Client & Engineer Portals)         |
-|  - AsyncStorage Local Cache for Offline Resilience           |
-+------------------------------+------------------------------+
-                               |
-                               | HTTP / REST API
-                               v
-+-------------------------------------------------------------+
-|                    Backend Service (Node.js)                |
-|  - Express REST API (Port 4000)                             |
-|  - Google Gemini AI Integration (@google/genai)              |
-|  - MySQL Connection Pool (mysql2/promise)                   |
-+------------------------------+------------------------------+
-                               |
-            +------------------+------------------+
-            |                                     |
-            v                                     v
-+-----------------------+             +-----------------------+
-|      MySQL Database    |             |    Google Gemini API  |
-|  - experts            |             |  - BNBC 2020 Analysis |
-|  - consultation_msgs  |             |  - Structural Checks  |
-|  - architectural_dsgn |             +-----------------------+
-|  - cost_estimates     |
-+-----------------------+
+
+### Cross-Module Interaction Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as User / Client
+    participant Modal as Design Detail Modal
+    participant Feas as Feasibility Screen
+    participant Cost as Cost Estimator
+    participant Chat as Expert Chat
+    participant Backend as Express Server
+    participant Gemini as Google Gemini API
+    participant MySQL as MySQL Database
+
+    Client->>Modal: Select Architectural Model
+
+    alt Check Feasibility
+        Client->>Modal: Tap "Check Feasibility for this Model"
+        Modal->>Feas: Pre-fill Katha, Floors, Authority
+        Feas->>Feas: Instant BNBC 2020 & RAJUK Feasibility Verification
+    else Estimate Cost & Customize
+        Client->>Modal: Tap "Estimate Cost & Customize"
+        Modal->>Cost: Pre-fill Dimensions, Floors, Room Layouts
+        Cost->>Cost: Automatic Calculation of Preliminary BDT Cost
+    else Ask Expert about this Design
+        Client->>Modal: Tap "Ask Expert about this Design"
+        Modal->>Chat: Attach Rich Design Specification Profile
+        Client->>Chat: Send Consultation Message
+        Chat->>Backend: POST /api/chat/messages
+        alt AI Expert Mode
+            Backend->>Gemini: Process Query with Full Model Context
+            Gemini-->>Backend: Return Targeted Building Code Advice
+        else Human Expert Mode
+            Backend->>MySQL: Insert into consultation_messages table
+        end
+        Backend-->>Chat: Synchronize Chat Thread
+        Chat-->>Client: Display Embedded Design Specification Card
+    end
 ```
 
 ---
