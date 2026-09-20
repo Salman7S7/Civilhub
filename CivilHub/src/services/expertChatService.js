@@ -23,43 +23,139 @@ export const AI_SPEC = {
     "Hello! I am your CivilHub AI Assistant powered by Google Gemini and BNBC 2020.\n\nI can answer questions regarding Floor Area Ratio (FAR), road setbacks, story height limits, seismic design rules, and municipal approvals across RAJUK, CDA, RDA, and KDA.",
 };
 
-export const ENGINEER_SPECS = {
-  architect: {
-    id: "architect",
+export const VERIFIED_EXPERTS = [
+  {
+    id: "architect_1",
     name: "Ar. Nusrat Jahan",
     title: "Senior Architect (Arc)",
-    roleLabel: "Architect (Arc)",
+    roleLabel: "Architect",
+    discipline: "architect",
     license: "IAB-K2104",
-    threadId: THREAD_ARCHITECT,
+    experience: "12 years exp",
+    firm: "Studio Nirman Dhaka",
+    rating: "4.9 ★ (84 reviews)",
+    specialties: ["Floor Layouts", "FAR Calculation", "RAJUK & CDA Approval"],
+    threadId: "thread_client_architect_1",
+    avatarInitials: "NJ",
+    avatarColor: "#0284c7",
     greeting:
       "Hello! I am Ar. Nusrat Jahan, your Architectural Consultant (IAB-K2104).\n\nI can assist you with Floor Area Ratio (FAR) calculations, mandatory front/rear setbacks, architectural floor layouts, and RAJUK/CDA approval preparation.",
   },
-  structural: {
-    id: "structural",
+  {
+    id: "architect_2",
+    name: "Ar. Mahmudul Hasan",
+    title: "Principal Urban Architect",
+    roleLabel: "Architect",
+    discipline: "architect",
+    license: "IAB-M3190",
+    experience: "8 years exp",
+    firm: "Hasan & Associates",
+    rating: "4.8 ★ (56 reviews)",
+    specialties: ["Residential Elevation", "Interior Space Planning", "Green Building"],
+    threadId: "thread_client_architect_2",
+    avatarInitials: "MH",
+    avatarColor: "#0369a1",
+    greeting:
+      "Hello! I am Ar. Mahmudul Hasan (IAB-M3190). I specialize in modern residential elevation, sustainable building envelopes, and RAJUK building code compliance.",
+  },
+  {
+    id: "structural_1",
     name: "Engr. Tanvir Ahmed, PEng",
     title: "Principal Structural Engineer",
     roleLabel: "Structure Eng",
+    discipline: "structural",
     license: "MIEB-18492",
-    threadId: THREAD_STRUCTURAL,
+    experience: "15 years exp",
+    firm: "Dhaka Structural Dynamics",
+    rating: "5.0 ★ (112 reviews)",
+    specialties: ["BNBC 2020", "Seismic RCC Detailing", "Shear Wall Design"],
+    threadId: "thread_client_structural_1",
+    avatarInitials: "TA",
+    avatarColor: "#2563eb",
     greeting:
-      "Hello! I am Engr. Tanvir Ahmed, your Structural Engineering Consultant (MIEB-18492).\n\nI can help you evaluate column and shear wall sizing, earthquake-resistant RCC frame detailing, structural drawing review, and BNBC 2020 structural safety compliance.",
+      "Hello! I am Engr. Tanvir Ahmed, PEng (MIEB-18492).\n\nI can help you evaluate column and shear wall sizing, earthquake-resistant RCC frame detailing, structural drawing review, and BNBC 2020 structural safety compliance.",
   },
-  soil: {
-    id: "soil",
+  {
+    id: "structural_2",
+    name: "Engr. Shahriar Kabir",
+    title: "Senior RCC Frame Specialist",
+    roleLabel: "Structure Eng",
+    discipline: "structural",
+    license: "MIEB-22104",
+    experience: "9 years exp",
+    firm: "Apex Structural Engineers",
+    rating: "4.9 ★ (63 reviews)",
+    specialties: ["High-rise Detailing", "Beam-Column Joints", "ETABS Modeling"],
+    threadId: "thread_client_structural_2",
+    avatarInitials: "SK",
+    avatarColor: "#1d4ed8",
+    greeting:
+      "Hello! I am Engr. Shahriar Kabir (MIEB-22104). I specialize in high-rise RCC framing, ductile rebar confinement, and ETABS structural analysis.",
+  },
+  {
+    id: "soil_1",
     name: "Engr. Mohammad Rafiqul",
     title: "Geotechnical & Soil Specialist",
     roleLabel: "Soil Eng",
+    discipline: "soil",
     license: "FIEB-09812",
-    threadId: THREAD_SOIL,
+    experience: "18 years exp",
+    firm: "Bengal Geotechnical Lab",
+    rating: "4.9 ★ (92 reviews)",
+    specialties: ["Borehole SPT N-Value", "Bored Cast-in-Situ Piling", "Pile Load Test"],
+    threadId: "thread_client_soil_1",
+    avatarInitials: "MR",
+    avatarColor: "#059669",
     greeting:
       "Hello! I am Engr. Mohammad Rafiqul, your Geotechnical & Soil Specialist (FIEB-09812).\n\nI specialize in soil test review, borehole SPT N-value interpretation, allowable bearing capacity calculation, and cast-in-situ bored pile foundation design.",
   },
+  {
+    id: "soil_2",
+    name: "Engr. Anisur Rahman",
+    title: "Foundation & Soil Consultant",
+    roleLabel: "Soil Eng",
+    discipline: "soil",
+    license: "MIEB-17632",
+    experience: "11 years exp",
+    firm: "Delta Geo-Engineering",
+    rating: "4.8 ★ (47 reviews)",
+    specialties: ["Mat / Raft Footing", "Differential Settlement", "Soil Improvement"],
+    threadId: "thread_client_soil_2",
+    avatarInitials: "AR",
+    avatarColor: "#047857",
+    greeting:
+      "Hello! I am Engr. Anisur Rahman (MIEB-17632). I evaluate soil bearing capacity, settlement risks in alluvial silt, and mat foundation suitability.",
+  },
+];
+
+export const ENGINEER_SPECS = {
+  architect: VERIFIED_EXPERTS[0],
+  structural: VERIFIED_EXPERTS[2],
+  soil: VERIFIED_EXPERTS[4],
 };
 
+export function getAvailableExperts(disciplineFilter = "all") {
+  if (!disciplineFilter || disciplineFilter === "all") {
+    return VERIFIED_EXPERTS;
+  }
+  return VERIFIED_EXPERTS.filter((e) => e.discipline === disciplineFilter);
+}
+
+export function getExpertById(expertId) {
+  return (
+    VERIFIED_EXPERTS.find((e) => e.id === expertId) ||
+    VERIFIED_EXPERTS[2] // default to structural_1
+  );
+}
+
+export function getExpertForThread(threadId) {
+  return VERIFIED_EXPERTS.find((e) => e.threadId === threadId) || null;
+}
+
 export function getThreadIdForEngineer(engineerType) {
-  if (engineerType === "architect") return THREAD_ARCHITECT;
-  if (engineerType === "soil") return THREAD_SOIL;
-  return THREAD_STRUCTURAL;
+  if (engineerType === "architect") return "thread_client_architect_1";
+  if (engineerType === "soil") return "thread_client_soil_1";
+  return "thread_client_structural_1";
 }
 
 export function getDefaultWelcomeForThread(threadId) {
@@ -77,46 +173,31 @@ export function getDefaultWelcomeForThread(threadId) {
       },
     ];
   }
-  if (threadId === THREAD_ARCHITECT) {
+
+  const expert = getExpertForThread(threadId);
+  if (expert) {
     return [
       {
-        id: "msg_welcome_arc",
-        threadId: THREAD_ARCHITECT,
+        id: `msg_welcome_${expert.id}`,
+        threadId: expert.threadId,
         senderRole: "engineer",
-        engineerType: "architect",
-        senderName: ENGINEER_SPECS.architect.name,
-        text: ENGINEER_SPECS.architect.greeting,
+        engineerType: expert.discipline,
+        senderName: expert.name,
+        text: expert.greeting,
         timestamp: new Date().toISOString(),
         attachedContext: null,
       },
     ];
+  }
+
+  // Fallbacks for legacy thread IDs
+  if (threadId === THREAD_ARCHITECT) {
+    return getDefaultWelcomeForThread("thread_client_architect_1");
   }
   if (threadId === THREAD_SOIL) {
-    return [
-      {
-        id: "msg_welcome_soil",
-        threadId: THREAD_SOIL,
-        senderRole: "engineer",
-        engineerType: "soil",
-        senderName: ENGINEER_SPECS.soil.name,
-        text: ENGINEER_SPECS.soil.greeting,
-        timestamp: new Date().toISOString(),
-        attachedContext: null,
-      },
-    ];
+    return getDefaultWelcomeForThread("thread_client_soil_1");
   }
-  return [
-    {
-      id: "msg_welcome_structural",
-      threadId: THREAD_STRUCTURAL,
-      senderRole: "engineer",
-      engineerType: "structural",
-      senderName: ENGINEER_SPECS.structural.name,
-      text: ENGINEER_SPECS.structural.greeting,
-      timestamp: new Date().toISOString(),
-      attachedContext: null,
-    },
-  ];
+  return getDefaultWelcomeForThread("thread_client_structural_1");
 }
 
 /**

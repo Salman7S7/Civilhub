@@ -18,21 +18,21 @@ import {
   getChatHistory,
   appendChatMessage,
   clearChatHistory,
-  queryEngineerExpert,
   queryAiExpert,
   getThreadIdForEngineer,
+  getAvailableExperts,
+  getExpertById,
   AI_SPEC,
   ENGINEER_SPECS,
+  VERIFIED_EXPERTS,
   THREAD_AI,
-  THREAD_STRUCTURAL,
-  THREAD_ARCHITECT,
-  THREAD_SOIL,
 } from "../services/expertChatService";
 
-const ENGINEER_CHIPS = [
-  { id: "architect", label: "Arc (Architect)", icon: "drawing" },
-  { id: "structural", label: "Structure Eng", icon: "pillar" },
-  { id: "soil", label: "Soil Eng", icon: "shovel" },
+const DISCIPLINE_FILTERS = [
+  { id: "all", label: "All Experts" },
+  { id: "architect", label: "Architects" },
+  { id: "structural", label: "Structural" },
+  { id: "soil", label: "Soil / Geotech" },
 ];
 
 export default function ExpertChatScreen({ route, session }) {
@@ -44,21 +44,31 @@ export default function ExpertChatScreen({ route, session }) {
   // Default to "ai" for clients; default to "human" for engineers (client consultation)
   const [chatMode, setChatMode] = useState(isEngineer ? "human" : "ai");
 
-  // For Client in Human mode: select which engineer to consult
-  // For Engineer: locked strictly to their own discipline to talk to Client
-  const [selectedDiscipline, setSelectedDiscipline] = useState(
-    isEngineer ? engineerDiscipline : "structural"
-  );
+  // For Client in Human mode: select specific verified expert (null displays Messenger directory)
+  const [selectedExpertId, setSelectedExpertId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterDiscipline, setFilterDiscipline] = useState("all");
 
-  const activeDiscipline = isEngineer ? engineerDiscipline : selectedDiscipline;
+  const selectedExpert = selectedExpertId ? getExpertById(selectedExpertId) : null;
+  const activeDiscipline = isEngineer
+    ? engineerDiscipline
+    : selectedExpert?.discipline || "structural";
+
   const activeThreadId =
     chatMode === "ai"
       ? THREAD_AI
-      : getThreadIdForEngineer(activeDiscipline);
+      : isEngineer
+      ? getThreadIdForEngineer(engineerDiscipline)
+      : selectedExpert
+      ? selectedExpert.threadId
+      : "thread_client_structural_1";
+
   const activeSpec =
     chatMode === "ai"
       ? AI_SPEC
-      : ENGINEER_SPECS[activeDiscipline] || ENGINEER_SPECS.structural;
+      : isEngineer
+      ? ENGINEER_SPECS[engineerDiscipline] || ENGINEER_SPECS.structural
+      : selectedExpert || VERIFIED_EXPERTS[0];
 
   const initialContext = route?.params?.initialContext || null;
   const [messages, setMessages] = useState([]);
@@ -255,6 +265,23 @@ export default function ExpertChatScreen({ route, session }) {
     ];
   };
 
+  // Filter experts for the Messenger-style directory
+  const filteredExperts = VERIFIED_EXPERTS.filter((exp) => {
+    if (filterDiscipline !== "all" && exp.discipline !== filterDiscipline) {
+      return false;
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchName = exp.name.toLowerCase().includes(q);
+      const matchTitle = exp.title.toLowerCase().includes(q);
+      const matchFirm = exp.firm.toLowerCase().includes(q);
+      const matchLicense = exp.license.toLowerCase().includes(q);
+      const matchSpecialty = exp.specialties?.some((s) => s.toLowerCase().includes(q));
+      return matchName || matchTitle || matchFirm || matchLicense || matchSpecialty;
+    }
+    return true;
+  });
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <KeyboardAvoidingView
@@ -275,7 +302,7 @@ export default function ExpertChatScreen({ route, session }) {
                 <Ionicons name="sparkles" size={20} color="#4f46e5" />
               ) : (
                 <MaterialCommunityIcons
-                  name={isEngineer ? "hard-hat" : "account-tie"}
+                  name={isEngineer ? "hard-hat" : selectedExpert ? "account-tie" : "account-group"}
                   size={22}
                   color="#2563eb"
                 />
@@ -287,28 +314,41 @@ export default function ExpertChatScreen({ route, session }) {
                   ? "CivilHub AI Assistant"
                   : isEngineer
                   ? "Client Consultation"
-                  : activeSpec.roleLabel}
+                  : selectedExpert
+                  ? selectedExpert.name
+                  : "Verified Civil Experts"}
               </Text>
               <Text style={styles.headerSubtitle}>
                 {chatMode === "ai"
                   ? "Powered by Google Gemini & BNBC 2020"
                   : isEngineer
                   ? "Direct Client Consultation"
-                  : `Consulting ${activeSpec.name} (${activeSpec.license})`}
+                  : selectedExpert
+                  ? `${selectedExpert.roleLabel} • ${selectedExpert.license}`
+                  : "Browse & consult licensed professionals"}
               </Text>
             </View>
           </View>
 
           <View style={styles.headerRight}>
-            <TouchableOpacity
-              style={styles.headerActionBtn}
-              onPress={handleClearHistory}
-              activeOpacity={0.7}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              accessibilityLabel="Clear chat history"
-            >
-              <Ionicons name="trash-outline" size={19} color="#ef4444" />
-            </TouchableOpacity>
+            {chatMode === "human" && !isEngineer && !selectedExpert ? (
+              <View style={styles.verifiedCountBadge}>
+                <Ionicons name="shield-checkmark" size={14} color="#059669" />
+                <Text style={styles.verifiedCountText}>
+                  {VERIFIED_EXPERTS.length} Verified
+                </Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.headerActionBtn}
+                onPress={handleClearHistory}
+                activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityLabel="Clear chat history"
+              >
+                <Ionicons name="trash-outline" size={19} color="#ef4444" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -361,277 +401,443 @@ export default function ExpertChatScreen({ route, session }) {
           </TouchableOpacity>
         </View>
 
-        {/* FOR CLIENT IN HUMAN MODE: Switch between 3 Engineers (Arc, Structure Eng, Soil Eng) */}
-        {chatMode === "human" && !isEngineer && (
-          <View style={styles.engineerSwitchBar}>
-            <Text style={styles.engineerSwitchLabel}>Select Human Engineer to Consult:</Text>
-            <View style={styles.engineerTabsRow}>
-              {ENGINEER_CHIPS.map((chip) => {
-                const isActive = selectedDiscipline === chip.id;
+        {/* MESSENGER-STYLE EXPERT DIRECTORY (When in Human mode & no expert is selected) */}
+        {chatMode === "human" && !isEngineer && !selectedExpert ? (
+          <View style={styles.directoryContainer}>
+            {/* Search Input */}
+            <View style={styles.searchBarWrapper}>
+              <Ionicons name="search" size={18} color="#64748b" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search by name, license, firm, or specialty..."
+                placeholderTextColor="#94a3b8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                clearButtonMode="while-editing"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setSearchQuery("")}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close-circle" size={18} color="#94a3b8" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Discipline Filter Chips */}
+            <View style={styles.filterChipsRow}>
+              {DISCIPLINE_FILTERS.map((filter) => {
+                const isActive = filterDiscipline === filter.id;
+                const count =
+                  filter.id === "all"
+                    ? VERIFIED_EXPERTS.length
+                    : VERIFIED_EXPERTS.filter((e) => e.discipline === filter.id).length;
                 return (
                   <TouchableOpacity
-                    key={chip.id}
-                    style={[styles.engineerTab, isActive && styles.engineerTabActive]}
-                    activeOpacity={0.75}
-                    onPress={() => setSelectedDiscipline(chip.id)}
+                    key={filter.id}
+                    style={[
+                      styles.filterChip,
+                      isActive && styles.filterChipActive,
+                    ]}
+                    onPress={() => setFilterDiscipline(filter.id)}
+                    activeOpacity={0.7}
                   >
-                    <MaterialCommunityIcons
-                      name={chip.icon}
-                      size={16}
-                      color={isActive ? "#ffffff" : "#475569"}
-                    />
                     <Text
                       style={[
-                        styles.engineerTabText,
-                        isActive && styles.engineerTabTextActive,
+                        styles.filterChipText,
+                        isActive && styles.filterChipTextActive,
                       ]}
                     >
-                      {chip.label}
+                      {filter.label} ({count})
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
-          </View>
-        )}
 
-        {/* FOR CLIENT IN AI MODE: Quick hint with switch to human */}
-        {chatMode === "ai" && !isEngineer && (
-          <View style={styles.aiHintBanner}>
-            <View style={styles.aiHintLeft}>
-              <Ionicons name="information-circle-outline" size={15} color="#4f46e5" />
-              <Text style={styles.aiHintText}>
-                Instant BNBC 2020 answers from Gemini AI. Need IEB sealed drawings?
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.aiHintBtn}
-              onPress={() => setChatMode("human")}
+            {/* Experts List */}
+            <ScrollView
+              style={styles.expertsScrollView}
+              contentContainerStyle={styles.expertsListContent}
+              showsVerticalScrollIndicator={false}
             >
-              <Text style={styles.aiHintBtnText}>Ask Human</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+              <View style={styles.directoryHeaderRow}>
+                <Text style={styles.directorySectionTitle}>
+                  Available Verified Consultants
+                </Text>
+                <Text style={styles.directorySectionSub}>
+                  {filteredExperts.length} online
+                </Text>
+              </View>
 
+              {filteredExperts.length === 0 ? (
+                <View style={styles.emptyStateContainer}>
+                  <MaterialCommunityIcons name="account-search" size={48} color="#94a3b8" />
+                  <Text style={styles.emptyStateTitle}>No experts found</Text>
+                  <Text style={styles.emptyStateSub}>
+                    Try searching with different keywords or switch filter categories.
+                  </Text>
+                </View>
+              ) : (
+                filteredExperts.map((expert) => (
+                  <TouchableOpacity
+                    key={expert.id}
+                    style={styles.expertCard}
+                    activeOpacity={0.7}
+                    onPress={() => setSelectedExpertId(expert.id)}
+                  >
+                    <View style={styles.expertCardHeader}>
+                      {/* Avatar with Initials & Online dot */}
+                      <View style={styles.avatarWrapper}>
+                        <View
+                          style={[
+                            styles.expertAvatar,
+                            { backgroundColor: expert.avatarColor || "#2563eb" },
+                          ]}
+                        >
+                          <Text style={styles.expertAvatarText}>
+                            {expert.avatarInitials}
+                          </Text>
+                        </View>
+                        <View style={styles.onlineDot} />
+                      </View>
 
+                      {/* Main Info */}
+                      <View style={styles.expertCardMain}>
+                        <View style={styles.expertNameRow}>
+                          <Text style={styles.expertCardName} numberOfLines={1}>
+                            {expert.name}
+                          </Text>
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={16}
+                            color="#2563eb"
+                            style={styles.verifiedIcon}
+                          />
+                        </View>
+                        <Text style={styles.expertCardTitle} numberOfLines={1}>
+                          {expert.title}
+                        </Text>
+                        <Text style={styles.expertCardMeta} numberOfLines={1}>
+                          <Text style={styles.licenseHighlight}>{expert.license}</Text>
+                          {" • "}
+                          {expert.firm}
+                        </Text>
+                      </View>
 
-        {/* Active Context Banner if any */}
-        {activeContext && (
-          <View style={styles.contextBanner}>
-            <View style={styles.contextBannerContent}>
-              <MaterialCommunityIcons name="office-building-cog" size={15} color="#1d4ed8" />
-              <Text style={styles.contextBannerText} numberOfLines={1}>
-                Context: {activeContext.floors ? `${activeContext.floors} Fl ` : ""}
-                {activeContext.katha ? `• ${activeContext.katha} Katha ` : ""}
-                {activeContext.authority ? `• ${activeContext.authority}` : ""}
-              </Text>
-            </View>
-            <TouchableOpacity onPress={() => setActiveContext(null)}>
-              <Ionicons name="close" size={16} color="#64748b" />
-            </TouchableOpacity>
-          </View>
-        )}
+                      {/* Rating Badge */}
+                      <View style={styles.ratingBadge}>
+                        <Ionicons name="star" size={13} color="#f59e0b" />
+                        <Text style={styles.ratingBadgeText}>
+                          {expert.rating.split(" ")[0]}
+                        </Text>
+                      </View>
+                    </View>
 
-        {/* Quick Starter Chips */}
-        <View style={styles.quickChipsWrapper}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.quickChipsContainer}
-          >
-            {getQuickPrompts().map((promptText, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.quickChip}
-                activeOpacity={0.7}
-                onPress={() => handleSend(promptText)}
-              >
-                <Text style={styles.quickChipText}>{promptText}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+                    {/* Specialties Chips */}
+                    <View style={styles.specialtiesWrapper}>
+                      {expert.specialties.map((spec, sIdx) => (
+                        <View key={sIdx} style={styles.specialtyChip}>
+                          <Text style={styles.specialtyChipText}>{spec}</Text>
+                        </View>
+                      ))}
+                    </View>
 
-        {/* Messages Stream */}
-        {loadingHistory ? (
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color="#2563eb" />
-            <Text style={styles.loaderText}>Loading consultation messages...</Text>
+                    {/* Card Footer: Action Button */}
+                    <View style={styles.expertCardFooter}>
+                      <Text style={styles.experienceText}>
+                        {expert.experience}
+                      </Text>
+                      <View style={styles.chatActionBtn}>
+                        <Text style={styles.chatActionBtnText}>Chat Now</Text>
+                        <Ionicons name="chevron-forward" size={14} color="#ffffff" />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
           </View>
         ) : (
-          <ScrollView
-            ref={scrollViewRef}
-            style={styles.messageList}
-            contentContainerStyle={styles.messageListContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {messages.map((msg) => {
-              const isAi = msg.senderRole === "ai";
-              const isEng = msg.senderRole === "engineer";
-              // Determine if this bubble belongs to current user
-              const isMyMessage = isEngineer
-                ? isEng
-                : msg.senderRole === "client" || msg.senderRole === "user";
-
-              return (
-                <View
-                  key={msg.id}
-                  style={[
-                    styles.messageRow,
-                    isMyMessage ? styles.myRow : styles.otherRow,
-                  ]}
+          /* ACTIVE CHAT VIEW (AI mode, or Selected Expert, or Engineer mode) */
+          <>
+            {/* When chatting with a selected expert: Sub-header with Back Button */}
+            {chatMode === "human" && !isEngineer && selectedExpert && (
+              <View style={styles.expertActiveSubHeader}>
+                <TouchableOpacity
+                  style={styles.backToExpertsBtn}
+                  onPress={() => setSelectedExpertId(null)}
+                  activeOpacity={0.7}
                 >
-                  {/* Left avatar for other party */}
-                  {!isMyMessage && (
-                    <View
-                      style={[
-                        styles.avatarBadge,
-                        isAi && styles.avatarBadgeAI,
-                      ]}
-                    >
-                      {isAi ? (
-                        <Ionicons name="sparkles" size={14} color="#ffffff" />
-                      ) : (
-                        <MaterialCommunityIcons
-                          name={isEngineer ? "account" : "hard-hat"}
-                          size={16}
-                          color="#ffffff"
-                        />
-                      )}
-                    </View>
-                  )}
+                  <Ionicons name="arrow-back" size={16} color="#2563eb" />
+                  <Text style={styles.backToExpertsBtnText}>All Experts</Text>
+                </TouchableOpacity>
 
-                  {/* Bubble Content */}
+                <View style={styles.expertActiveInfo}>
                   <View
                     style={[
-                      styles.bubble,
-                      isMyMessage
-                        ? styles.myBubble
-                        : isAi
-                        ? styles.aiBubble
-                        : styles.otherBubble,
+                      styles.miniAvatar,
+                      { backgroundColor: selectedExpert.avatarColor || "#2563eb" },
                     ]}
                   >
-                    <View style={styles.bubbleHeader}>
-                      <Text
-                        style={[
-                          styles.senderName,
-                          isMyMessage
-                            ? styles.mySenderName
-                            : isAi
-                            ? styles.aiSenderName
-                            : styles.otherSenderName,
-                        ]}
-                      >
-                        {isMyMessage
-                          ? isEngineer
-                            ? `You (${activeSpec.roleLabel})`
-                            : "You (Client)"
-                          : msg.senderName || (isAi ? "CivilHub AI Assistant" : activeSpec.roleLabel)}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.timestamp,
-                          isMyMessage
-                            ? styles.myTimestamp
-                            : styles.otherTimestamp,
-                        ]}
-                      >
-                        {new Date(msg.timestamp).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </Text>
-                    </View>
-
-                    <Text
-                      style={[
-                        styles.messageText,
-                        isMyMessage
-                          ? styles.myMessageText
-                          : isAi
-                          ? styles.aiMessageText
-                          : styles.otherMessageText,
-                      ]}
-                    >
-                      {msg.text}
+                    <Text style={styles.miniAvatarText}>
+                      {selectedExpert.avatarInitials}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.expertActiveName} numberOfLines={1}>
+                      {selectedExpert.name}
+                    </Text>
+                    <Text style={styles.expertActiveRole} numberOfLines={1}>
+                      {selectedExpert.license} • {selectedExpert.firm}
                     </Text>
                   </View>
                 </View>
-              );
-            })}
-
-            {/* Typing Indicator */}
-            {isTyping && (
-              <View style={[styles.messageRow, styles.otherRow]}>
-                <View
-                  style={[
-                    styles.avatarBadge,
-                    chatMode === "ai" && styles.avatarBadgeAI,
-                  ]}
-                >
-                  {chatMode === "ai" ? (
-                    <Ionicons name="sparkles" size={14} color="#ffffff" />
-                  ) : (
-                    <MaterialCommunityIcons name="hard-hat" size={16} color="#ffffff" />
-                  )}
-                </View>
-                <View
-                  style={[
-                    styles.bubble,
-                    chatMode === "ai" ? styles.aiBubble : styles.otherBubble,
-                    styles.typingBubble,
-                  ]}
-                >
-                  <ActivityIndicator
-                    size="small"
-                    color={chatMode === "ai" ? "#4f46e5" : "#2563eb"}
-                  />
-                  <Text style={styles.typingText}>
-                    {chatMode === "ai"
-                      ? "Gemini AI is analyzing building codes..."
-                      : `${activeSpec.name} is preparing consultation...`}
-                  </Text>
-                </View>
               </View>
             )}
-          </ScrollView>
-        )}
 
-        {/* Input Bar */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder={
-              chatMode === "ai"
-                ? "Ask AI about BNBC, setbacks, FAR, approvals..."
-                : isEngineer
-                ? "Type message to Client..."
-                : `Ask ${activeSpec.roleLabel}...`
-            }
-            placeholderTextColor="#94a3b8"
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            maxLength={1000}
-            editable={!isTyping}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              chatMode === "ai" && styles.sendButtonAI,
-              (!inputText.trim() || isTyping) && styles.sendButtonDisabled,
-            ]}
-            onPress={() => handleSend()}
-            disabled={!inputText.trim() || isTyping}
-          >
-            {isTyping ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <Ionicons name="send" size={16} color="#ffffff" />
+            {/* FOR CLIENT IN AI MODE: Quick hint with switch to human */}
+            {chatMode === "ai" && !isEngineer && (
+              <View style={styles.aiHintBanner}>
+                <View style={styles.aiHintLeft}>
+                  <Ionicons name="information-circle-outline" size={15} color="#4f46e5" />
+                  <Text style={styles.aiHintText}>
+                    Instant BNBC 2020 answers from Gemini AI. Need IEB sealed drawings?
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.aiHintBtn}
+                  onPress={() => setChatMode("human")}
+                >
+                  <Text style={styles.aiHintBtnText}>Ask Human</Text>
+                </TouchableOpacity>
+              </View>
             )}
-          </TouchableOpacity>
-        </View>
+
+            {/* Active Context Banner if any */}
+            {activeContext && (
+              <View style={styles.contextBanner}>
+                <View style={styles.contextBannerContent}>
+                  <MaterialCommunityIcons name="office-building-cog" size={15} color="#1d4ed8" />
+                  <Text style={styles.contextBannerText} numberOfLines={1}>
+                    Context: {activeContext.floors ? `${activeContext.floors} Fl ` : ""}
+                    {activeContext.katha ? `• ${activeContext.katha} Katha ` : ""}
+                    {activeContext.authority ? `• ${activeContext.authority}` : ""}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setActiveContext(null)}>
+                  <Ionicons name="close" size={16} color="#64748b" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Quick Starter Chips */}
+            <View style={styles.quickChipsWrapper}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.quickChipsContainer}
+              >
+                {getQuickPrompts().map((promptText, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={styles.quickChip}
+                    activeOpacity={0.7}
+                    onPress={() => handleSend(promptText)}
+                  >
+                    <Text style={styles.quickChipText}>{promptText}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Messages Stream */}
+            {loadingHistory ? (
+              <View style={styles.loaderContainer}>
+                <ActivityIndicator size="large" color="#2563eb" />
+                <Text style={styles.loaderText}>Loading consultation messages...</Text>
+              </View>
+            ) : (
+              <ScrollView
+                ref={scrollViewRef}
+                style={styles.messageList}
+                contentContainerStyle={styles.messageListContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {messages.map((msg) => {
+                  const isAi = msg.senderRole === "ai";
+                  const isEng = msg.senderRole === "engineer";
+                  const isMyMessage = isEngineer
+                    ? isEng
+                    : msg.senderRole === "client" || msg.senderRole === "user";
+
+                  return (
+                    <View
+                      key={msg.id}
+                      style={[
+                        styles.messageRow,
+                        isMyMessage ? styles.myRow : styles.otherRow,
+                      ]}
+                    >
+                      {/* Left avatar for other party */}
+                      {!isMyMessage && (
+                        <View
+                          style={[
+                            styles.avatarBadge,
+                            isAi && styles.avatarBadgeAI,
+                            isEng && selectedExpert?.avatarColor && {
+                              backgroundColor: selectedExpert.avatarColor,
+                            },
+                          ]}
+                        >
+                          {isAi ? (
+                            <Ionicons name="sparkles" size={14} color="#ffffff" />
+                          ) : (
+                            <MaterialCommunityIcons
+                              name={isEngineer ? "account" : "hard-hat"}
+                              size={16}
+                              color="#ffffff"
+                            />
+                          )}
+                        </View>
+                      )}
+
+                      {/* Bubble Content */}
+                      <View
+                        style={[
+                          styles.bubble,
+                          isMyMessage
+                            ? styles.myBubble
+                            : isAi
+                            ? styles.aiBubble
+                            : styles.otherBubble,
+                        ]}
+                      >
+                        <View style={styles.bubbleHeader}>
+                          <Text
+                            style={[
+                              styles.senderName,
+                              isMyMessage
+                                ? styles.mySenderName
+                                : isAi
+                                ? styles.aiSenderName
+                                : styles.otherSenderName,
+                            ]}
+                          >
+                            {isMyMessage
+                              ? isEngineer
+                                ? `You (${activeSpec.roleLabel})`
+                                : "You (Client)"
+                              : msg.senderName || (isAi ? "CivilHub AI Assistant" : activeSpec.roleLabel)}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.timestamp,
+                              isMyMessage
+                                ? styles.myTimestamp
+                                : styles.otherTimestamp,
+                            ]}
+                          >
+                            {new Date(msg.timestamp).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </Text>
+                        </View>
+
+                        <Text
+                          style={[
+                            styles.messageText,
+                            isMyMessage
+                              ? styles.myMessageText
+                              : isAi
+                              ? styles.aiMessageText
+                              : styles.otherMessageText,
+                          ]}
+                        >
+                          {msg.text}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+
+                {/* Typing Indicator */}
+                {isTyping && (
+                  <View style={[styles.messageRow, styles.otherRow]}>
+                    <View
+                      style={[
+                        styles.avatarBadge,
+                        chatMode === "ai" && styles.avatarBadgeAI,
+                      ]}
+                    >
+                      {chatMode === "ai" ? (
+                        <Ionicons name="sparkles" size={14} color="#ffffff" />
+                      ) : (
+                        <MaterialCommunityIcons name="hard-hat" size={16} color="#ffffff" />
+                      )}
+                    </View>
+                    <View
+                      style={[
+                        styles.bubble,
+                        chatMode === "ai" ? styles.aiBubble : styles.otherBubble,
+                        styles.typingBubble,
+                      ]}
+                    >
+                      <ActivityIndicator
+                        size="small"
+                        color={chatMode === "ai" ? "#4f46e5" : "#2563eb"}
+                      />
+                      <Text style={styles.typingText}>
+                        {chatMode === "ai"
+                          ? "Gemini AI is analyzing building codes..."
+                          : `${activeSpec.name} is preparing consultation...`}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
+            )}
+
+            {/* Input Bar */}
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder={
+                  chatMode === "ai"
+                    ? "Ask AI about BNBC, setbacks, FAR, approvals..."
+                    : isEngineer
+                    ? "Type message to Client..."
+                    : selectedExpert
+                    ? `Ask ${selectedExpert.name}...`
+                    : `Ask ${activeSpec.roleLabel}...`
+                }
+                placeholderTextColor="#94a3b8"
+                value={inputText}
+                onChangeText={setInputText}
+                multiline
+                maxLength={1000}
+                editable={!isTyping}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  chatMode === "ai" && styles.sendButtonAI,
+                  (!inputText.trim() || isTyping) && styles.sendButtonDisabled,
+                ]}
+                onPress={() => handleSend()}
+                disabled={!inputText.trim() || isTyping}
+              >
+                {isTyping ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Ionicons name="send" size={16} color="#ffffff" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -765,65 +971,305 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#ffffff",
   },
-  engineerSwitchBar: {
-    backgroundColor: "#f8fafc",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-  },
-  engineerSwitchLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#64748b",
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
-  },
-  engineerTabsRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  engineerTab: {
-    flex: 1,
+  verifiedCountBadge: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#ffffff",
-    borderWidth: 1.5,
-    borderColor: "#cbd5e1",
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    borderRadius: 10,
-    gap: 5,
+    backgroundColor: "#ecfdf5",
+    borderWidth: 1,
+    borderColor: "#a7f3d0",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    gap: 4,
   },
-  engineerTabActive: {
+  verifiedCountText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#059669",
+  },
+  directoryContainer: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
+  },
+  searchBarWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    gap: 8,
+  },
+  searchIcon: {
+    marginRight: 2,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: "#0f172a",
+    padding: 0,
+  },
+  filterChipsRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+  },
+  filterChipActive: {
     backgroundColor: "#2563eb",
     borderColor: "#2563eb",
   },
-  engineerTabText: {
+  filterChipText: {
     fontSize: 11,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  filterChipTextActive: {
+    color: "#ffffff",
+    fontWeight: "700",
+  },
+  expertsScrollView: {
+    flex: 1,
+  },
+  expertsListContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+    gap: 12,
+  },
+  directoryHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginVertical: 4,
+  },
+  directorySectionTitle: {
+    fontSize: 13,
     fontWeight: "700",
     color: "#334155",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
   },
-  engineerTabTextActive: {
+  directorySectionSub: {
+    fontSize: 11,
+    color: "#64748b",
+  },
+  emptyStateContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  emptyStateTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  emptyStateSub: {
+    fontSize: 12,
+    color: "#94a3b8",
+    textAlign: "center",
+  },
+  expertCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+    gap: 10,
+  },
+  expertCardHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  avatarWrapper: {
+    position: "relative",
+  },
+  expertAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  expertAvatarText: {
+    fontSize: 16,
+    fontWeight: "700",
     color: "#ffffff",
   },
-  engineerInfoBanner: {
+  onlineDot: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    backgroundColor: "#10b981",
+    borderWidth: 2,
+    borderColor: "#ffffff",
+  },
+  expertCardMain: {
+    flex: 1,
+    gap: 2,
+  },
+  expertNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  expertCardName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  verifiedIcon: {
+    marginLeft: 2,
+  },
+  expertCardTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#2563eb",
+  },
+  expertCardMeta: {
+    fontSize: 11,
+    color: "#64748b",
+  },
+  licenseHighlight: {
+    fontWeight: "600",
+    color: "#334155",
+  },
+  ratingBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fffbeb",
+    borderWidth: 1,
+    borderColor: "#fde68a",
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+    gap: 3,
+  },
+  ratingBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#b45309",
+  },
+  specialtiesWrapper: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  specialtyChip: {
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  specialtyChipText: {
+    fontSize: 11,
+    color: "#475569",
+  },
+  expertCardFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+  },
+  experienceText: {
+    fontSize: 11,
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  chatActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2563eb",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4,
+  },
+  chatActionBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  expertActiveSubHeader: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#f0f9ff",
     borderBottomWidth: 1,
     borderBottomColor: "#bae6fd",
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    gap: 8,
+    gap: 12,
   },
-  engineerInfoBannerText: {
+  backToExpertsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    gap: 2,
+  },
+  backToExpertsBtnText: {
     fontSize: 12,
-    color: "#0369a1",
-    fontWeight: "600",
+    fontWeight: "700",
+    color: "#2563eb",
+  },
+  expertActiveInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     flex: 1,
+  },
+  miniAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  miniAvatarText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  expertActiveName: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#0369a1",
+  },
+  expertActiveRole: {
+    fontSize: 10,
+    color: "#0284c7",
   },
   contextBanner: {
     flexDirection: "row",
