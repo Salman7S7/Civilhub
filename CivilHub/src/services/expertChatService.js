@@ -318,7 +318,7 @@ export async function queryAiExpert(userPrompt, activeContext = null) {
   let answerText = "";
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     const res = await fetch(`${BACKEND_BASE_URL}/api/ask-building-code`, {
       method: "POST",
@@ -329,18 +329,18 @@ export async function queryAiExpert(userPrompt, activeContext = null) {
 
     clearTimeout(timeoutId);
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.answer) {
-        answerText = data.answer;
-      }
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data && data.answer) {
+      answerText = data.answer;
+    } else if (data && data.error) {
+      answerText = data.error;
     }
   } catch (_netErr) {
-    // Backend offline or unreachable
+    answerText = "Backend server is unreachable. Please ensure the backend is running.";
   }
 
   if (!answerText) {
-    answerText = generateDisciplineAdvice(trimmedPrompt, "structural", activeContext);
+    answerText = "Gemini API key is not configured in backend/.env. Please add GEMINI_API_KEY to enable AI chat.";
   }
 
   return {

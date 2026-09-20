@@ -156,7 +156,7 @@ export default function ExpertChatScreen({ route, session }) {
         Alert.alert("Error", err.message || "Failed to send message.");
       }
     } else {
-      // 3. CLIENT LOGGED IN: Sends question to active Human Engineer
+      // 3. CLIENT LOGGED IN: Sends question to active Human Engineer (No automated bot reply)
       try {
         const savedClientMsg = await appendChatMessage(
           {
@@ -169,21 +169,8 @@ export default function ExpertChatScreen({ route, session }) {
         );
 
         setMessages((prev) => [...prev, savedClientMsg]);
-        setIsTyping(true);
-
-        // Get engineering response tailored for the selected discipline
-        const expertReply = await queryEngineerExpert(
-          trimmed,
-          activeDiscipline,
-          activeContext
-        );
-
-        const savedReply = await appendChatMessage(expertReply, activeThreadId);
-        setMessages((prev) => [...prev, savedReply]);
       } catch (err) {
-        Alert.alert("Error", err.message || "Failed to process consultation.");
-      } finally {
-        setIsTyping(false);
+        Alert.alert("Error", err.message || "Failed to send message.");
       }
     }
   };

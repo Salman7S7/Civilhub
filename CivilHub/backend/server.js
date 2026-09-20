@@ -330,33 +330,48 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(500).json({ error: "Server is missing JWT_SECRET." });
     }
 
-    if (!getStatus().connected) {
-      const user = fallbackUsers.find((candidate) => candidate.email === email);
-      const passwordMatches = user && await bcrypt.compare(password, user.passwordHash);
+    let user = null;
 
-      if (!passwordMatches) {
-        return res.status(401).json({ error: "Invalid email or password." });
+    if (getStatus().connected) {
+      try {
+        const rows = await query(
+          "SELECT id, name, email, password_hash, role, engineer_type FROM users WHERE email = ? LIMIT 1",
+          [email]
+        );
+        if (rows && rows.length > 0) {
+          user = rows[0];
+        }
+      } catch (dbErr) {
+        console.warn("DB user lookup warning:", dbErr.message);
       }
-
-      const role = reqRole || user.role || "client";
-      const engineerType = role === "engineer" ? (reqEngineerType || user.engineerType || "structural") : null;
-      const safeUser = { id: user.id, name: user.name, email: user.email, role, engineerType };
-      return res.json({ success: true, token: createToken(safeUser), user: safeUser });
     }
 
-    const rows = await query(
-      "SELECT id, name, email, password_hash FROM users WHERE email = ? LIMIT 1",
-      [email]
-    );
-    const user = rows[0];
-    const passwordMatches = user && await bcrypt.compare(password, user.password_hash);
+    // If user not in DB or DB offline, check fallbackUsers
+    if (!user) {
+      const fallback = fallbackUsers.find((candidate) => candidate.email === email);
+      if (fallback) {
+        user = {
+          id: fallback.id,
+          name: fallback.name,
+          email: fallback.email,
+          password_hash: fallback.passwordHash,
+          role: fallback.role,
+          engineer_type: fallback.engineerType,
+        };
+      }
+    }
 
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.password_hash || user.passwordHash);
     if (!passwordMatches) {
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
     const role = reqRole || user.role || "client";
-    const engineerType = role === "engineer" ? (reqEngineerType || user.engineer_type || "structural") : null;
+    const engineerType = role === "engineer" ? (reqEngineerType || user.engineer_type || user.engineerType || "structural") : null;
     const safeUser = { id: user.id, name: user.name, email: user.email, role, engineerType };
     return res.json({ success: true, token: createToken(safeUser), user: safeUser });
   } catch (error) {
@@ -936,38 +951,10 @@ app.post("/api/ask-building-code", async (req, res) => {
       return res.status(400).json({ error: "Missing 'question' in request body." });
     }
 
-    function getCivilFallback(q) {
-      const lower = String(q).toLowerCase();
-      if (lower.includes("setback") || lower.includes("side") || lower.includes("rear") || lower.includes("front")) {
-        return (
-          "### Setback Requirements (BNBC 2020 & RAJUK Imarat Nirman Bidhimala):\n\n" +
-          "- **Front Setback**: Minimum 1.50 meters (4.92 ft) from the road boundary line.\n" +
-          "- **Rear Setback**: Minimum 2.00 meters (6.56 ft) for plots up to 5 Katha.\n" +
-          "- **Side Setbacks**: Minimum 1.00m to 1.25m (3.28 to 4.10 ft) on each side.\n\n" +
-          "*Disclaimer: Final approval depends on the relevant development authority and review by a licensed structural/civil engineer.*"
-        );
-      }
-      if (lower.includes("soil") || lower.includes("pile") || lower.includes("foundation")) {
-        return (
-          "### Foundation & Substructure Guidelines (BNBC 2020):\n\n" +
-          "- **Soil Test**: Minimum 3 to 5 boreholes required for buildings above 3 stories.\n" +
-          "- **Low SPT (N < 5)**: Deep bored cast-in-situ RCC piles (50–80 ft depth) required.\n" +
-          "- **Medium Dense Soil (N > 15)**: Mat/raft foundation or isolated footings with tie beams.\n\n" +
-          "*Disclaimer: Final approval depends on the relevant development authority and review by a licensed structural/civil engineer.*"
-        );
-      }
-      return (
-        "### Bangladesh National Building Code (BNBC 2020) & Authority Rules:\n\n" +
-        "Under BNBC 2020 and development authorities (RAJUK, CDA, RDA, KDA):\n" +
-        "- Adhere strictly to Floor Area Ratio (FAR) and Maximum Ground Coverage (MGC) rules.\n" +
-        "- Maintain required setbacks for light, natural ventilation, and fire egress.\n" +
-        "- All structural calculations and soil investigation reports must be endorsed by a registered IEB professional engineer.\n\n" +
-        "*Disclaimer: Final approval depends on the relevant development authority and review by a licensed structural/civil engineer.*"
-      );
-    }
-
     if (!GEMINI_API_KEY) {
-      return res.json({ answer: getCivilFallback(question), fallback: true });
+      return res.status(503).json({
+        error: "Gemini API key is not configured in backend/.env. Please add GEMINI_API_KEY to enable AI chat.",
+      });
     }
 
     const fullPrompt = `${SYSTEM_CONTEXT}\n\nUser question:\n${String(question).trim()}`;
@@ -994,18 +981,21 @@ app.post("/api/ask-building-code", async (req, res) => {
       if (!geminiResponse.ok) {
         const errorText = await geminiResponse.text();
         console.warn("Gemini API error (" + geminiResponse.status + "):", errorText);
-        return res.json({ answer: getCivilFallback(question), fallback: true });
+        return res.status(502).json({ error: `Gemini API error (${geminiResponse.status}).` });
       }
 
       const data = await geminiResponse.json();
       const answerText =
-        data?.candidates?.[0]?.content?.parts?.map((p) => p?.text || "").join("").trim() ||
-        getCivilFallback(question);
+        data?.candidates?.[0]?.content?.parts?.map((p) => p?.text || "").join("").trim() || "";
+
+      if (!answerText) {
+        return res.status(502).json({ error: "Gemini API returned an empty response." });
+      }
 
       return res.json({ answer: answerText });
     } catch (apiError) {
-      console.warn("Gemini API fetch error, using BNBC fallback:", apiError.message);
-      return res.json({ answer: getCivilFallback(question), fallback: true });
+      console.warn("Gemini API fetch error:", apiError.message);
+      return res.status(500).json({ error: `Failed to reach Gemini API: ${apiError.message}` });
     }
   } catch (error) {
     console.error("Proxy error:", error);

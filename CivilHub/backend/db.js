@@ -5,6 +5,7 @@
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 const mysql = require("mysql2/promise");
+const bcrypt = require("bcryptjs");
 
 const DB_CONFIG = {
   host: process.env.DB_HOST || "localhost",
@@ -181,10 +182,39 @@ async function initDB() {
         name VARCHAR(100) NOT NULL,
         email VARCHAR(190) NOT NULL UNIQUE,
         password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'client',
+        engineer_type VARCHAR(50) DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       );
     `);
+
+    // Ensure columns exist if table was previously created without them
+    try {
+      const [roleCol] = await pool.query("SHOW COLUMNS FROM users LIKE 'role'");
+      if (roleCol.length === 0) {
+        await pool.query("ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'client'");
+      }
+      const [engCol] = await pool.query("SHOW COLUMNS FROM users LIKE 'engineer_type'");
+      if (engCol.length === 0) {
+        await pool.query("ALTER TABLE users ADD COLUMN engineer_type VARCHAR(50) DEFAULT NULL");
+      }
+    } catch (_colErr) {}
+
+    // Seed default demo users if users table is empty
+    const [userRows] = await pool.query("SELECT COUNT(*) AS count FROM users");
+    if (userRows[0].count === 0) {
+      const hash = bcrypt.hashSync("password123", 10);
+      await pool.query(`
+        INSERT INTO users (name, email, password_hash, role, engineer_type) VALUES
+          ('CivilHub Client', 'demo@civilhub.com', ?, 'client', NULL),
+          ('Client Salman', 'salman@civilhub.com', ?, 'client', NULL),
+          ('Ar. Nusrat Jahan', 'arc@civilhub.com', ?, 'engineer', 'architect'),
+          ('Engr. Tanvir Ahmed, PEng', 'structure@civilhub.com', ?, 'engineer', 'structural'),
+          ('Engr. Mohammad Rafiqul', 'soil@civilhub.com', ?, 'engineer', 'soil')
+      `, [hash, hash, hash, hash, hash]);
+      console.log("[MySQL] Default demo users seeded successfully.");
+    }
     isConnected = true;
     console.log(`[MySQL] Connected to database '${DB_CONFIG.database}' successfully.`);
     return true;
