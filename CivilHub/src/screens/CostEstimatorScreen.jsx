@@ -1029,6 +1029,11 @@ export default function CostEstimatorScreen({ route }) {
       if (!validateRooms()) return;
     }
 
+    if (step === 5) {
+      handleCalculate();
+      return;
+    }
+
     setError("");
     setActiveStep(step);
   };
@@ -1051,6 +1056,22 @@ export default function CostEstimatorScreen({ route }) {
     setError("");
     setSaveMessage("");
     setSaving(true);
+
+    // Ensure floor configuration length is fully synchronized with current floorCount
+    const parsedCount = clamp(Math.round(toNumber(floorCount)) || 1, 1, 30);
+    let currentFloors = floors;
+    if (currentFloors.length !== parsedCount) {
+      const next = [...currentFloors];
+      if (parsedCount > next.length) {
+        for (let i = next.length; i < parsedCount; i++) {
+          next.push({ floor: i + 1, rooms: createInitialRooms() });
+        }
+      } else {
+        next.length = parsedCount;
+      }
+      currentFloors = next.map((f, idx) => ({ ...f, floor: idx + 1 }));
+      setFloors(currentFloors);
+    }
 
     try {
       const rules =
@@ -1080,7 +1101,7 @@ export default function CostEstimatorScreen({ route }) {
         authority,
         buildingType,
 
-        floors,
+        floors: currentFloors,
 
         allowancePercent:
           toNumber(allowancePercent),
@@ -1207,7 +1228,7 @@ export default function CostEstimatorScreen({ route }) {
                   Customizing Model: {modelBanner.title}
                 </Text>
                 <Text style={styles.modelBannerSubtitle}>
-                  {modelBanner.floors ? `${modelBanner.floors} Floors` : ""}
+                  {floorCount ? `${floorCount} Floors` : (modelBanner.floors ? `${modelBanner.floors} Floors` : "")}
                   {modelBanner.katha ? ` • ${modelBanner.katha} Katha Plot` : ""}
                   {modelBanner.floorArea ? ` • ~${modelBanner.floorArea} sqft/floor` : ""}
                 </Text>
@@ -1246,13 +1267,7 @@ export default function CostEstimatorScreen({ route }) {
                   styles.modelBannerBtn,
                   activeStep === 5 && styles.modelBannerBtnActive,
                 ]}
-                onPress={() => {
-                  if (!estimateResult) {
-                    handleCalculate();
-                  } else {
-                    setActiveStep(5);
-                  }
-                }}
+                onPress={handleCalculate}
               >
                 <Ionicons
                   name="calculator-outline"
