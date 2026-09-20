@@ -176,22 +176,43 @@ export default function ExpertChatScreen({ route, session }) {
   };
 
   // Reset conversation
-  const handleClearHistory = () => {
-    Alert.alert(
-      "Reset Conversation",
-      `Are you sure you want to clear this ${chatMode === "ai" ? "AI" : "consultation"} thread?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Clear Thread",
-          style: "destructive",
-          onPress: async () => {
+  const handleClearHistory = async () => {
+    const threadName =
+      chatMode === "ai"
+        ? "AI conversation"
+        : `${activeSpec.roleLabel} consultation`;
+    const confirmMessage = `Are you sure you want to clear this ${threadName}?`;
+
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined") {
+        const confirmed = window.confirm(confirmMessage);
+        if (confirmed) {
+          try {
             const resetMessages = await clearChatHistory(activeThreadId);
             setMessages(resetMessages);
-          },
+          } catch (err) {
+            console.error("Failed to clear chat history:", err);
+          }
+        }
+      }
+      return;
+    }
+
+    Alert.alert("Reset Conversation", confirmMessage, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clear Thread",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const resetMessages = await clearChatHistory(activeThreadId);
+            setMessages(resetMessages);
+          } catch (err) {
+            console.error("Failed to clear chat history:", err);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   // Quick starter prompts based on chat mode, user role, and discipline
@@ -282,9 +303,11 @@ export default function ExpertChatScreen({ route, session }) {
             <TouchableOpacity
               style={styles.headerActionBtn}
               onPress={handleClearHistory}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel="Clear chat history"
             >
-              <Ionicons name="trash-outline" size={18} color="#94a3b8" />
+              <Ionicons name="trash-outline" size={19} color="#ef4444" />
             </TouchableOpacity>
           </View>
         </View>
@@ -666,7 +689,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerActionBtn: {
-    padding: 6,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "#fef2f2",
+    borderWidth: 1,
+    borderColor: "#fee2e2",
   },
   modeToggleBar: {
     flexDirection: "row",
