@@ -1,103 +1,215 @@
-# CivilHub — Feasibility Checker & Building Code AI Assistant
+# CivilHub - Civil Engineering & Architectural Intelligence Platform
 
-A complete, ready-to-run Expo (React Native) app with a small backend proxy
-for the Gemini API, so your API key stays server-side instead of shipping
-inside the app.
+CivilHub is a comprehensive civil engineering, architectural planning, and building code compliance platform tailored for Bangladesh construction regulations (BNBC 2020, RAJUK, CDA, RDA, KDA). It combines automated regulatory feasibility analysis, architectural model exploration, detailed construction cost estimation, land tax calculations, and dual-mode expert consultations powered by Google Gemini and verified human engineers.
+
+---
+
+## Key Modules and Features
+
+### 1. Feasibility Checker & Building Code Engine
+- Evaluates plot dimensions, frontage road widths, and target stories against municipal bylaws (RAJUK, CDA, RDA, KDA, and General Municipalities).
+- Analyzes Floor Area Ratio (FAR), Maximum Ground Coverage (MGC), and mandatory setback clearances.
+- Real-time AI advisory backed by Bangladesh National Building Code (BNBC 2020) guidelines.
+
+### 2. Smart Architectural Designs Catalog
+- Curated architectural designs and residential/commercial layouts with 3D elevations and floor plan specifications.
+- Filter by plot requirement (Katha), story count, architectural style, and units per floor.
+- Direct cross-module workflows:
+  - Check Feasibility for Model (pre-fills plot size and story requirements).
+  - Estimate Cost & Customize (pre-populates floor dimensions and structural options).
+  - Ask Expert about Model (attaches full architectural specifications to consultation threads).
+
+### 3. Bangladesh Construction Cost Estimator
+- 5-step estimation workflow covering Land Data, Bylaw Verification, Floor-wise Room Sizing, Material Quality Profiles, and Cost Summaries.
+- Dynamic recalculation supporting custom floor counts, room dimensions, basements, and garages.
+- Itemized BDT cost breakdown including structural civil work, interior/exterior finishes, plumbing, electrical, and regulatory approval costs.
+
+### 4. Land Tax & Transfer Duty Calculator
+- Computes stamp duty, registration fees, gain tax, local government tax, and mutation costs according to current Bangladesh revenue laws.
+- Supports mouza classifications, municipal tiers, and property value adjustments.
+
+### 5. Dual-Mode Expert Consultation Chat
+- CivilHub AI Assistant: Instant regulatory and structural compliance queries via Google Gemini.
+- Verified Human Expert Directory: Messenger-style multi-expert messaging with licensed Architects, Structural Engineers (PEng/MIEB), and Geotechnical Specialists.
+- Embedded Design Specification Cards: Rich architectural snapshots embedded directly into chat messages with interactive modal inspection.
+- Role-based interfaces for Clients and Logged-in Engineers with real-time polling (2.5s) and MySQL database synchronization.
+
+---
+
+## Architecture and System Design
 
 ```
-CivilHub/
-  App.js                    ← app entry point
-  app.json                  ← Expo config
-  babel.config.js
-  package.json
-  backend/                  ← Node/Express proxy for the Gemini API
-    server.js
-    package.json
-    .env                    ← pre-filled with your key (dev only, gitignored)
-    .env.example
-  src/
-    navigation/BottomTabNavigator.jsx
-    services/
-      geminiService.js       ← calls OUR backend, not Google directly
-      feasibilityRules.js    ← local rule-of-thumb feasibility engine
-    components/
-      FeasibilityForm.jsx
-      AIChatbotModal.jsx
-    screens/
-      FeasibilityScreen.jsx
-      PlaceholderScreens.jsx
++-------------------------------------------------------------+
+|                      Client Layer (Expo)                     |
+|  - React Native / Expo Web & Mobile                          |
+|  - Bottom Tab Navigation (Client & Engineer Portals)         |
+|  - AsyncStorage Local Cache for Offline Resilience           |
++------------------------------+------------------------------+
+                               |
+                               | HTTP / REST API
+                               v
++-------------------------------------------------------------+
+|                    Backend Service (Node.js)                |
+|  - Express REST API (Port 4000)                             |
+|  - Google Gemini AI Integration (@google/genai)              |
+|  - MySQL Connection Pool (mysql2/promise)                   |
++------------------------------+------------------------------+
+                               |
+            +------------------+------------------+
+            |                                     |
+            v                                     v
++-----------------------+             +-----------------------+
+|      MySQL Database    |             |    Google Gemini API  |
+|  - experts            |             |  - BNBC 2020 Analysis |
+|  - consultation_msgs  |             |  - Structural Checks  |
+|  - architectural_dsgn |             +-----------------------+
+|  - cost_estimates     |
++-----------------------+
 ```
 
-## 1. Run the backend first
+---
 
-The chatbot won't work until this is running — it's what actually calls
-Gemini using your API key.
+## Project Structure
+
+```
+Civilhub/
+├── README.md
+├── CivilHub/
+│   ├── App.js                         # Application root and session bootstrap
+│   ├── app.json                       # Expo configuration
+│   ├── package.json                   # Mobile and web client dependencies
+│   ├── backend/
+│   │   ├── server.js                  # Express API server and route handlers
+│   │   ├── db.js                      # MySQL schema initialization and pooling
+│   │   ├── package.json               # Backend dependencies
+│   │   ├── .env                       # Backend environment configuration (gitignored)
+│   │   └── .env.example               # Example environment variables template
+│   └── src/
+│       ├── navigation/
+│       │   └── BottomTabNavigator.jsx # Role-based bottom navigation bar
+│       ├── screens/
+│       │   ├── FeasibilityScreen.jsx       # Regulatory check and code assistant
+│       │   ├── DesignSuggestionsScreen.jsx # Architectural models catalog
+│       │   ├── CostEstimatorScreen.jsx     # 5-step construction cost estimator
+│       │   ├── LandTaxScreen.jsx           # Property tax and registration duties
+│       │   ├── ExpertChatScreen.jsx        # Dual-mode AI & human chat interface
+│       │   └── LoginScreen.jsx             # Role-based authentication modal
+│       ├── components/
+│       │   ├── FeasibilityForm.jsx         # Feasibility evaluation form
+│       │   ├── AIChatbotModal.jsx          # Standalone AI chatbot modal
+│       │   └── designs/
+│       │       ├── DesignCard.jsx          # Architectural preview card
+│       │       ├── DesignDetailModal.jsx   # Detailed design inspector and editor
+│       │       ├── DesignFilterModal.jsx   # Multi-parameter filter sheet
+│       │       └── AddDesignModal.jsx      # Upload and creation modal
+│       └── services/
+│           ├── apiConfig.js                # Centralized backend URL configuration
+│           ├── costEstimator.js            # Estimation formulas and rate databases
+│           ├── designService.js            # Architectural model CRUD operations
+│           ├── expertChatService.js        # Consultation history and Gemini integration
+│           └── feasibilityRules.js         # BNBC and municipal setback rules
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js (v18.0.0 or higher recommended)
+- npm or yarn
+- MySQL Server (v8.0 or higher)
+
+### 1. Database Setup
+Ensure MySQL is running and create the database:
+
+```sql
+CREATE DATABASE IF NOT EXISTS civilhub_db;
+```
+
+The application automatically creates and migrates required tables (`experts`, `consultation_messages`, etc.) upon server startup.
+
+### 2. Backend Configuration & Startup
+
+Navigate to the backend directory:
 
 ```bash
 cd CivilHub/backend
 npm install
+```
+
+Create a `.env` file from `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Configure the environment variables in `CivilHub/backend/.env`:
+
+```env
+PORT=4000
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_NAME=civilhub_db
+GEMINI_API_KEY=your_google_gemini_api_key
+```
+
+Start the backend server:
+
+```bash
 npm start
 ```
 
-You should see:
+The backend server will run on `http://localhost:4000`.
 
-```
-CivilHub backend proxy running on http://localhost:4000
-```
+### 3. Frontend Setup & Launch
 
-The key is already in `backend/.env` so this works immediately. That file is
-gitignored — never commit it.
-
-**Rotate the key.** It was shared in a chat conversation earlier, so treat it
-as already exposed. Generate a new key in Google AI Studio, then replace the
-value in `backend/.env`.
-
-## 2. Run the app
-
-In a **second terminal**, from the project root:
+In a separate terminal, navigate to the frontend directory:
 
 ```bash
 cd CivilHub
 npm install
-npm run web       # opens in browser at localhost:19006
-# or
-npm run android   # requires Android emulator/device
-npm run ios       # requires macOS + Xcode simulator
 ```
 
-## 3. Point the app at your backend (if not using web)
+Start the application using Expo:
 
-`src/services/geminiService.js` has a `BACKEND_BASE_URL` constant:
+```bash
+# Web browser
+npm run web
 
-```js
-const BACKEND_BASE_URL = "http://localhost:4000";
+# Android emulator / device
+npm run android
+
+# iOS simulator (macOS only)
+npm run ios
 ```
 
-- **Web / iOS Simulator** → `http://localhost:4000` works as-is.
-- **Android Emulator** → change to `http://10.0.2.2:4000` (Android's alias
-  for your computer's localhost).
-- **Physical phone** on the same Wi-Fi as your computer → change to
-  `http://<your-computer's-LAN-IP>:4000`, e.g. `http://192.168.1.20:4000`.
-  Find your LAN IP with `ipconfig` (Windows) or `ifconfig`/`ipconfig getifaddr en0` (Mac).
+---
 
-## What each part does
+## Network Configuration for Mobile Devices
 
-- **Feasibility form** (`FeasibilityForm.jsx` + `feasibilityRules.js`): a
-  local, instant estimate based on road width — not a live regulatory
-  lookup. See the big comment block at the top of `feasibilityRules.js` for
-  exactly what's sourced vs. simplified, and why full RAJUK zone-by-zone
-  rules can't be safely hardcoded into one table.
-- **AI chatbot** (`AIChatbotModal.jsx` + `geminiService.js` + `backend/server.js`):
-  the app sends the question to your backend, the backend attaches BNBC/RAJUK
-  domain context and calls Gemini, and the answer streams back to the chat UI.
+The frontend connects to the backend through `CivilHub/src/services/apiConfig.js`:
 
-## Before shipping to real users
+- Web Browser / iOS Simulator: `http://localhost:4000`
+- Android Emulator: `http://10.0.2.2:4000`
+- Physical Mobile Device: `http://<your-local-ip>:4000` (e.g. `http://192.168.1.50:4000`)
 
-1. Replace the feasibility heuristics with an authoritative, regularly
-   updated dataset (ideally reviewed by a licensed structural engineer),
-   since RAJUK's DAP zone rules change over time and vary by neighborhood.
-2. Deploy `backend/` somewhere real (Render, Railway, Fly.io, a VPS, etc.)
-   instead of localhost, and point `BACKEND_BASE_URL` at that deployed URL.
-3. Add authentication/rate-limiting to the backend so the Gemini endpoint
-   can't be abused by anyone who finds the URL.
-4. Rotate the Gemini key one more time right before launch.
+---
+
+## Demo Credentials for Testing
+
+The platform supports both Client and Engineer sessions:
+
+| Role | Email / Identifier | Password | Access Scope |
+|---|---|---|---|
+| Client | client@civilhub.com | client123 | Full suite (Feasibility, Designs, Cost, Tax, Ask Expert) |
+| Architect | architect@civilhub.com | expert123 | Dedicated Client Consultation Workspace |
+| Structural Engineer | structural@civilhub.com | expert123 | Dedicated Client Consultation Workspace |
+| Soil Engineer | soil@civilhub.com | expert123 | Dedicated Client Consultation Workspace |
+
+---
+
+## License
+
+This project is proprietary and confidential. All rights reserved.
