@@ -1005,6 +1005,211 @@ app.post("/api/ask-building-code", async (req, res) => {
 });
 
 // ============================================================
+// FEATURE: EXPERT DIRECTORY & CONSULTATION CHAT API
+// ============================================================
+
+/**
+ * GET /api/experts
+ * Fetch verified consultants from MySQL
+ */
+app.get("/api/experts", async (req, res) => {
+  const dbStatus = getStatus();
+  const { discipline } = req.query;
+
+  if (dbStatus.connected) {
+    try {
+      let sql = "SELECT * FROM experts WHERE is_active = 1";
+      const params = [];
+      if (discipline && discipline !== "all") {
+        sql += " AND discipline = ?";
+        params.push(discipline);
+      }
+      sql += " ORDER BY discipline, name ASC";
+
+      const rows = await query(sql, params);
+      const experts = rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        title: r.title,
+        roleLabel: r.role_label,
+        discipline: r.discipline,
+        license: r.license,
+        experience: r.experience,
+        firm: r.firm,
+        rating: r.rating,
+        specialties: typeof r.specialties === "string" ? JSON.parse(r.specialties) : r.specialties,
+        threadId: r.thread_id,
+        avatarInitials: r.avatar_initials,
+        avatarColor: r.avatar_color,
+        greeting: r.greeting,
+      }));
+      return res.json({ success: true, count: experts.length, experts });
+    } catch (err) {
+      console.error("[Experts Query Error]:", err);
+    }
+  }
+
+  res.json({ success: false, count: 0, experts: [] });
+});
+
+/**
+ * GET /api/experts/:id
+ * Fetch single expert by ID
+ */
+app.get("/api/experts/:id", async (req, res) => {
+  const dbStatus = getStatus();
+  const { id } = req.params;
+
+  if (dbStatus.connected) {
+    try {
+      const rows = await query("SELECT * FROM experts WHERE id = ? LIMIT 1", [id]);
+      if (rows.length > 0) {
+        const r = rows[0];
+        return res.json({
+          success: true,
+          expert: {
+            id: r.id,
+            name: r.name,
+            title: r.title,
+            roleLabel: r.role_label,
+            discipline: r.discipline,
+            license: r.license,
+            experience: r.experience,
+            firm: r.firm,
+            rating: r.rating,
+            specialties: typeof r.specialties === "string" ? JSON.parse(r.specialties) : r.specialties,
+            threadId: r.thread_id,
+            avatarInitials: r.avatar_initials,
+            avatarColor: r.avatar_color,
+            greeting: r.greeting,
+          },
+        });
+      }
+    } catch (err) {
+      console.error("[Expert Detail Error]:", err);
+    }
+  }
+  res.status(404).json({ success: false, error: "Expert not found" });
+});
+
+/**
+ * GET /api/chat/messages/:threadId
+ * Fetch conversation history from MySQL for a specific thread
+ */
+app.get("/api/chat/messages/:threadId", async (req, res) => {
+  const dbStatus = getStatus();
+  const { threadId } = req.params;
+
+  if (dbStatus.connected) {
+    try {
+      const rows = await query(
+        "SELECT * FROM consultation_messages WHERE thread_id = ? ORDER BY created_at ASC",
+        [threadId]
+      );
+
+      const messages = rows.map((r) => ({
+        id: r.id,
+        threadId: r.thread_id,
+        senderRole: r.sender_role,
+        engineerType: r.engineer_type,
+        senderName: r.sender_name,
+        text: r.message_text,
+        attachedContext: typeof r.attached_context === "string" ? JSON.parse(r.attached_context) : r.attached_context,
+        timestamp: r.created_at,
+      }));
+
+      return res.json({ success: true, count: messages.length, messages });
+    } catch (err) {
+      console.error("[Chat Messages Query Error]:", err);
+    }
+  }
+  res.json({ success: true, count: 0, messages: [] });
+});
+
+/**
+ * POST /api/chat/messages
+ * Store a new consultation message in MySQL
+ */
+app.post("/api/chat/messages", async (req, res) => {
+  const dbStatus = getStatus();
+  const { id, threadId, senderRole = "client", engineerType = null, senderName = "Client", text, attachedContext = null } = req.body;
+
+  if (!threadId || !text || !String(text).trim()) {
+    return res.status(400).json({ error: "Missing threadId or message text." });
+  }
+
+  const msgId = id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  const cleanText = String(text).trim();
+
+  if (dbStatus.connected) {
+    try {
+      await query(
+        `INSERT INTO consultation_messages (
+          id, thread_id, sender_role, engineer_type, sender_name, message_text, attached_context
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          msgId,
+          threadId,
+          senderRole,
+          engineerType,
+          senderName,
+          cleanText,
+          attachedContext ? JSON.stringify(attachedContext) : null,
+        ]
+      );
+
+      const savedMessage = {
+        id: msgId,
+        threadId,
+        senderRole,
+        engineerType,
+        senderName,
+        text: cleanText,
+        attachedContext,
+        timestamp: new Date().toISOString(),
+      };
+
+      return res.status(201).json({ success: true, message: savedMessage });
+    } catch (err) {
+      console.error("[Save Chat Message Error]:", err);
+      return res.status(500).json({ error: "Failed to save message to database." });
+    }
+  }
+
+  const fallbackMessage = {
+    id: msgId,
+    threadId,
+    senderRole,
+    engineerType,
+    senderName,
+    text: cleanText,
+    attachedContext,
+    timestamp: new Date().toISOString(),
+  };
+  res.status(201).json({ success: true, message: fallbackMessage });
+});
+
+/**
+ * DELETE /api/chat/messages/:threadId
+ * Clear consultation history in MySQL for a thread
+ */
+app.delete("/api/chat/messages/:threadId", async (req, res) => {
+  const dbStatus = getStatus();
+  const { threadId } = req.params;
+
+  if (dbStatus.connected) {
+    try {
+      await query("DELETE FROM consultation_messages WHERE thread_id = ?", [threadId]);
+      return res.json({ success: true, message: `Cleared messages for thread ${threadId}` });
+    } catch (err) {
+      console.error("[Delete Chat Messages Error]:", err);
+      return res.status(500).json({ error: "Failed to clear messages." });
+    }
+  }
+  res.json({ success: true, message: `Cleared messages locally for thread ${threadId}` });
+});
+
+// ============================================================
 // START SERVER
 // ============================================================
 

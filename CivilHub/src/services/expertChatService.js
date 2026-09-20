@@ -158,6 +158,47 @@ export function getThreadIdForEngineer(engineerType) {
   return "thread_client_structural_1";
 }
 
+export const EXPERTS_STORAGE_KEY = "@civilhub_cached_experts_v1";
+
+/**
+ * Fetch verified experts dynamically from the MySQL database via REST API.
+ * Falls back to local AsyncStorage cache and default verified list if offline.
+ */
+export async function fetchExpertsFromApi(disciplineFilter = "all") {
+  try {
+    const url =
+      disciplineFilter && disciplineFilter !== "all"
+        ? `${BACKEND_BASE_URL}/api/experts?discipline=${encodeURIComponent(disciplineFilter)}`
+        : `${BACKEND_BASE_URL}/api/experts`;
+
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.experts) && data.experts.length > 0) {
+        await AsyncStorage.setItem(EXPERTS_STORAGE_KEY, JSON.stringify(data.experts));
+        return data.experts;
+      }
+    }
+  } catch (err) {
+    console.warn("[Experts API] Network fetch failed, falling back to local cache:", err.message);
+  }
+
+  // Fallback 1: AsyncStorage Cache
+  try {
+    const cached = await AsyncStorage.getItem(EXPERTS_STORAGE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        if (!disciplineFilter || disciplineFilter === "all") return parsed;
+        return parsed.filter((e) => e.discipline === disciplineFilter);
+      }
+    }
+  } catch (_e) {}
+
+  // Fallback 2: Built-in default catalog
+  return getAvailableExperts(disciplineFilter);
+}
+
 export function getDefaultWelcomeForThread(threadId) {
   if (threadId === THREAD_AI) {
     return [
@@ -201,27 +242,52 @@ export function getDefaultWelcomeForThread(threadId) {
 }
 
 /**
- * Retrieve chat messages for a specific consultation thread.
+ * Retrieve chat messages for a specific consultation thread from MySQL.
+ * Syncs with local AsyncStorage cache for offline availability.
  */
 export async function getChatHistory(threadId = THREAD_STRUCTURAL) {
-  try {
-    const raw = await AsyncStorage.getItem(`${CHAT_STORAGE_KEY}_${threadId}`);
-    if (!raw) {
-      return getDefaultWelcomeForThread(threadId);
-    }
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      return getDefaultWelcomeForThread(threadId);
-    }
-    return parsed;
-  } catch (err) {
-    console.warn("Failed to load chat history from AsyncStorage:", err);
+  // For AI thread, use local AsyncStorage
+  if (threadId === THREAD_AI) {
+    try {
+      const raw = await AsyncStorage.getItem(`${CHAT_STORAGE_KEY}_${threadId}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_e) {}
     return getDefaultWelcomeForThread(threadId);
   }
+
+  // For Human Consultation threads, query MySQL Backend
+  try {
+    const res = await fetch(`${BACKEND_BASE_URL}/api/chat/messages/${encodeURIComponent(threadId)}`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.messages) && data.messages.length > 0) {
+        await AsyncStorage.setItem(`${CHAT_STORAGE_KEY}_${threadId}`, JSON.stringify(data.messages));
+        return data.messages;
+      }
+    }
+  } catch (err) {
+    console.warn("[Chat History API] Network fetch failed, using local cache:", err.message);
+  }
+
+  // Cache fallback
+  try {
+    const raw = await AsyncStorage.getItem(`${CHAT_STORAGE_KEY}_${threadId}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (_e) {}
+
+  return getDefaultWelcomeForThread(threadId);
 }
 
 /**
- * Append a single message to persistent chat history.
+ * Append a single message to persistent chat history in MySQL and local cache.
  */
 export async function appendChatMessage(messagePayload, threadId = THREAD_STRUCTURAL) {
   if (!messagePayload || !messagePayload.text || !messagePayload.text.trim()) {
@@ -234,39 +300,68 @@ export async function appendChatMessage(messagePayload, threadId = THREAD_STRUCT
   if (senderRole === "ai") fallbackSenderName = AI_SPEC.name;
   else if (senderRole === "engineer") fallbackSenderName = "Engineer";
 
+  const cleanText = messagePayload.text.trim();
+  const msgId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+
   const messageToSave = {
-    id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    id: msgId,
     threadId,
     senderRole,
     engineerType: messagePayload.engineerType || null,
     senderName: messagePayload.senderName || fallbackSenderName,
-    text: messagePayload.text.trim(),
+    text: cleanText,
     timestamp: new Date().toISOString(),
     attachedContext: messagePayload.attachedContext || null,
   };
 
+  // Try saving to MySQL Backend
+  if (threadId !== THREAD_AI) {
+    try {
+      await fetch(`${BACKEND_BASE_URL}/api/chat/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(messageToSave),
+        signal: AbortSignal.timeout(5000),
+      });
+    } catch (err) {
+      console.warn("[Append Chat API] Backend save failed, saving to local cache:", err.message);
+    }
+  }
+
+  // Always sync local AsyncStorage cache
   try {
     const existing = await getChatHistory(threadId);
     const updated = [...existing, messageToSave];
     await AsyncStorage.setItem(`${CHAT_STORAGE_KEY}_${threadId}`, JSON.stringify(updated));
-    return messageToSave;
   } catch (err) {
-    console.error("Failed to append chat message:", err);
-    throw err;
+    console.warn("Failed to persist message to AsyncStorage:", err);
   }
+
+  return messageToSave;
 }
 
 /**
- * Clear chat history for a thread back to initial welcome message.
+ * Clear chat history for a thread back to initial welcome message in MySQL and local cache.
  */
 export async function clearChatHistory(threadId = THREAD_STRUCTURAL) {
+  if (threadId !== THREAD_AI) {
+    try {
+      await fetch(`${BACKEND_BASE_URL}/api/chat/messages/${encodeURIComponent(threadId)}`, {
+        method: "DELETE",
+        signal: AbortSignal.timeout(5000),
+      });
+    } catch (err) {
+      console.warn("[Clear Chat API] Backend delete failed:", err.message);
+    }
+  }
+
   try {
     await AsyncStorage.removeItem(`${CHAT_STORAGE_KEY}_${threadId}`);
-    return getDefaultWelcomeForThread(threadId);
   } catch (err) {
-    console.error("Failed to clear chat history:", err);
-    return getDefaultWelcomeForThread(threadId);
+    console.warn("Failed to clear chat history from AsyncStorage:", err);
   }
+
+  return getDefaultWelcomeForThread(threadId);
 }
 
 /**

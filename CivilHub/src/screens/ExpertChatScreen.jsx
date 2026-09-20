@@ -22,6 +22,7 @@ import {
   getThreadIdForEngineer,
   getAvailableExperts,
   getExpertById,
+  fetchExpertsFromApi,
   AI_SPEC,
   ENGINEER_SPECS,
   VERIFIED_EXPERTS,
@@ -44,12 +45,36 @@ export default function ExpertChatScreen({ route, session }) {
   // Default to "ai" for clients; default to "human" for engineers (client consultation)
   const [chatMode, setChatMode] = useState(isEngineer ? "human" : "ai");
 
+  // Dynamic experts list fetched from MySQL database
+  const [experts, setExperts] = useState(VERIFIED_EXPERTS);
+
   // For Client in Human mode: select specific verified expert (null displays Messenger directory)
   const [selectedExpertId, setSelectedExpertId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterDiscipline, setFilterDiscipline] = useState("all");
 
-  const selectedExpert = selectedExpertId ? getExpertById(selectedExpertId) : null;
+  // Load verified consultants from MySQL API on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function loadExperts() {
+      try {
+        const dbExperts = await fetchExpertsFromApi();
+        if (isMounted && Array.isArray(dbExperts) && dbExperts.length > 0) {
+          setExperts(dbExperts);
+        }
+      } catch (err) {
+        console.warn("Failed to load experts from API:", err);
+      }
+    }
+    loadExperts();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const selectedExpert = selectedExpertId
+    ? experts.find((e) => e.id === selectedExpertId) || getExpertById(selectedExpertId)
+    : null;
   const activeDiscipline = isEngineer
     ? engineerDiscipline
     : selectedExpert?.discipline || "structural";
@@ -68,7 +93,7 @@ export default function ExpertChatScreen({ route, session }) {
       ? AI_SPEC
       : isEngineer
       ? ENGINEER_SPECS[engineerDiscipline] || ENGINEER_SPECS.structural
-      : selectedExpert || VERIFIED_EXPERTS[0];
+      : selectedExpert || experts[0] || VERIFIED_EXPERTS[0];
 
   const initialContext = route?.params?.initialContext || null;
   const [messages, setMessages] = useState([]);
@@ -266,7 +291,7 @@ export default function ExpertChatScreen({ route, session }) {
   };
 
   // Filter experts for the Messenger-style directory
-  const filteredExperts = VERIFIED_EXPERTS.filter((exp) => {
+  const filteredExperts = experts.filter((exp) => {
     if (filterDiscipline !== "all" && exp.discipline !== filterDiscipline) {
       return false;
     }
@@ -335,7 +360,7 @@ export default function ExpertChatScreen({ route, session }) {
               <View style={styles.verifiedCountBadge}>
                 <Ionicons name="shield-checkmark" size={14} color="#059669" />
                 <Text style={styles.verifiedCountText}>
-                  {VERIFIED_EXPERTS.length} Verified
+                  {experts.length} Verified
                 </Text>
               </View>
             ) : (
@@ -431,8 +456,8 @@ export default function ExpertChatScreen({ route, session }) {
                 const isActive = filterDiscipline === filter.id;
                 const count =
                   filter.id === "all"
-                    ? VERIFIED_EXPERTS.length
-                    : VERIFIED_EXPERTS.filter((e) => e.discipline === filter.id).length;
+                    ? experts.length
+                    : experts.filter((e) => e.discipline === filter.id).length;
                 return (
                   <TouchableOpacity
                     key={filter.id}
