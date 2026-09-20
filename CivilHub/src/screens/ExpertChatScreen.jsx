@@ -419,54 +419,56 @@ export default function ExpertChatScreen({ route, session }) {
           </View>
         </View>
 
-        {/* 2 OPTIONS TOGGLE: Chat with AI Expert vs Chat with Human Expert */}
-        <View style={styles.modeToggleBar}>
-          <TouchableOpacity
-            style={[
-              styles.modeTab,
-              chatMode === "ai" && styles.modeTabActiveAI,
-            ]}
-            onPress={() => setChatMode("ai")}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="sparkles"
-              size={15}
-              color={chatMode === "ai" ? "#ffffff" : "#4f46e5"}
-            />
-            <Text
+        {/* 2 OPTIONS TOGGLE: Chat with AI Expert vs Chat with Human Expert (Visible to Clients only) */}
+        {!isEngineer && (
+          <View style={styles.modeToggleBar}>
+            <TouchableOpacity
               style={[
-                styles.modeTabText,
-                chatMode === "ai" && styles.modeTabTextActive,
+                styles.modeTab,
+                chatMode === "ai" && styles.modeTabActiveAI,
               ]}
+              onPress={() => setChatMode("ai")}
+              activeOpacity={0.8}
             >
-              Chat with AI Expert
-            </Text>
-          </TouchableOpacity>
+              <Ionicons
+                name="sparkles"
+                size={15}
+                color={chatMode === "ai" ? "#ffffff" : "#4f46e5"}
+              />
+              <Text
+                style={[
+                  styles.modeTabText,
+                  chatMode === "ai" && styles.modeTabTextActive,
+                ]}
+              >
+                Chat with AI Expert
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[
-              styles.modeTab,
-              chatMode === "human" && styles.modeTabActiveHuman,
-            ]}
-            onPress={() => setChatMode("human")}
-            activeOpacity={0.8}
-          >
-            <MaterialCommunityIcons
-              name={isEngineer ? "account-group" : "account-hard-hat"}
-              size={16}
-              color={chatMode === "human" ? "#ffffff" : "#2563eb"}
-            />
-            <Text
+            <TouchableOpacity
               style={[
-                styles.modeTabText,
-                chatMode === "human" && styles.modeTabTextActive,
+                styles.modeTab,
+                chatMode === "human" && styles.modeTabActiveHuman,
               ]}
+              onPress={() => setChatMode("human")}
+              activeOpacity={0.8}
             >
-              {isEngineer ? "Client Chat" : "Chat with Human Expert"}
-            </Text>
-          </TouchableOpacity>
-        </View>
+              <MaterialCommunityIcons
+                name="account-hard-hat"
+                size={16}
+                color={chatMode === "human" ? "#ffffff" : "#2563eb"}
+              />
+              <Text
+                style={[
+                  styles.modeTabText,
+                  chatMode === "human" && styles.modeTabTextActive,
+                ]}
+              >
+                Chat with Human Expert
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* MESSENGER-STYLE EXPERT DIRECTORY (When in Human mode & no expert is selected) */}
         {chatMode === "human" && !isEngineer && !selectedExpert ? (

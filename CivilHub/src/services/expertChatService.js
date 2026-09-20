@@ -265,9 +265,15 @@ export async function getChatHistory(threadId = THREAD_STRUCTURAL) {
     });
     if (res.ok) {
       const data = await res.json();
-      if (data.success && Array.isArray(data.messages) && data.messages.length > 0) {
-        await AsyncStorage.setItem(`${CHAT_STORAGE_KEY}_${threadId}`, JSON.stringify(data.messages));
-        return data.messages;
+      if (data.success && Array.isArray(data.messages)) {
+        if (data.messages.length > 0) {
+          await AsyncStorage.setItem(`${CHAT_STORAGE_KEY}_${threadId}`, JSON.stringify(data.messages));
+          return data.messages;
+        } else {
+          // Database has 0 messages (cleared): clear local cache and return default welcome
+          await AsyncStorage.removeItem(`${CHAT_STORAGE_KEY}_${threadId}`);
+          return getDefaultWelcomeForThread(threadId);
+        }
       }
     }
   } catch (err) {
