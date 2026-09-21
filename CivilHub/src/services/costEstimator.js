@@ -2,32 +2,20 @@
 
 import { Platform } from "react-native";
 
-/*
-|--------------------------------------------------------------------------
-| API
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   API CONFIG
+========================================================= */
 
 export const COST_ESTIMATOR_API =
   Platform.OS === "android"
     ? "http://10.0.2.2:4000/api/cost-estimator"
     : "http://localhost:4000/api/cost-estimator";
 
-/*
-|--------------------------------------------------------------------------
-| IMPORTANT
-|--------------------------------------------------------------------------
-| Backend এখনো connect করছি না।
-| আগে frontend calculation ঠিকমতো কাজ করাব।
-*/
-
 export const USE_MOCK_BACKEND = false;
 
-/*
-|--------------------------------------------------------------------------
-| ROOM DEFAULTS
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   ROOM DEFAULTS
+========================================================= */
 
 export const ROOM_DEFAULTS = {
   bedroom: 120,
@@ -39,40 +27,33 @@ export const ROOM_DEFAULTS = {
   other: 80,
 };
 
-// Old component compatibility
 export const ROOM_DEFAULT_SIZES = ROOM_DEFAULTS;
 
-/*
-|--------------------------------------------------------------------------
-| QUALITY OPTIONS
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   QUALITY OPTIONS
+========================================================= */
 
 export const QUALITY_OPTIONS = [
   {
     value: "standard",
     label: "Standard",
-    description: "Demo planning rate",
+    description: "Standard construction rate",
   },
   {
     value: "premium",
     label: "Premium",
-    description: "Demo planning rate",
+    description: "Premium construction rate",
   },
   {
     value: "luxury",
     label: "Luxury",
-    description: "Demo planning rate",
+    description: "Luxury construction rate",
   },
 ];
 
-/*
-|--------------------------------------------------------------------------
-| DEMO COST RATES
-|--------------------------------------------------------------------------
-| These are NOT official government rates.
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   DEMO COST RATES
+========================================================= */
 
 const QUALITY_RATES = {
   standard: 3500,
@@ -80,11 +61,9 @@ const QUALITY_RATES = {
   luxury: 6000,
 };
 
-/*
-|--------------------------------------------------------------------------
-| COST BREAKDOWN
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   COST BREAKDOWN
+========================================================= */
 
 const CATEGORY_SHARES = [
   ["Materials", 0.48],
@@ -96,35 +75,29 @@ const CATEGORY_SHARES = [
   ["Other", 0.08],
 ];
 
-/*
-|--------------------------------------------------------------------------
-| DEMO REGULATION RULES
-|--------------------------------------------------------------------------
-| Only for frontend testing.
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   DEMO REGULATION RULES
+========================================================= */
 
 const DEMO_RULES = {
   rajuk: {
     residential: {
-      coverage: 0.6,
+      coverage: 60,
       far: 3.5,
       frontSetback: 5,
       rearSetback: 3,
       sideSetback: 3,
     },
-
     commercial: {
-      coverage: 0.65,
-      far: 4.0,
-      frontSetback: 6,
+      coverage: 70,
+      far: 5,
+      frontSetback: 5,
       rearSetback: 3,
       sideSetback: 3,
     },
-
     mixed: {
-      coverage: 0.6,
-      far: 3.75,
+      coverage: 65,
+      far: 4,
       frontSetback: 5,
       rearSetback: 3,
       sideSetback: 3,
@@ -133,24 +106,22 @@ const DEMO_RULES = {
 
   cda: {
     residential: {
-      coverage: 0.6,
-      far: 3.0,
+      coverage: 60,
+      far: 3.5,
       frontSetback: 5,
       rearSetback: 3,
       sideSetback: 3,
     },
-
     commercial: {
-      coverage: 0.65,
-      far: 3.5,
-      frontSetback: 6,
+      coverage: 70,
+      far: 5,
+      frontSetback: 5,
       rearSetback: 3,
       sideSetback: 3,
     },
-
     mixed: {
-      coverage: 0.6,
-      far: 3.25,
+      coverage: 65,
+      far: 4,
       frontSetback: 5,
       rearSetback: 3,
       sideSetback: 3,
@@ -159,24 +130,22 @@ const DEMO_RULES = {
 
   kda: {
     residential: {
-      coverage: 0.6,
-      far: 3.0,
+      coverage: 60,
+      far: 3.5,
       frontSetback: 5,
       rearSetback: 3,
       sideSetback: 3,
     },
-
     commercial: {
-      coverage: 0.65,
-      far: 3.5,
-      frontSetback: 6,
+      coverage: 70,
+      far: 5,
+      frontSetback: 5,
       rearSetback: 3,
       sideSetback: 3,
     },
-
     mixed: {
-      coverage: 0.6,
-      far: 3.25,
+      coverage: 65,
+      far: 4,
       frontSetback: 5,
       rearSetback: 3,
       sideSetback: 3,
@@ -185,24 +154,22 @@ const DEMO_RULES = {
 
   rda: {
     residential: {
-      coverage: 0.6,
-      far: 3.0,
+      coverage: 60,
+      far: 3.5,
       frontSetback: 5,
       rearSetback: 3,
       sideSetback: 3,
     },
-
     commercial: {
-      coverage: 0.65,
-      far: 3.5,
-      frontSetback: 6,
+      coverage: 70,
+      far: 5,
+      frontSetback: 5,
       rearSetback: 3,
       sideSetback: 3,
     },
-
     mixed: {
-      coverage: 0.6,
-      far: 3.25,
+      coverage: 65,
+      far: 4,
       frontSetback: 5,
       rearSetback: 3,
       sideSetback: 3,
@@ -211,50 +178,62 @@ const DEMO_RULES = {
 
   general: {
     residential: {
-      coverage: 0.6,
-      far: 2.5,
+      coverage: 60,
+      far: 3,
       frontSetback: 5,
-      rearSetback: 5,
-      sideSetback: 4,
+      rearSetback: 3,
+      sideSetback: 3,
     },
-
     commercial: {
-      coverage: 0.6,
-      far: 2.5,
+      coverage: 70,
+      far: 4,
       frontSetback: 5,
-      rearSetback: 5,
-      sideSetback: 4,
+      rearSetback: 3,
+      sideSetback: 3,
     },
-
     mixed: {
-      coverage: 0.6,
-      far: 2.5,
+      coverage: 65,
+      far: 3.5,
       frontSetback: 5,
-      rearSetback: 5,
-      sideSetback: 4,
+      rearSetback: 3,
+      sideSetback: 3,
     },
   },
 };
 
-/*
-|--------------------------------------------------------------------------
-| HELPERS
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   HELPERS
+========================================================= */
 
-const toNumber = (value) => {
+const toNumber = (value, fallback = 0) => {
   const number = Number.parseFloat(value);
 
   return Number.isFinite(number)
     ? number
-    : 0;
+    : fallback;
 };
 
-const normalizeAuthority = (value) =>
-  String(value || "general").toLowerCase();
+const normalizeAuthority = (value) => {
+  const authority =
+    String(value || "general").toLowerCase();
 
-const normalizeBuildingType = (value) =>
-  String(value || "residential").toLowerCase();
+  return DEMO_RULES[authority]
+    ? authority
+    : "general";
+};
+
+const normalizeBuildingType = (value) => {
+  const type =
+    String(value || "residential").toLowerCase();
+
+  return [
+    "residential",
+    "commercial",
+    "mixed",
+  ].includes(type)
+    ? type
+    : "residential";
+};
 
 const normalizeQuality = (value) => {
   const quality =
@@ -265,11 +244,9 @@ const normalizeQuality = (value) => {
     : "standard";
 };
 
-/*
-|--------------------------------------------------------------------------
-| UNIT CONVERSION
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   UNIT CONVERSION
+========================================================= */
 
 export function feetToMeter(value) {
   return toNumber(value) * 0.3048;
@@ -287,11 +264,9 @@ export function sqmToSqft(value) {
   return toNumber(value) / 0.092903;
 }
 
-/*
-|--------------------------------------------------------------------------
-| LAND AREA
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   LAND AREA
+========================================================= */
 
 export function calculateLandArea({
   length,
@@ -310,31 +285,24 @@ export function calculateLandArea({
   }
 
   const isMeter =
-    String(unit).toLowerCase().startsWith("m");
+    String(unit)
+      .toLowerCase()
+      .startsWith("m");
 
-  let areaSqft;
-
-  if (isMeter) {
-    areaSqft = sqmToSqft(l * w);
-  } else {
-    areaSqft = l * w;
-  }
-
-  const areaSqm =
-    sqftToSqm(areaSqft);
+  const areaSqft = isMeter
+    ? sqmToSqft(l * w)
+    : l * w;
 
   return {
     area: areaSqft,
     areaSqft,
-    areaSqm,
+    areaSqm: sqftToSqm(areaSqft),
   };
 }
 
-/*
-|--------------------------------------------------------------------------
-| REGULATION
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   REGULATION
+========================================================= */
 
 export function getRegulationRules({
   authority = "general",
@@ -347,63 +315,46 @@ export function getRegulationRules({
   const normalizedBuildingType =
     normalizeBuildingType(buildingType);
 
-  const selectedRules =
-    DEMO_RULES[
-      normalizedAuthority
-    ]?.[
+  const rules =
+    DEMO_RULES[normalizedAuthority][
       normalizedBuildingType
-    ] ||
-    DEMO_RULES.general.residential;
+    ];
 
   return {
-    ...selectedRules,
-
-    authority:
-      normalizedAuthority,
-
-    buildingType:
-      normalizedBuildingType,
-
-    roadWidth:
-      toNumber(roadWidth),
-
-    source:
-      "Frontend demo / sample values",
-
-    effectiveDate:
-      "Demo only",
-
+    ...rules,
+    authority: normalizedAuthority,
+    buildingType: normalizedBuildingType,
+    roadWidth: toNumber(roadWidth),
+    source: "Frontend demo values",
+    effectiveDate: "Demo only",
     isDemo: true,
   };
 }
 
-/*
-|--------------------------------------------------------------------------
-| FETCH REGULATION
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   FETCH REGULATION
+========================================================= */
 
 export async function fetchRegulationRules(
   params = {}
 ) {
-  /*
-   * Backend OFF for now.
-   */
-
   if (USE_MOCK_BACKEND) {
     return getRegulationRules(params);
   }
 
-  const response =
-    await fetch(
-      `${COST_ESTIMATOR_API}/regulations?authority=${encodeURIComponent(
-        params.authority || "general"
-      )}&buildingType=${encodeURIComponent(
-        params.buildingType || "residential"
-      )}&roadWidth=${toNumber(
-        params.roadWidth
-      )}`
-    );
+  const url =
+    `${COST_ESTIMATOR_API}/regulations` +
+    `?authority=${encodeURIComponent(
+      params.authority || "general"
+    )}` +
+    `&buildingType=${encodeURIComponent(
+      params.buildingType || "residential"
+    )}` +
+    `&roadWidth=${toNumber(
+      params.roadWidth
+    )}`;
+
+  const response = await fetch(url);
 
   if (!response.ok) {
     throw new Error(
@@ -411,14 +362,34 @@ export async function fetchRegulationRules(
     );
   }
 
-  return response.json();
+  const data = await response.json();
+
+  if (data?.rules) {
+    return {
+      ...data.rules,
+      authority:
+        data.authority ||
+        params.authority ||
+        "general",
+      buildingType:
+        data.buildingType ||
+        params.buildingType ||
+        "residential",
+      source:
+        data.source || "backend",
+      effectiveDate:
+        data.effectiveDate ||
+        "Backend temporary values",
+      isDemo: true,
+    };
+  }
+
+  return data;
 }
 
-/*
-|--------------------------------------------------------------------------
-| COST RATES
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   COST RATES
+========================================================= */
 
 export function getCostRates(
   quality = "standard",
@@ -428,31 +399,19 @@ export function getCostRates(
     normalizeQuality(quality);
 
   return {
-    quality:
-      normalizedQuality,
-
+    quality: normalizedQuality,
     buildingType,
-
     ratePerSqft:
-      QUALITY_RATES[
-        normalizedQuality
-      ],
-
-    source:
-      "Frontend demo / sample rate",
-
-    effectiveDate:
-      "Demo only",
-
+      QUALITY_RATES[normalizedQuality],
+    source: "Frontend demo values",
+    effectiveDate: "Demo only",
     isDemo: true,
   };
 }
 
-/*
-|--------------------------------------------------------------------------
-| FETCH COST RATES
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   FETCH COST RATES
+========================================================= */
 
 export async function fetchCostRates({
   quality = "standard",
@@ -465,14 +424,15 @@ export async function fetchCostRates({
     );
   }
 
-  const response =
-    await fetch(
-      `${COST_ESTIMATOR_API}/rates?quality=${encodeURIComponent(
+  const response = await fetch(
+    `${COST_ESTIMATOR_API}/rates` +
+      `?quality=${encodeURIComponent(
         quality
-      )}&buildingType=${encodeURIComponent(
+      )}` +
+      `&buildingType=${encodeURIComponent(
         buildingType
       )}`
-    );
+  );
 
   if (!response.ok) {
     throw new Error(
@@ -480,231 +440,474 @@ export async function fetchCostRates({
     );
   }
 
-  return response.json();
-}
+  const data = await response.json();
 
-/*
-|--------------------------------------------------------------------------
-| ROOM AREA
-|--------------------------------------------------------------------------
-|
-| Supports:
-|
-| calculateRoomArea({
-|   count: 2,
-|   area: 120
-| })
-|
-| AND:
-|
-| calculateRoomArea({
-|   bedroom: {...},
-|   bathroom: {...}
-| })
-|
-|--------------------------------------------------------------------------
-*/
+  const normalizedQuality =
+    normalizeQuality(quality);
 
-export function calculateRoomArea(
-  roomsOrConfig = {},
-  maybeSize
-) {
-  if (
-    typeof roomsOrConfig.count !==
-    "undefined"
-  ) {
-    const count =
-      Math.max(
-        0,
-        toNumber(
-          roomsOrConfig.count
-        )
-      );
+  const rawRate =
+    data?.rates?.[normalizedQuality] ||
+    data?.[normalizedQuality] ||
+    data;
 
-    const area =
-      Math.max(
-        0,
-        toNumber(
-          roomsOrConfig.area ??
-            roomsOrConfig.size
-        )
-      );
-
-    return count * area;
-  }
+  const ratePerSqft = Number(
+    rawRate?.ratePerSqft ??
+      rawRate?.rate_per_sqft ??
+      rawRate
+  );
 
   if (
-    typeof maybeSize !==
-    "undefined"
+    !Number.isFinite(ratePerSqft) ||
+    ratePerSqft <= 0
   ) {
-    return (
-      Math.max(
-        0,
-        toNumber(roomsOrConfig)
-      ) *
-      Math.max(
-        0,
-        toNumber(maybeSize)
-      )
+    throw new Error(
+      "Invalid cost rate received from backend."
     );
   }
 
-  return Object.values(
-    roomsOrConfig || {}
-  ).reduce(
-    (total, room) =>
-      total +
-      calculateRoomArea(room),
-    0
-  );
+  return {
+    ...rawRate,
+    quality: normalizedQuality,
+    buildingType,
+    ratePerSqft,
+  };
 }
 
-/*
-|--------------------------------------------------------------------------
-| GROSS FLOOR AREA
-|--------------------------------------------------------------------------
-*/
-
-export function calculateGrossFloorArea(
-  netRoomArea,
-  allowancePercent = 20
-) {
-  const net =
-    Math.max(
-      0,
-      toNumber(netRoomArea)
-    );
-
-  const allowance =
-    Math.max(
-      0,
-      toNumber(allowancePercent)
-    );
-
-  return (
-    net *
-    (1 + allowance / 100)
-  );
-}
-
-/*
-|--------------------------------------------------------------------------
-| BUILDABLE FOOTPRINT
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   BUILDING FOOTPRINT
+========================================================= */
 
 export function calculateBuildableFootprint({
+  length,
+  width,
   landLength,
   landWidth,
-  dimensionUnit = "ft",
-  roadFacing = "front",
+  unit = "ft",
+  dimensionUnit,
   rules,
+  roadFacing = "front",
 } = {}) {
-  const land =
-    calculateLandArea({
-      length: landLength,
-      width: landWidth,
-      unit: dimensionUnit,
-    });
+  const resolvedLength =
+    length ?? landLength;
 
-  const coverage =
-    Math.max(
-      0,
-      toNumber(
-        rules?.coverage
-      )
+  const resolvedWidth =
+    width ?? landWidth;
+
+  const resolvedUnit =
+    dimensionUnit || unit;
+
+  const land = calculateLandArea({
+    length: resolvedLength,
+    width: resolvedWidth,
+    unit: resolvedUnit,
+  });
+
+  const lengthFeet =
+    String(resolvedUnit)
+      .toLowerCase()
+      .startsWith("m")
+      ? meterToFeet(resolvedLength)
+      : toNumber(resolvedLength);
+
+  const widthFeet =
+    String(resolvedUnit)
+      .toLowerCase()
+      .startsWith("m")
+      ? meterToFeet(resolvedWidth)
+      : toNumber(resolvedWidth);
+
+  const effectiveRules = {
+    coverage: 60,
+    frontSetback: 5,
+    rearSetback: 3,
+    sideSetback: 3,
+    ...(rules || {}),
+  };
+
+  const frontSetback =
+    toNumber(
+      effectiveRules.frontSetback
     );
+
+  const rearSetback =
+    toNumber(
+      effectiveRules.rearSetback
+    );
+
+  const sideSetback =
+    toNumber(
+      effectiveRules.sideSetback
+    );
+
+  const usableLength = Math.max(
+    0,
+    lengthFeet -
+      frontSetback -
+      rearSetback
+  );
+
+  const usableWidth = Math.max(
+    0,
+    widthFeet -
+      sideSetback * 2
+  );
+
+  const setbackArea =
+    usableLength * usableWidth;
 
   const coverageArea =
     land.areaSqft *
-    coverage;
+    (toNumber(
+      effectiveRules.coverage,
+      60
+    ) / 100);
 
-  let lengthFt =
-    toNumber(landLength);
-
-  let widthFt =
-    toNumber(landWidth);
-
-  if (
-    String(
-      dimensionUnit
-    )
-      .toLowerCase()
-      .startsWith("m")
-  ) {
-    lengthFt =
-      meterToFeet(
-        lengthFt
-      );
-
-    widthFt =
-      meterToFeet(
-        widthFt
-      );
-  }
-
-  const front =
-    toNumber(
-      rules?.frontSetback
-    );
-
-  const rear =
-    toNumber(
-      rules?.rearSetback
-    );
-
-  const side =
-    toNumber(
-      rules?.sideSetback
-    );
-
-  const remainingLength =
-    Math.max(
-      0,
-      lengthFt -
-        front -
-        rear
-    );
-
-  const remainingWidth =
-    Math.max(
-      0,
-      widthFt -
-        side * 2
-    );
-
-  const setbackArea =
-    remainingLength *
-    remainingWidth;
+  const maxFootprint = Math.min(
+    setbackArea,
+    coverageArea
+  );
 
   return {
-    coverageArea,
+    landArea: land.areaSqft,
+    landAreaSqm: land.areaSqm,
+
+    lengthFeet,
+    widthFeet,
+
+    usableLength,
+    usableWidth,
 
     setbackArea,
+    coverageArea,
 
     maxFootprint:
-      Math.max(
-        0,
-        Math.min(
-          coverageArea,
-          setbackArea
-        )
+      Math.max(0, maxFootprint),
+
+    coveragePercent:
+      toNumber(
+        effectiveRules.coverage,
+        60
       ),
+
+    setbacks: {
+      front: frontSetback,
+      rear: rearSetback,
+      side: sideSetback,
+    },
 
     roadFacing,
   };
 }
 
-/*
-|--------------------------------------------------------------------------
-| COMPLETE ESTIMATE
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   ROOM AREA
+========================================================= */
+
+export function calculateRoomArea(
+  rooms = {}
+) {
+  const list = Array.isArray(rooms)
+    ? rooms
+    : Object.entries(
+        rooms || {}
+      ).map(([type, value]) => ({
+        type,
+        count:
+          value?.count ?? 0,
+        area:
+          value?.area ??
+          value?.size ??
+          0,
+      }));
+
+  return list.reduce(
+    (total, room) => {
+      const count = Math.max(
+        0,
+        toNumber(room?.count)
+      );
+
+      const area = Math.max(
+        0,
+        toNumber(
+          room?.area ??
+            room?.size
+        )
+      );
+
+      return (
+        total +
+        count * area
+      );
+    },
+    0
+  );
+}
+
+/* =========================================================
+   GROSS FLOOR AREA
+========================================================= */
+
+export function calculateGrossFloorArea(
+  roomArea,
+  allowancePercent = 20
+) {
+  const area = Math.max(
+    0,
+    toNumber(roomArea)
+  );
+
+  const allowance = Math.max(
+    0,
+    toNumber(allowancePercent)
+  );
+
+  return (
+    area *
+    (1 + allowance / 100)
+  );
+}
+
+/* =========================================================
+   FORMAT HELPERS
+========================================================= */
+
+export function formatBDT(value) {
+  const amount = Math.round(
+    toNumber(value)
+  );
+
+  return `৳${amount.toLocaleString(
+    "en-BD"
+  )}`;
+}
+
+export function formatSqft(value) {
+  const area = toNumber(value);
+
+  return `${Math.round(
+    area
+  ).toLocaleString(
+    "en-BD"
+  )} sqft`;
+}
+
+/* =========================================================
+   LOCAL ESTIMATE
+========================================================= */
+
+export function calculateLocalEstimate({
+  landLength = 0,
+  landWidth = 0,
+  dimensionUnit = "ft",
+  authority = "general",
+  buildingType = "residential",
+  roadWidth = 0,
+  roadFacing = "front",
+  floorCount = 1,
+  quality = "standard",
+  hasBasement = false,
+  hasGarage = false,
+  floors = [],
+  allowancePercent = 20,
+} = {}) {
+  const rules =
+    getRegulationRules({
+      authority,
+      buildingType,
+      roadWidth,
+    });
+
+  const rate =
+    getCostRates(
+      quality,
+      buildingType
+    );
+
+  const footprint =
+    calculateBuildableFootprint({
+      landLength,
+      landWidth,
+      dimensionUnit,
+      rules,
+      roadFacing,
+    });
+
+  const normalizedFloors =
+    Array.isArray(floors) &&
+    floors.length > 0
+      ? floors
+      : Array.from(
+          {
+            length: Math.max(
+              1,
+              toNumber(
+                floorCount,
+                1
+              )
+            ),
+          },
+          (_, index) => ({
+            floor: index + 1,
+            rooms: [],
+          })
+        );
+
+  const floorBreakdown =
+    normalizedFloors.map(
+      (floor, index) => {
+        const roomArea =
+          calculateRoomArea(
+            floor?.rooms || []
+          );
+
+        const grossArea =
+          calculateGrossFloorArea(
+            roomArea,
+            allowancePercent
+          );
+
+        return {
+          floor:
+            index + 1,
+          netRoomArea:
+            roomArea,
+          grossArea,
+        };
+      }
+    );
+
+  const totalGrossFloorArea =
+    floorBreakdown.reduce(
+      (sum, floor) =>
+        sum +
+        floor.grossArea,
+      0
+    );
+
+  const basementArea =
+    hasBasement
+      ? footprint.maxFootprint
+      : 0;
+
+  const garageArea =
+    hasGarage
+      ? Math.min(
+          footprint.maxFootprint,
+          250
+        )
+      : 0;
+
+  const totalCostArea =
+    totalGrossFloorArea +
+    basementArea +
+    garageArea;
+
+  const totalCost =
+    totalCostArea *
+    rate.ratePerSqft;
+
+  const maxFarArea =
+    footprint.landArea *
+    rules.far;
+
+  const firstFloorArea =
+    floorBreakdown[0]
+      ?.grossArea || 0;
+
+  const coveragePass =
+    firstFloorArea <=
+    footprint.maxFootprint;
+
+  const farPass =
+    totalGrossFloorArea <=
+    maxFarArea;
+
+  const compliance =
+    coveragePass &&
+    farPass;
+
+  const breakdown =
+    CATEGORY_SHARES.map(
+      ([label, percentage]) => ({
+        label,
+        percentage:
+          percentage * 100,
+        amount:
+          totalCost *
+          percentage,
+      })
+    );
+
+  return {
+    success: true,
+
+    landArea:
+      footprint.landArea,
+
+    buildableFootprint:
+      footprint.maxFootprint,
+
+    proposedGroundArea:
+      firstFloorArea,
+
+    totalGrossFloorArea,
+
+    maxFarArea,
+
+    ratePerSqft:
+      rate.ratePerSqft,
+
+    totalCost,
+
+    breakdown,
+
+    floorBreakdown,
+
+    rules,
+
+    compliance: {
+      isCompliant:
+        compliance,
+      coveragePass,
+      farPass,
+    },
+
+    buildingArea: {
+      grossFloorArea:
+        totalGrossFloorArea,
+      basementArea,
+      garageArea,
+    },
+
+    validation: [
+      {
+        label:
+          "Ground Coverage",
+        status:
+          coveragePass
+            ? "pass"
+            : "fail",
+      },
+      {
+        label: "FAR",
+        status:
+          farPass
+            ? "pass"
+            : "fail",
+      },
+    ],
+  };
+}
+
+/* =========================================================
+   SCREEN-SIDE CALCULATOR
+========================================================= */
 
 export function calculateEstimate({
-  land,
-  authority,
-  buildingType,
+  land = {},
+  authority = "general",
+  buildingType = "residential",
   floors = [],
   allowancePercent = 20,
   quality = "standard",
@@ -713,71 +916,128 @@ export function calculateEstimate({
   rules,
   rates,
 } = {}) {
-  const landInfo =
-    calculateLandArea(
-      land || {}
+  const landLength =
+    toNumber(land.length);
+
+  const landWidth =
+    toNumber(land.width);
+
+  const dimensionUnit =
+    land.unit || "ft";
+
+  const roadWidth =
+    toNumber(
+      land.roadWidth
     );
 
-  const selectedRules =
+  const roadFacing =
+    land.roadFacing ||
+    "front";
+
+  const effectiveRules =
     rules ||
     getRegulationRules({
       authority,
       buildingType,
-      roadWidth:
-        land?.roadWidth,
+      roadWidth,
     });
 
-  const selectedRates =
+  const effectiveRate =
     rates ||
     getCostRates(
       quality,
       buildingType
     );
 
-  const footprint =
-    calculateBuildableFootprint({
-      landLength:
-        land?.length,
+  const normalizedFloors =
+    Array.isArray(floors) &&
+    floors.length > 0
+      ? floors.map(
+          (floor, index) => ({
+            ...floor,
 
-      landWidth:
-        land?.width,
+            floor:
+              index + 1,
 
-      dimensionUnit:
-        land?.unit || "ft",
+            rooms:
+              Array.isArray(
+                floor?.rooms
+              )
+                ? floor.rooms
+                : Object.entries(
+                    floor?.rooms ||
+                      {}
+                  ).map(
+                    ([type, value]) => ({
+                      type,
 
-      roadFacing:
-        land?.roadFacing ||
-        "front",
+                      count:
+                        value?.count ??
+                        0,
 
-      rules:
-        selectedRules,
+                      area:
+                        value?.area ??
+                        value?.size ??
+                        0,
+                    })
+                  ),
+          })
+        )
+      : [
+          {
+            floor: 1,
+            rooms: [],
+          },
+        ];
+
+  const localResult =
+    calculateLocalEstimate({
+      landLength,
+      landWidth,
+      dimensionUnit,
+      authority,
+      buildingType,
+      roadWidth,
+      roadFacing,
+      floorCount:
+        normalizedFloors.length,
+      quality,
+      hasBasement,
+      hasGarage,
+      floors:
+        normalizedFloors,
+      allowancePercent,
     });
 
-  /*
-   * Floor calculations
-   */
+  const footprint =
+    calculateBuildableFootprint({
+      landLength,
+      landWidth,
+      dimensionUnit,
+      rules:
+        effectiveRules,
+      roadFacing,
+    });
 
   const floorBreakdown =
-    floors.map(
+    normalizedFloors.map(
       (floor, index) => {
-        const netRoomArea =
+        const roomArea =
           calculateRoomArea(
-            floor?.rooms || {}
+            floor.rooms
           );
 
         const grossArea =
           calculateGrossFloorArea(
-            netRoomArea,
+            roomArea,
             allowancePercent
           );
 
         return {
           floor:
-            floor?.floor ||
             index + 1,
-
-          netRoomArea,
-
+          netRoomArea:
+            roomArea,
           grossArea,
         };
       }
@@ -785,116 +1045,65 @@ export function calculateEstimate({
 
   const totalGrossFloorArea =
     floorBreakdown.reduce(
-      (total, floor) =>
-        total +
+      (sum, floor) =>
+        sum +
         floor.grossArea,
       0
     );
 
-  const proposedGroundArea =
+  const firstFloorGrossArea =
     floorBreakdown[0]
       ?.grossArea || 0;
 
-  /*
-   * FAR
-   */
-
   const maxFarArea =
-    landInfo.areaSqft *
+    footprint.landArea *
     toNumber(
-      selectedRules.far
+      effectiveRules.far
     );
-
-  /*
-   * Maximum buildable footprint
-   */
-
-  const maxBuildableFootprint =
-    footprint.maxFootprint;
-
-  /*
-   * Construction cost
-   */
-
-  const baseRate =
-    toNumber(
-      selectedRates.ratePerSqft
-    ) ||
-    QUALITY_RATES[
-      normalizeQuality(
-        quality
-      )
-    ];
-
-  let costArea =
-    totalGrossFloorArea;
 
   const basementArea =
     hasBasement
-      ? maxBuildableFootprint
+      ? footprint.maxFootprint
       : 0;
 
   const garageArea =
     hasGarage
       ? Math.min(
-          maxBuildableFootprint,
+          footprint.maxFootprint,
           250
         )
       : 0;
 
-  costArea +=
+  const totalCostArea =
+    totalGrossFloorArea +
     basementArea +
     garageArea;
 
+  const ratePerSqft =
+    toNumber(
+      effectiveRate?.ratePerSqft,
+      getCostRates(
+        quality,
+        buildingType
+      ).ratePerSqft
+    );
+
   const totalCost =
-    costArea *
-    baseRate;
+    totalCostArea *
+    ratePerSqft;
 
-  /*
-   * Validation
-   */
+  const coveragePass =
+    firstFloorGrossArea <=
+    footprint.maxFootprint +
+      0.01;
 
-  const validation = [
-    {
-      label:
-        "Ground coverage",
+  const farPass =
+    totalGrossFloorArea <=
+    maxFarArea + 0.01;
 
-      value:
-        `${Math.round(
-          proposedGroundArea
-        ).toLocaleString()} / ${Math.round(
-          maxBuildableFootprint
-        ).toLocaleString()} sqft`,
-
-      status:
-        proposedGroundArea <=
-        maxBuildableFootprint
-          ? "pass"
-          : "fail",
-    },
-
-    {
-      label:
-        "FAR area",
-
-      value:
-        `${Math.round(
-          totalGrossFloorArea
-        ).toLocaleString()} / ${Math.round(
-          maxFarArea
-        ).toLocaleString()} sqft`,
-
-      status:
-        totalGrossFloorArea <=
-        maxFarArea
-          ? "pass"
-          : "fail",
-    },
-  ];
-
-  /*
-   * Breakdown
-   */
+  const footprintPass =
+    footprint.maxFootprint >
+    0;
 
   const breakdown =
     CATEGORY_SHARES.map(
@@ -911,39 +1120,39 @@ export function calculateEstimate({
     );
 
   return {
+    ...localResult,
+
+    success: true,
+
     landArea:
-      landInfo.areaSqft,
+      footprint.landArea,
 
-    maxBuildableFootprint,
+    maxBuildableFootprint:
+      footprint.maxFootprint,
 
-    proposedGroundArea,
+    proposedGroundArea:
+      firstFloorGrossArea,
 
     totalGrossFloorArea,
 
     maxFarArea,
 
-    ratePerSqft:
-      baseRate,
+    ratePerSqft,
 
     totalCost,
-
-    validation,
 
     breakdown,
 
     floorBreakdown,
 
     rules:
-      selectedRules,
-
-    rates:
-      selectedRates,
+      effectiveRules,
 
     buildingArea: {
       netRoomArea:
         floorBreakdown.reduce(
-          (total, floor) =>
-            total +
+          (sum, floor) =>
+            sum +
             floor.netRoomArea,
           0
         ),
@@ -956,119 +1165,129 @@ export function calculateEstimate({
       garageArea,
     },
 
+    validation: [
+      {
+        label:
+          "Ground coverage",
+
+        value:
+          `${Math.round(
+            firstFloorGrossArea
+          ).toLocaleString()} / ` +
+          `${Math.round(
+            footprint.maxFootprint
+          ).toLocaleString()} sqft`,
+
+        status:
+          coveragePass
+            ? "pass"
+            : "fail",
+      },
+
+      {
+        label: "FAR area",
+
+        value:
+          `${Math.round(
+            totalGrossFloorArea
+          ).toLocaleString()} / ` +
+          `${Math.round(
+            maxFarArea
+          ).toLocaleString()} sqft`,
+
+        status:
+          farPass
+            ? "pass"
+            : "fail",
+      },
+
+      {
+        label:
+          "Buildable footprint",
+
+        value:
+          `${Math.round(
+            footprint.maxFootprint
+          ).toLocaleString()} sqft available`,
+
+        status:
+          footprintPass
+            ? "pass"
+            : "fail",
+      },
+    ],
+
+    compliance: {
+      isCompliant:
+        coveragePass &&
+        farPass &&
+        footprintPass,
+    },
+
     options: {
       hasBasement,
       hasGarage,
       quality,
     },
-
-    generatedAt:
-      new Date().toISOString(),
   };
 }
 
-/*
-|--------------------------------------------------------------------------
-| OLD COMPONENT COMPATIBILITY
-|--------------------------------------------------------------------------
-|
-| DesignDetailModal still uses this function.
-|
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   MAIN CALCULATOR
+========================================================= */
 
-export function estimateConstructionCost({
-  floors = 1,
-  floorAreaSqft = 0,
-  quality = "standard",
-  hasBasement = false,
-  hasGarage = false,
-} = {}) {
-  const floorCount =
-    Math.max(
-      0,
-      toNumber(floors)
+export async function calculateCostEstimate(
+  params = {}
+) {
+  if (USE_MOCK_BACKEND) {
+    return calculateLocalEstimate(
+      params
+    );
+  }
+
+  const response =
+    await fetch(
+      `${COST_ESTIMATOR_API}/estimate`,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body: JSON.stringify(
+          params
+        ),
+      }
     );
 
-  const floorArea =
-    Math.max(
-      0,
-      toNumber(
-        floorAreaSqft
-      )
+  const data =
+    await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message ||
+        "Cost estimation failed."
     );
+  }
 
-  const normalArea =
-    floorCount *
-    floorArea;
-
-  const basementArea =
-    hasBasement
-      ? floorArea
-      : 0;
-
-  const garageArea =
-    hasGarage
-      ? Math.min(
-          floorArea,
-          250
-        )
-      : 0;
-
-  const totalArea =
-    normalArea +
-    basementArea +
-    garageArea;
-
-  const rate =
-    QUALITY_RATES[
-      normalizeQuality(
-        quality
-      )
-    ];
-
-  const total =
-    totalArea * rate;
-
-  return {
-    total,
-
-    totalCost:
-      total,
-
-    ratePerSqft:
-      rate,
-
-    areaSqft:
-      totalArea,
-  };
+  return data;
 }
 
-/*
-|--------------------------------------------------------------------------
-| SAVE ESTIMATE
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   SAVE ESTIMATE
+========================================================= */
 
 export async function saveEstimate(
-  payload
+  params = {}
 ) {
-  /*
-   * Backend OFF.
-   * Local demo save.
-   */
-
-  if (USE_MOCK_BACKEND) {
-    return {
-      success: true,
-
-      id:
-        `DEMO-${Date.now()}`,
-
-      source:
-        "frontend-demo",
-    };
-  }
+  const payload =
+    params?.input &&
+    typeof params.input ===
+      "object"
+      ? params.input
+      : params;
 
   const response =
     await fetch(
@@ -1081,60 +1300,42 @@ export async function saveEstimate(
             "application/json",
         },
 
-        body:
-          JSON.stringify(
-            payload
-          ),
+        body: JSON.stringify(
+          payload
+        ),
       }
     );
 
+  const data =
+    await response.json();
+
   if (!response.ok) {
     throw new Error(
-      "Unable to save estimate."
+      data?.message ||
+        "Unable to save estimate."
     );
   }
 
-  return response.json();
+  return data;
 }
 
-/*
-|--------------------------------------------------------------------------
-| BACKWARD COMPATIBILITY
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   DEFAULT EXPORT
+========================================================= */
 
-export async function fetchLiveRatesFromDB() {
-  return {
-    source:
-      "frontend-demo",
-
-    rates:
-      QUALITY_RATES,
-  };
-}
-
-export async function recordEstimateInDB(
-  estimate
-) {
-  return saveEstimate(
-    estimate
-  );
-}
-
-/*
-|--------------------------------------------------------------------------
-| FORMATTERS
-|--------------------------------------------------------------------------
-*/
-
-export function formatBDT(value) {
-  return `৳${Math.round(
-    toNumber(value)
-  ).toLocaleString("en-BD")}`;
-}
-
-export function formatSqft(value) {
-  return `${Math.round(
-    toNumber(value)
-  ).toLocaleString("en-US")} sqft`;
-}
+export default {
+  calculateLandArea,
+  calculateBuildableFootprint,
+  calculateRoomArea,
+  calculateGrossFloorArea,
+  calculateEstimate,
+  calculateLocalEstimate,
+  calculateCostEstimate,
+  formatBDT,
+  formatSqft,
+  fetchRegulationRules,
+  fetchCostRates,
+  getRegulationRules,
+  getCostRates,
+  saveEstimate,
+};

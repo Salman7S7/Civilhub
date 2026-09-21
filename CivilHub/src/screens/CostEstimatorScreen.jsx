@@ -589,11 +589,15 @@ export default function CostEstimatorScreen({ route }) {
   ======================================================= */
 
   const landArea = useMemo(() => {
-    return calculateLandArea({
+    const areaResult = calculateLandArea({
       length: toNumber(landLength),
       width: toNumber(landWidth),
       unit: dimensionUnit,
     });
+
+    // calculateLandArea returns an object; the screen needs the
+    // numeric square-feet value for display and comparisons.
+    return Number(areaResult?.areaSqft || 0);
   }, [
     landLength,
     landWidth,
@@ -1099,7 +1103,7 @@ export default function CostEstimatorScreen({ route }) {
 
           <View style={styles.headerText}>
             <Text style={styles.headerTitle}>
-              Bangladesh Cost Estimator
+              CIVILHUB Cost Estimator
             </Text>
 
             <Text style={styles.headerSubtitle}>
