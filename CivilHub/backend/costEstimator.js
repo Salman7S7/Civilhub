@@ -1,584 +1,1195 @@
-// backend/costEstimator.js
-
 const express = require("express");
-
-const {
-  COST_RATES,
-  REGULATIONS,
-} = require("./costEstimatorData");
 
 const router = express.Router();
 
-// ============================================================
-// Helpers
-// ============================================================
+/* =========================================================
+   DEMO COST RATES
+========================================================= */
 
-function toNumber(value, defaultValue = 0) {
-  const number = Number(value);
+const COST_RATES = {
+  standard: {
+    ratePerSqft: 3500,
+  },
 
-  if (!Number.isFinite(number)) {
-    return defaultValue;
-  }
+  premium: {
+    ratePerSqft: 4500,
+  },
 
-  return number;
+  luxury: {
+    ratePerSqft: 6000,
+  },
+};
+
+/* =========================================================
+   DEMO REGULATION
+========================================================= */
+
+const REGULATIONS = {
+  rajuk: {
+    residential: {
+      coverage: 60,
+      far: 3.5,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+
+    commercial: {
+      coverage: 70,
+      far: 5,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+
+    mixed: {
+      coverage: 65,
+      far: 4,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+  },
+
+  cda: {
+    residential: {
+      coverage: 60,
+      far: 3.5,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+
+    commercial: {
+      coverage: 70,
+      far: 5,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+
+    mixed: {
+      coverage: 65,
+      far: 4,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+  },
+
+  kda: {
+    residential: {
+      coverage: 60,
+      far: 3.5,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+
+    commercial: {
+      coverage: 70,
+      far: 5,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+
+    mixed: {
+      coverage: 65,
+      far: 4,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+  },
+
+  rda: {
+    residential: {
+      coverage: 60,
+      far: 3.5,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+
+    commercial: {
+      coverage: 70,
+      far: 5,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+
+    mixed: {
+      coverage: 65,
+      far: 4,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+  },
+
+  general: {
+    residential: {
+      coverage: 60,
+      far: 3,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+
+    commercial: {
+      coverage: 70,
+      far: 4,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+
+    mixed: {
+      coverage: 65,
+      far: 3.5,
+      frontSetback: 5,
+      rearSetback: 3,
+      sideSetback: 3,
+    },
+  },
+};
+
+/* =========================================================
+   COST BREAKDOWN
+========================================================= */
+
+const CATEGORY_SHARES = [
+  ["Materials", 0.48],
+  ["Labour", 0.12],
+  ["Equipment", 0.05],
+  ["Electrical", 0.08],
+  ["Plumbing", 0.07],
+  ["Finishing", 0.12],
+  ["Other", 0.08],
+];
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function toNumber(value, fallback = 0) {
+  const number =
+    Number.parseFloat(value);
+
+  return Number.isFinite(number)
+    ? number
+    : fallback;
 }
 
 function round(value) {
-  return Math.round(value * 100) / 100;
-}
-
-function normalizeQuality(value) {
-  const quality = String(value || "standard")
-    .trim()
-    .toLowerCase();
-
-  if (COST_RATES[quality]) {
-    return quality;
-  }
-
-  return "standard";
+  return Math.round(
+    value * 100
+  ) / 100;
 }
 
 function normalizeAuthority(value) {
-  const authority = String(value || "RAJUK")
-    .trim();
+  const authority =
+    String(
+      value || "general"
+    ).toLowerCase();
 
-  if (REGULATIONS[authority]) {
-    return authority;
-  }
-
-  return "General";
+  return REGULATIONS[authority]
+    ? authority
+    : "general";
 }
 
 function normalizeBuildingType(value) {
-  const type = String(value || "residential")
-    .trim()
-    .toLowerCase();
+  const type =
+    String(
+      value || "residential"
+    ).toLowerCase();
 
-  if (
-    type === "residential" ||
-    type === "commercial" ||
-    type === "mixed"
-  ) {
-    return type;
-  }
-
-  return "residential";
+  return [
+    "residential",
+    "commercial",
+    "mixed",
+  ].includes(type)
+    ? type
+    : "residential";
 }
 
-// ============================================================
-// GET /health
-// ============================================================
+function normalizeQuality(value) {
+  const quality =
+    String(
+      value || "standard"
+    ).toLowerCase();
 
-router.get("/health", (req, res) => {
-  res.json({
-    success: true,
-    service: "cost-estimator",
-    message: "Cost Estimator Backend is running",
-  });
-});
+  return COST_RATES[quality]
+    ? quality
+    : "standard";
+}
 
-// ============================================================
-// GET /rates
-// ============================================================
+function normalizeRoadFacing(value) {
+  const facing =
+    String(
+      value || "front"
+    ).toLowerCase();
 
-router.get("/rates", (req, res) => {
-  res.json({
-    success: true,
-    source: "temporary",
-    rates: COST_RATES,
-  });
-});
+  return [
+    "front",
+    "rear",
+    "left",
+    "right",
+  ].includes(facing)
+    ? facing
+    : "front";
+}
 
-// ============================================================
-// GET /regulations
-// ============================================================
+function normalizeDimensionUnit(value) {
+  const unit =
+    String(
+      value || "ft"
+    ).toLowerCase();
 
-router.get("/regulations", (req, res) => {
-  const authority = normalizeAuthority(
-    req.query.authority
-  );
+  return unit.startsWith("m")
+    ? "m"
+    : "ft";
+}
 
-  const buildingType = normalizeBuildingType(
-    req.query.buildingType
-  );
+function convertToFeet(
+  value,
+  unit
+) {
+  const number =
+    toNumber(value);
 
-  const rules =
-    REGULATIONS[authority][buildingType];
+  return unit === "m"
+    ? number / 0.3048
+    : number;
+}
 
-  res.json({
-    success: true,
-    source: "temporary",
+/* =========================================================
+   REGULATION
+========================================================= */
 
-    authority,
-    buildingType,
+function getRules(
+  authority,
+  buildingType
+) {
+  const a =
+    normalizeAuthority(
+      authority
+    );
 
-    rules,
-  });
-});
+  const b =
+    normalizeBuildingType(
+      buildingType
+    );
 
-// ============================================================
-// POST /estimate
-// ============================================================
+  return REGULATIONS[a][b];
+}
 
-router.post("/estimate", (req, res) => {
-  try {
-    const data = req.body || {};
+/* =========================================================
+   RATE
+========================================================= */
 
-    // --------------------------------------------------------
-    // Land Information
-    // --------------------------------------------------------
+function getRate(
+  quality
+) {
+  const q =
+    normalizeQuality(
+      quality
+    );
 
-    const landLength = toNumber(
+  return COST_RATES[q];
+}
+
+/* =========================================================
+   FOOTPRINT
+========================================================= */
+
+function calculateFootprint(
+  lengthFeet,
+  widthFeet,
+  rules,
+  roadFacing
+) {
+  const landArea =
+    lengthFeet *
+    widthFeet;
+
+  const coverageArea =
+    landArea *
+    (
+      toNumber(
+        rules.coverage
+      ) / 100
+    );
+
+  const front =
+    toNumber(
+      rules.frontSetback
+    );
+
+  const rear =
+    toNumber(
+      rules.rearSetback
+    );
+
+  const side =
+    toNumber(
+      rules.sideSetback
+    );
+
+  let availableLength;
+  let availableWidth;
+
+  if (
+    roadFacing === "front" ||
+    roadFacing === "rear"
+  ) {
+    availableLength =
+      Math.max(
+        lengthFeet -
+          front -
+          rear,
+        0
+      );
+
+    availableWidth =
+      Math.max(
+        widthFeet -
+          side * 2,
+        0
+      );
+  } else {
+    availableLength =
+      Math.max(
+        lengthFeet -
+          side * 2,
+        0
+      );
+
+    availableWidth =
+      Math.max(
+        widthFeet -
+          front -
+          rear,
+        0
+      );
+  }
+
+  const setbackArea =
+    availableLength *
+    availableWidth;
+
+  const maxFootprint =
+    Math.max(
+      0,
+      Math.min(
+        coverageArea,
+        setbackArea
+      )
+    );
+
+  return {
+    landArea,
+    coverageArea,
+    setbackArea,
+    maxFootprint,
+  };
+}
+
+/* =========================================================
+   ROOMS
+========================================================= */
+
+function normalizeRooms(
+  rooms
+) {
+  if (
+    Array.isArray(rooms)
+  ) {
+    return rooms;
+  }
+
+  if (
+    rooms &&
+    typeof rooms ===
+      "object"
+  ) {
+    return Object.entries(
+      rooms
+    ).map(
+      ([type, value]) => ({
+        type,
+        count: toNumber(
+          value?.count,
+          1
+        ),
+        area: toNumber(
+          value?.area ??
+            value?.size,
+          0
+        ),
+      })
+    );
+  }
+
+  return [];
+}
+
+/* =========================================================
+   FLOOR BREAKDOWN
+========================================================= */
+
+function calculateFloorBreakdown(
+  floors,
+  floorCount,
+  allowancePercent,
+  fallbackArea
+) {
+  const result = [];
+
+  for (
+    let i = 0;
+    i < floorCount;
+    i++
+  ) {
+    const floor =
+      Array.isArray(floors)
+        ? floors[i] || {}
+        : {};
+
+    const rooms =
+      normalizeRooms(
+        floor.rooms
+      );
+
+    let netRoomArea = 0;
+
+    rooms.forEach(
+      (room) => {
+        const count =
+          Math.max(
+            1,
+            toNumber(
+              room.count,
+              1
+            )
+          );
+
+        const area =
+          Math.max(
+            0,
+            toNumber(
+              room.area ??
+                room.size
+            )
+          );
+
+        netRoomArea +=
+          count * area;
+      }
+    );
+
+    if (
+      netRoomArea <= 0
+    ) {
+      netRoomArea =
+        fallbackArea;
+    }
+
+    const grossArea =
+      netRoomArea *
+      (
+        1 +
+        allowancePercent /
+          100
+      );
+
+    result.push({
+      floor: i + 1,
+
+      netRoomArea:
+        round(
+          netRoomArea
+        ),
+
+      allowancePercent:
+        round(
+          allowancePercent
+        ),
+
+      grossArea:
+        round(
+          grossArea
+        ),
+    });
+  }
+
+  return result;
+}
+
+/* =========================================================
+   BUILD ESTIMATE
+========================================================= */
+
+function buildEstimate(
+  data = {}
+) {
+  const landLength =
+    toNumber(
       data.landLength
     );
 
-    const landWidth = toNumber(
+  const landWidth =
+    toNumber(
       data.landWidth
     );
 
-    if (
-      landLength <= 0 ||
-      landWidth <= 0
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Land length and land width must be greater than 0.",
-      });
-    }
+  if (
+    landLength <= 0 ||
+    landWidth <= 0
+  ) {
+    const error =
+      new Error(
+        "Land length and land width must be greater than 0."
+      );
 
-    const dimensionUnit =
-      String(
-        data.dimensionUnit || "feet"
-      ).toLowerCase();
+    error.statusCode =
+      400;
 
-    // --------------------------------------------------------
-    // Convert meters to feet
-    // --------------------------------------------------------
+    throw error;
+  }
 
-    let lengthFeet = landLength;
-    let widthFeet = landWidth;
+  const dimensionUnit =
+    normalizeDimensionUnit(
+      data.dimensionUnit
+    );
 
-    if (
-      dimensionUnit === "meter" ||
-      dimensionUnit === "meters"
-    ) {
-      lengthFeet =
-        landLength * 3.28084;
+  const lengthFeet =
+    convertToFeet(
+      landLength,
+      dimensionUnit
+    );
 
-      widthFeet =
-        landWidth * 3.28084;
-    }
+  const widthFeet =
+    convertToFeet(
+      landWidth,
+      dimensionUnit
+    );
 
-    // --------------------------------------------------------
-    // Land Area
-    // --------------------------------------------------------
-
-    const landArea =
-      lengthFeet * widthFeet;
-
-    // --------------------------------------------------------
-    // Basic Information
-    // --------------------------------------------------------
-
-    const roadWidth = toNumber(
+  const roadWidth =
+    toNumber(
       data.roadWidth
     );
 
-    const roadFacing =
-      data.roadFacing || "front";
+  const roadFacing =
+    normalizeRoadFacing(
+      data.roadFacing
+    );
 
-    const authority =
-      normalizeAuthority(
-        data.authority
-      );
+  const authority =
+    normalizeAuthority(
+      data.authority
+    );
 
-    const buildingType =
-      normalizeBuildingType(
-        data.buildingType
-      );
+  const buildingType =
+    normalizeBuildingType(
+      data.buildingType
+    );
 
-    // --------------------------------------------------------
-    // Regulation
-    // --------------------------------------------------------
+  const quality =
+    normalizeQuality(
+      data.quality
+    );
 
-    const rules =
-      REGULATIONS[authority][buildingType];
+  const rules =
+    getRules(
+      authority,
+      buildingType
+    );
 
-    // --------------------------------------------------------
-    // Buildable Footprint
-    // --------------------------------------------------------
+  const rate =
+    getRate(
+      quality
+    );
 
-    const setbackLength =
-      rules.frontSetback +
-      rules.rearSetback;
-
-    const setbackWidth =
-      rules.sideSetback * 2;
-
-    const usableLength =
-      Math.max(
-        lengthFeet - setbackLength,
-        0
-      );
-
-    const usableWidth =
-      Math.max(
-        widthFeet - setbackWidth,
-        0
-      );
-
-    const setbackBasedFootprint =
-      usableLength * usableWidth;
-
-    const coverageBasedFootprint =
-      landArea *
-      (rules.coverage / 100);
-
-    const buildableFootprint =
-      Math.min(
-        setbackBasedFootprint,
-        coverageBasedFootprint
-      );
-
-    // --------------------------------------------------------
-    // Floors
-    // --------------------------------------------------------
-
-    const floorCount = Math.max(
+  const floorCount =
+    Math.max(
       1,
-      Math.floor(
-        toNumber(
-          data.floorCount,
-          1
+      Math.min(
+        30,
+        Math.floor(
+          toNumber(
+            data.floorCount,
+            1
+          )
         )
       )
     );
 
-    const allowancePercent =
-      Math.max(
-        0,
+  const allowancePercent =
+    Math.max(
+      0,
+      Math.min(
+        100,
         toNumber(
           data.allowancePercent,
-          0
+          20
         )
-      );
+      )
+    );
 
-    const floors = Array.isArray(
+  const floors =
+    Array.isArray(
       data.floors
     )
       ? data.floors
       : [];
 
-    // --------------------------------------------------------
-    // Floor Calculation
-    // --------------------------------------------------------
+  const hasBasement =
+    Boolean(
+      data.hasBasement
+    );
 
-    let totalGrossFloorArea = 0;
+  const hasGarage =
+    Boolean(
+      data.hasGarage
+    );
 
-    const floorBreakdown = [];
+  const footprint =
+    calculateFootprint(
+      lengthFeet,
+      widthFeet,
+      rules,
+      roadFacing
+    );
 
-    for (
-      let index = 0;
-      index < floorCount;
-      index++
-    ) {
-      const floor =
-        floors[index] || {};
+  const floorBreakdown =
+    calculateFloorBreakdown(
+      floors,
+      floorCount,
+      allowancePercent,
+      footprint.maxFootprint
+    );
 
-      const rooms =
-        Array.isArray(floor.rooms)
-          ? floor.rooms
-          : [];
+  const totalGrossFloorArea =
+    floorBreakdown.reduce(
+      (sum, floor) =>
+        sum +
+        floor.grossArea,
+      0
+    );
 
-      let roomArea = 0;
+  const maxFarArea =
+    footprint.landArea *
+    toNumber(
+      rules.far
+    );
 
-      rooms.forEach((room) => {
-        const area = toNumber(
-          room.area
-        );
+  const basementArea =
+    hasBasement
+      ? footprint.maxFootprint
+      : 0;
 
-        if (area > 0) {
-          roomArea += area;
-        }
-      });
+  const garageArea =
+    hasGarage
+      ? Math.min(
+          footprint.maxFootprint,
+          250
+        )
+      : 0;
 
-      // If no room data is provided,
-      // use the maximum buildable footprint.
+  const totalCostArea =
+    totalGrossFloorArea +
+    basementArea +
+    garageArea;
 
-      if (roomArea <= 0) {
-        roomArea =
-          buildableFootprint;
-      }
+  const totalCost =
+    totalCostArea *
+    toNumber(
+      rate.ratePerSqft
+    );
 
-      const grossArea =
-        roomArea *
-        (1 + allowancePercent / 100);
+  const firstFloorGrossArea =
+    floorBreakdown[0]
+      ?.grossArea || 0;
 
-      totalGrossFloorArea +=
-        grossArea;
+  const coveragePass =
+    firstFloorGrossArea <=
+    footprint.maxFootprint +
+      0.01;
 
-      floorBreakdown.push({
-        floor: index + 1,
+  const farPass =
+    totalGrossFloorArea <=
+    maxFarArea +
+      0.01;
 
-        roomArea: round(
-          roomArea
-        ),
+  const footprintPass =
+    footprint.maxFootprint >
+    0;
 
-        allowancePercent,
+  const isCompliant =
+    coveragePass &&
+    farPass &&
+    footprintPass;
 
-        grossArea: round(
-          grossArea
-        ),
-      });
-    }
+  const breakdown =
+    CATEGORY_SHARES.map(
+      ([label, percentage]) => ({
+        label,
 
-    // --------------------------------------------------------
-    // FAR Maximum
-    // --------------------------------------------------------
+        percentage:
+          percentage * 100,
 
-    const farMaximum =
-      landArea * rules.far;
+        amount:
+          round(
+            totalCost *
+              percentage
+          ),
+      })
+    );
 
-    // --------------------------------------------------------
-    // FAR Limitation
-    // --------------------------------------------------------
+  return {
+    success: true,
 
-    const finalGrossFloorArea =
-      Math.min(
-        totalGrossFloorArea,
-        farMaximum
-      );
+    source:
+      "backend-temporary",
 
-    // --------------------------------------------------------
-    // Quality / Rate
-    // --------------------------------------------------------
+    input: {
+      landLength,
+      landWidth,
+      dimensionUnit,
+      roadWidth,
+      roadFacing,
+      authority,
+      buildingType,
+      floorCount,
+      allowancePercent,
+      floors,
+      quality,
+      hasBasement,
+      hasGarage,
+    },
 
-    const quality =
-      normalizeQuality(
-        data.quality
-      );
-
-    const rateInfo =
-      COST_RATES[quality];
-
-    const ratePerSqft =
-      rateInfo.ratePerSqft;
-
-    // --------------------------------------------------------
-    // Main Construction Cost
-    // --------------------------------------------------------
-
-    const constructionCost =
-      finalGrossFloorArea *
-      ratePerSqft;
-
-    // --------------------------------------------------------
-    // Basement
-    // --------------------------------------------------------
-
-    const hasBasement =
-      Boolean(data.hasBasement);
-
-    const basementCost =
-      hasBasement
-        ? buildableFootprint *
-          ratePerSqft *
-          0.60
-        : 0;
-
-    // --------------------------------------------------------
-    // Garage
-    // --------------------------------------------------------
-
-    const hasGarage =
-      Boolean(data.hasGarage);
-
-    const garageCost =
-      hasGarage
-        ? 400000
-        : 0;
-
-    // --------------------------------------------------------
-    // Total
-    // --------------------------------------------------------
-
-    const totalCost =
-      constructionCost +
-      basementCost +
-      garageCost;
-
-    // --------------------------------------------------------
-    // Compliance
-    // --------------------------------------------------------
-
-    const isCompliant =
-      totalGrossFloorArea <=
-      farMaximum;
-
-    // --------------------------------------------------------
-    // Response
-    // --------------------------------------------------------
-
-    return res.json({
-      success: true,
-
-      source: "temporary",
-
-      input: {
-        landLength,
-        landWidth,
-        dimensionUnit,
-
-        roadWidth,
-        roadFacing,
-
-        authority,
-        buildingType,
-
-        floorCount,
-        allowancePercent,
-
-        floors,
-
-        quality,
-
-        hasBasement,
-        hasGarage,
-      },
-
-      land: {
-        lengthFeet: round(
+    land: {
+      lengthFeet:
+        round(
           lengthFeet
         ),
 
-        widthFeet: round(
+      widthFeet:
+        round(
           widthFeet
         ),
 
-        areaSqft: round(
-          landArea
+      areaSqft:
+        round(
+          footprint.landArea
         ),
+    },
+
+    rules: {
+      ...rules,
+
+      source:
+        "Temporary backend values",
+
+      effectiveDate:
+        "Demo only",
+
+      isDemo: true,
+    },
+
+    calculation: {
+      buildableFootprint:
+        round(
+          footprint.maxFootprint
+        ),
+
+      coverageArea:
+        round(
+          footprint.coverageArea
+        ),
+
+      setbackArea:
+        round(
+          footprint.setbackArea
+        ),
+
+      proposedGroundArea:
+        round(
+          firstFloorGrossArea
+        ),
+
+      totalGrossFloorArea:
+        round(
+          totalGrossFloorArea
+        ),
+
+      farMaximum:
+        round(
+          maxFarArea
+        ),
+    },
+
+    rate: {
+      quality,
+
+      ratePerSqft:
+        toNumber(
+          rate.ratePerSqft
+        ),
+
+      source:
+        "Temporary backend values",
+
+      effectiveDate:
+        "Demo only",
+
+      isDemo: true,
+    },
+
+    ratePerSqft:
+      toNumber(
+        rate.ratePerSqft
+      ),
+
+    landArea:
+      round(
+        footprint.landArea
+      ),
+
+    maxBuildableFootprint:
+      round(
+        footprint.maxFootprint
+      ),
+
+    proposedGroundArea:
+      round(
+        firstFloorGrossArea
+      ),
+
+    totalGrossFloorArea:
+      round(
+        totalGrossFloorArea
+      ),
+
+    maxFarArea:
+      round(
+        maxFarArea
+      ),
+
+    totalCost:
+      round(
+        totalCost
+      ),
+
+    breakdown,
+
+    floorBreakdown,
+
+    buildingArea: {
+      netRoomArea:
+        round(
+          floorBreakdown.reduce(
+            (
+              sum,
+              floor
+            ) =>
+              sum +
+              floor.netRoomArea,
+            0
+          )
+        ),
+
+      grossFloorArea:
+        round(
+          totalGrossFloorArea
+        ),
+
+      basementArea:
+        round(
+          basementArea
+        ),
+
+      garageArea:
+        round(
+          garageArea
+        ),
+    },
+
+    validation: [
+      {
+        label:
+          "Ground coverage",
+
+        value:
+          `${Math.round(
+            firstFloorGrossArea
+          ).toLocaleString()} / ${Math.round(
+            footprint.maxFootprint
+          ).toLocaleString()} sqft`,
+
+        status:
+          coveragePass
+            ? "pass"
+            : "fail",
       },
 
-      rules: {
-        coverage:
-          rules.coverage,
+      {
+        label:
+          "FAR area",
 
-        far:
-          rules.far,
+        value:
+          `${Math.round(
+            totalGrossFloorArea
+          ).toLocaleString()} / ${Math.round(
+            maxFarArea
+          ).toLocaleString()} sqft`,
 
-        frontSetback:
-          rules.frontSetback,
-
-        rearSetback:
-          rules.rearSetback,
-
-        sideSetback:
-          rules.sideSetback,
+        status:
+          farPass
+            ? "pass"
+            : "fail",
       },
 
-      calculation: {
-        buildableFootprint:
-          round(
-            buildableFootprint
-          ),
+      {
+        label:
+          "Buildable footprint",
 
-        proposedGroundArea:
-          round(
-            buildableFootprint
-          ),
+        value:
+          `${Math.round(
+            footprint.maxFootprint
+          ).toLocaleString()} sqft available`,
 
-        totalGrossFloorArea:
-          round(
-            finalGrossFloorArea
-          ),
-
-        farMaximum:
-          round(
-            farMaximum
-          ),
+        status:
+          footprintPass
+            ? "pass"
+            : "fail",
       },
+    ],
 
-      rate: {
-        quality,
-
-        ratePerSqft:
-          ratePerSqft,
-      },
-
-      breakdown: {
-        construction:
-          round(
-            constructionCost
-          ),
-
-        basement:
-          round(
-            basementCost
-          ),
-
-        garage:
-          round(
-            garageCost
-          ),
-
-        total:
-          round(
-            totalCost
-          ),
-      },
-
-      floorBreakdown,
-
-      compliance: {
-        isCompliant,
-
-        message: isCompliant
-          ? "Proposed building is within the FAR limit."
-          : "Proposed building exceeds the FAR limit.",
-      },
-
-      validation: {
-        landAreaValid:
-          landArea > 0,
-
-        footprintValid:
-          buildableFootprint > 0,
-
-        farValid:
-          finalGrossFloorArea <=
-          farMaximum,
-      },
-
-      metadata: {
-        source: "Temporary backend values",
-
-        disclaimer:
-          "These rates and regulations are temporary demo values. Final construction cost and building approval must be verified with the relevant authority and a licensed civil/structural engineer.",
-      },
-    });
-  } catch (error) {
-    console.error(
-      "[Cost Estimator Error]:",
-      error
-    );
-
-    return res.status(500).json({
-      success: false,
+    compliance: {
+      isCompliant,
 
       message:
-        "Failed to calculate construction cost.",
+        isCompliant
+          ? "The entered floor plan is within the temporary coverage and FAR limits."
+          : "The entered floor plan exceeds one or more temporary coverage/FAR limits.",
+    },
 
-      error:
-        error.message,
+    options: {
+      hasBasement,
+      hasGarage,
+      quality,
+    },
+
+    metadata: {
+      source:
+        "Temporary backend values",
+
+      disclaimer:
+        "Rates and regulations are temporary demo values. Final construction cost and building approval must be verified with the relevant authority and a licensed civil/structural engineer.",
+    },
+
+    generatedAt:
+      new Date().toISOString(),
+  };
+}
+
+/* =========================================================
+   HEALTH
+========================================================= */
+
+router.get(
+  "/health",
+  (_req, res) => {
+    res.json({
+      success: true,
+
+      service:
+        "cost-estimator",
+
+      message:
+        "Cost Estimator Backend is running",
     });
   }
-});
+);
 
-// ============================================================
-// Export Router
-// ============================================================
+/* =========================================================
+   RATES
+========================================================= */
 
-module.exports = router;
+router.get(
+  "/rates",
+  (req, res) => {
+    const quality =
+      normalizeQuality(
+        req.query.quality
+      );
+
+    res.json({
+      success: true,
+
+      source:
+        "temporary",
+
+      selectedQuality:
+        quality,
+
+      rates:
+        COST_RATES,
+    });
+  }
+);
+
+/* =========================================================
+   REGULATIONS
+========================================================= */
+
+router.get(
+  "/regulations",
+  (req, res) => {
+    const authority =
+      normalizeAuthority(
+        req.query.authority
+      );
+
+    const buildingType =
+      normalizeBuildingType(
+        req.query.buildingType
+      );
+
+    const rules =
+      REGULATIONS[
+        authority
+      ][
+        buildingType
+      ];
+
+    res.json({
+      success: true,
+
+      source:
+        "temporary",
+
+      authority,
+
+      buildingType,
+
+      roadWidth:
+        toNumber(
+          req.query.roadWidth
+        ),
+
+      rules: {
+        ...rules,
+
+        source:
+          "Temporary backend values",
+
+        effectiveDate:
+          "Demo only",
+
+        isDemo: true,
+      },
+    });
+  }
+);
+
+/* =========================================================
+   CALCULATE ESTIMATE
+========================================================= */
+
+router.post(
+  "/estimate",
+  (req, res) => {
+    try {
+      const result =
+        buildEstimate(
+          req.body
+        );
+
+      return res.json(
+        result
+      );
+    } catch (error) {
+      console.error(
+        "[Cost Estimator Error]:",
+        error
+      );
+
+      return res
+        .status(
+          error.statusCode ||
+            500
+        )
+        .json({
+          success: false,
+
+          message:
+            error.message ||
+            "Failed to calculate construction cost.",
+        });
+    }
+  }
+);
+
+/* =========================================================
+   SAVE ESTIMATE
+========================================================= */
+
+router.post(
+  "/estimates",
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const estimate =
+        buildEstimate(
+          req.body
+        );
+
+      return res.json({
+        success: true,
+
+        id:
+          `EST-${Date.now()}`,
+
+        estimateId:
+          `EST-${Date.now()}`,
+
+        source:
+          "computed",
+
+        estimate,
+      });
+    } catch (error) {
+      console.error(
+        "[Cost Estimate Save Error]:",
+        error
+      );
+
+      return res
+        .status(
+          error.statusCode ||
+            500
+        )
+        .json({
+          success: false,
+
+          message:
+            error.message ||
+            "Unable to save estimate.",
+        });
+    }
+  }
+);
+
+/* =========================================================
+   EXPORT
+========================================================= */
+
+module.exports =
+  router;
