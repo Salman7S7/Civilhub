@@ -1,168 +1,81 @@
-// backend/costEstimatorData.js
+// Bangladesh Standard (BNBC / RAJUK) Construction Cost & Land Rules Data
 
-// ============================================================
-// CivilHub Cost Estimator - Temporary Data
-// ============================================================
-// IMPORTANT:
-// These are temporary/demo values.
-// Later these values can come from MySQL/database
-// without changing the frontend API structure.
-// ============================================================
+// RAJUK Max Ground Coverage (MGC) rules by plot size (in Katha)
+export const RAJUK_GROUND_COVERAGE_RULES = [
+  { minKatha: 0, maxKatha: 2, maxMGCPercent: 67.5, description: "Up to 2 Katha" },
+  { minKatha: 2, maxKatha: 3, maxMGCPercent: 65.0, description: "2 to 3 Katha" },
+  { minKatha: 3, maxKatha: 5, maxMGCPercent: 62.5, description: "3 to 5 Katha" },
+  { minKatha: 5, maxKatha: 10, maxMGCPercent: 60.0, description: "5 to 10 Katha" },
+  { minKatha: 10, maxKatha: 999, maxMGCPercent: 50.0, description: "Above 10 Katha" },
+];
 
-const COST_RATES = {
+// Standard Cost per Sq Ft in Bangladesh (BDT) based on quality
+export const BD_CONSTRUCTION_RATES = {
+  basic: {
+    ratePerSqFt: 1800,
+    label: "Basic / Low-Cost",
+    description: "Standard local materials, basic tiles, standard sanitary fittings.",
+  },
   standard: {
-    quality: "standard",
-    ratePerSqft: 3500,
+    ratePerSqFt: 2400,
+    label: "Standard Quality",
+    description: "Good quality brand cement, rebar, 24x24 tiles, modern fittings.",
   },
-
   premium: {
-    quality: "premium",
-    ratePerSqft: 4500,
-  },
-
-  luxury: {
-    quality: "luxury",
-    ratePerSqft: 6000,
+    ratePerSqFt: 3200,
+    label: "Premium / Luxury",
+    description: "High-end imported/brand materials, luxury sanitary, premium finishes.",
   },
 };
 
-// ============================================================
-// Building Regulations
-// ============================================================
-
-const REGULATIONS = {
-  RAJUK: {
-    residential: {
-      coverage: 60,
-      far: 3.5,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
-
-    commercial: {
-      coverage: 70,
-      far: 5,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
-
-    mixed: {
-      coverage: 65,
-      far: 4,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
+// Cost percentage breakdown based on standard Bangladesh/RAJUK building practice
+export const BD_COST_BREAKDOWN_PERCENTAGES = [
+  {
+    category: "Civil & Structural Works",
+    percentage: 45,
+    description: "Soil test, piling, foundation, RCC columns, beams, slabs, brickwork.",
+    rajukNote: "Based on BNBC structural safety and RAJUK RCC design norms.",
   },
-
-  CDA: {
-    residential: {
-      coverage: 60,
-      far: 3.5,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
-
-    commercial: {
-      coverage: 70,
-      far: 5,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
-
-    mixed: {
-      coverage: 65,
-      far: 4,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
+  {
+    category: "Finishing Works",
+    percentage: 25,
+    description: "Plaster, floor/wall tiles, painting, doors, windows, glass.",
+    rajukNote: "Standard interior & exterior finishing allowance.",
   },
-
-  KDA: {
-    residential: {
-      coverage: 60,
-      far: 3.5,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
-
-    commercial: {
-      coverage: 70,
-      far: 5,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
-
-    mixed: {
-      coverage: 65,
-      far: 4,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
+  {
+    category: "Electrical System",
+    percentage: 10,
+    description: "Concealed wiring, switchboards, circuit breakers, light fixtures, earthing.",
+    rajukNote: "Compliant with BNBC electrical safety codes.",
   },
-
-  RDA: {
-    residential: {
-      coverage: 60,
-      far: 3.5,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
-
-    commercial: {
-      coverage: 70,
-      far: 5,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
-
-    mixed: {
-      coverage: 65,
-      far: 4,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
+  {
+    category: "Plumbing & Sanitary Works",
+    percentage: 10,
+    description: "Pipes, water supply, sewage, bathroom fittings, overhead & underground tank.",
+    rajukNote: "Standard WASA & BNBC sanitation guidelines.",
   },
-
-  General: {
-    residential: {
-      coverage: 60,
-      far: 3,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
-
-    commercial: {
-      coverage: 70,
-      far: 4,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
-
-    mixed: {
-      coverage: 65,
-      far: 3.5,
-      frontSetback: 5,
-      rearSetback: 3,
-      sideSetback: 3,
-    },
+  {
+    category: "RAJUK Approval & Design Fees",
+    percentage: 5,
+    description: "Architectural plan, structural design, RAJUK/Municipality approval fees, vetting.",
+    rajukNote: "Mandatory RAJUK approval & engineering consultancy allowance.",
   },
-};
+  {
+    category: "Contingency & Miscellaneous",
+    percentage: 5,
+    description: "Labor safety, site management, unexpected price fluctuations.",
+    rajukNote: "Recommended buffer for construction management.",
+  },
+];
 
-module.exports = {
-  COST_RATES,
-  REGULATIONS,
+// Average Room Dimensions (Sq Ft) for detailed estimation
+export const AVERAGE_ROOM_SIZES = {
+  bedroom: 140, // 12ft x 11.5ft
+  masterBedroom: 180, // 14ft x 13ft
+  bathroom: 42, // 6ft x 7ft
+  kitchen: 70, // 7ft x 10ft
+  livingRoom: 200, // 14ft x 14ft
+  diningRoom: 140, // 12ft x 11.5ft
+  balcony: 35, // 5ft x 7ft
+  corridorStairs: 150, // Common circulation & stairs per floor
 };
