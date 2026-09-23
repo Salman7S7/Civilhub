@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
+    "dev": "concurrently -n \"BACKEND,EXPO\" -c \"blue,green\" \"npm run backend\" \"npm run web\"",
     "start": "expo start",
+    "server": "node backend/server.js",
     "backend": "node backend/server.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
@@ -28,7 +30,8 @@
     "react-native-web": "~0.19.10"
   },
   "devDependencies": {
-    "@babel/core": "^7.24.0"
+    "@babel/core": "^7.24.0",
+    "concurrently": "^10.0.5"
   },
   "private": true
 }
