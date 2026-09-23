@@ -1,5 +1,6 @@
 // src/services/expertChatService.js
 import { BACKEND_BASE_URL } from "./apiConfig.js";
+import { generateBnbcExpertAnswer } from "./bnbcExpertEngine.js";
 import AsyncStorageModule from "@react-native-async-storage/async-storage";
 
 // Bulletproof unwrap across Metro, Webpack, and direct Node execution
@@ -510,12 +511,12 @@ export async function queryAiExpert(userPrompt, activeContext = null) {
   let answerText = "";
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     const res = await fetch(`${BACKEND_BASE_URL}/api/ask-building-code`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question: enrichedPrompt }),
+      body: JSON.stringify({ question: enrichedPrompt, context: activeContext }),
       signal: controller.signal,
     });
 
@@ -524,15 +525,11 @@ export async function queryAiExpert(userPrompt, activeContext = null) {
     const data = await res.json().catch(() => ({}));
     if (res.ok && data && data.answer) {
       answerText = data.answer;
-    } else if (data && data.error) {
-      answerText = data.error;
+    } else {
+      throw new Error(data?.error || "Gemini could not generate a response.");
     }
   } catch (_netErr) {
-    answerText = "Backend server is unreachable. Please ensure the backend is running.";
-  }
-
-  if (!answerText) {
-    answerText = "Gemini API key is not configured in backend/.env. Please add GEMINI_API_KEY to enable AI chat.";
+    throw new Error("Gemini service is unavailable. Please check the backend and try again.");
   }
 
   return {
@@ -544,5 +541,5 @@ export async function queryAiExpert(userPrompt, activeContext = null) {
   };
 }
 
-export const generateLocalCivilConsultation = generateDisciplineAdvice;
+export const generateLocalCivilConsultation = generateBnbcExpertAnswer;
 
