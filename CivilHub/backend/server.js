@@ -17,6 +17,7 @@ const { initDB, query, getStatus } = require("./db");
 const { SEED_DESIGNS } = require("./seedData");
 
 const costEstimatorRouter = require("./costEstimator");
+const { generateBnbcExpertAnswer } = require("./bnbcExpertEngine");
 
 const app = express();
 const fallbackUsers = [
@@ -85,19 +86,54 @@ app.use(
 
 const PORT = process.env.PORT || 4000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-flash-lite-latest";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 const JWT_SECRET = process.env.JWT_SECRET || "civilhub-development-secret";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
-const GEMINI_URL =
-  `https://generativelanguage.googleapis.com/v1beta/models/` +
-  `${GEMINI_MODEL}:generateContent`;
+
+function isTransientGeminiError(error) {
+  const status = Number(error?.status || error?.code || 0);
+  const message = String(error?.message || "").toLowerCase();
+  if (message.includes("high demand")) {
+    return false;
+  }
+  return (
+    [429, 500, 502, 504].includes(status) ||
+    message.includes("high demand") ||
+    message.includes("temporarily unavailable") ||
+    message.includes("service unavailable") ||
+    message.includes("unavailable")
+  );
+}
+
+async function withGeminiRetry(operation, maxAttempts = 1, timeoutMs = 90000) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      let timeoutHandle;
+      const timeout = new Promise((_, reject) => {
+        timeoutHandle = setTimeout(
+          () => reject(new Error(`Gemini request timed out after ${timeoutMs}ms`)),
+          timeoutMs
+        );
+      });
+      const result = await Promise.race([operation(), timeout]);
+      clearTimeout(timeoutHandle);
+      return result;
+    } catch (error) {
+      if (!isTransientGeminiError(error) || attempt === maxAttempts) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** (attempt - 1)));
+    }
+  }
+}
 
 // ============================================================
 // Bangladesh Building Code System Context (Feature 1)
 // ============================================================
 
 const SYSTEM_CONTEXT = `
-You are a senior Bangladesh Civil Engineering and Building Code Expert.
+You are CivilHub AI, a helpful general-purpose assistant with strong expertise in
+Bangladesh civil engineering, architecture, and building regulations.
 
 You are knowledgeable about:
 - Bangladesh National Building Code (BNBC 2020)
@@ -109,11 +145,13 @@ You are knowledgeable about:
 - General Pourashava construction guidelines
 
 Rules for your answers:
-1. Always answer in the context of Bangladeshi building regulations.
-2. When relevant, mention Floor Area Ratio (FAR), setback requirements, maximum permissible height, and road-width-based restrictions.
-3. If the answer depends on RAJUK, CDA, RDA, or KDA, make a reasonable assumption and clearly state the assumed authority.
-4. Keep answers concise, structured, and practical.
-5. Always include this disclaimer:
+1. Answer the user's actual question, including general questions outside construction.
+2. For construction questions, use the Bangladesh context and apply BNBC 2020, RAJUK, CDA, RDA, KDA, or Pourashava guidance as relevant.
+3. When relevant to construction, mention Floor Area Ratio (FAR), setback requirements, maximum permissible height, and road-width-based restrictions.
+4. If a construction answer depends on RAJUK, CDA, RDA, or KDA, make a reasonable assumption and clearly state the assumed authority.
+5. Do not claim to have live data, browse the internet, or know private information. Say when current or verified information is needed.
+6. Keep answers concise, structured, and practical.
+7. Include this disclaimer only for construction, legal, safety, or engineering advice:
 "Disclaimer: Final approval depends on the relevant development authority and review by a licensed structural/civil engineer."
 `;
 
@@ -237,11 +275,13 @@ function filterInMemory(filters = {}) {
 // ============================================================
 
 app.get("/health", (req, res) => {
+  require("dotenv").config({ path: path.join(__dirname, ".env"), override: true });
+  const activeApiKey = (process.env.GEMINI_API_KEY || "").trim();
   const dbStatus = getStatus();
   res.json({
     ok: true,
-    hasKey: Boolean(GEMINI_API_KEY),
-    model: GEMINI_MODEL,
+    hasKey: Boolean(activeApiKey),
+    model: process.env.GEMINI_MODEL || GEMINI_MODEL,
     database: dbStatus,
   });
 });
@@ -945,62 +985,85 @@ app.post("/api/feasibility/check", async (req, res) => {
 
 app.post("/api/ask-building-code", async (req, res) => {
   try {
-    const { question } = req.body;
+    const { question, context } = req.body;
 
     if (!question || !String(question).trim()) {
       return res.status(400).json({ error: "Missing 'question' in request body." });
     }
 
-    if (!GEMINI_API_KEY) {
-      return res.status(503).json({
-        error: "Gemini API key is not configured in backend/.env. Please add GEMINI_API_KEY to enable AI chat.",
-      });
-    }
+    const cleanQuestion = String(question).trim();
 
-    const fullPrompt = `${SYSTEM_CONTEXT}\n\nUser question:\n${String(question).trim()}`;
+    // Reload dotenv dynamically so user can update GEMINI_API_KEY in .env on the fly
+    require("dotenv").config({ path: path.join(__dirname, ".env"), override: true });
+    const activeApiKey = (process.env.GEMINI_API_KEY || "").trim();
 
-    const requestBody = {
-      contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
-      generationConfig: { maxOutputTokens: 800 },
-    };
+    // 1. Ask Gemini directly. The local engine below is only an outage fallback.
+    if (activeApiKey) {
+      const contextText = context
+        ? `\n\nAttached project context:\n${JSON.stringify(context)}`
+        : "";
+      const fullPrompt = `${SYSTEM_CONTEXT}${contextText}\n\nUser question:\n${cleanQuestion}`;
+      const model = process.env.GEMINI_MODEL || GEMINI_MODEL;
 
-    const candidateModels = Array.from(
-      new Set([GEMINI_MODEL, "gemini-flash-lite-latest", "gemini-3.8-flash", "gemini-3.5-flash"])
-    );
-
-    let lastError = null;
-    for (const model of candidateModels) {
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-        const geminiResponse = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestBody),
-          signal: AbortSignal.timeout(15000),
-        });
+        let answerText = "";
 
-        if (geminiResponse.ok) {
-          const data = await geminiResponse.json();
-          const answerText =
-            data?.candidates?.[0]?.content?.parts?.map((p) => p?.text || "").join("").trim();
-          if (answerText) {
-            return res.json({ answer: answerText, model });
-          }
-        } else {
-          const errorText = await geminiResponse.text();
-          console.warn(`[Gemini] Model ${model} returned (${geminiResponse.status}):`, errorText);
-          lastError = `Gemini API error (${geminiResponse.status})`;
+        const geminiResponse = await withGeminiRetry(() =>
+          fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": activeApiKey,
+              },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: fullPrompt }] }],
+                generationConfig: { maxOutputTokens: 800 },
+              }),
+              signal: AbortSignal.timeout(90000),
+            }
+          )
+        );
+
+        if (!geminiResponse.ok) {
+          const error = new Error(`Gemini returned HTTP ${geminiResponse.status}`);
+          error.status = geminiResponse.status;
+          throw error;
+        }
+
+        const data = await geminiResponse.json();
+        answerText = data?.candidates?.[0]?.content?.parts
+          ?.map((part) => part?.text || "")
+          .join("")
+          .trim();
+
+        if (answerText) {
+          return res.json({ answer: answerText, model, source: "gemini" });
         }
       } catch (callErr) {
-        console.warn(`[Gemini] Model ${model} call failed:`, callErr.message);
-        lastError = callErr.message;
+        console.warn(
+          "[Gemini] Temporarily unavailable; using local BNBC fallback:",
+          callErr.message
+        );
       }
     }
 
-    return res.status(502).json({ error: `Gemini API error: ${lastError || "No response received"}` });
+    const fallbackAnswer = generateBnbcExpertAnswer(cleanQuestion, context);
+    if (fallbackAnswer) {
+      return res.json({
+        answer: fallbackAnswer,
+        model: "local-bnbc-engine",
+        source: "local-fallback",
+      });
+    }
+
+    return res.status(502).json({
+      error: "Gemini could not generate a response. Please try again.",
+    });
   } catch (error) {
     console.error("Proxy error:", error);
-    res.status(500).json({ error: "Internal server error." });
+    return res.status(500).json({ error: "Gemini service error. Please try again." });
   }
 });
 
