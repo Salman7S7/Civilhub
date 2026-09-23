@@ -5,6 +5,7 @@
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 const mysql = require("mysql2/promise");
+const bcrypt = require("bcryptjs");
 
 const DB_CONFIG = {
   host: process.env.DB_HOST || "localhost",
@@ -181,8 +182,195 @@ async function initDB() {
         name VARCHAR(100) NOT NULL,
         email VARCHAR(190) NOT NULL UNIQUE,
         password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'client',
+        engineer_type VARCHAR(50) DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Ensure columns exist if table was previously created without them
+    try {
+      const [roleCol] = await pool.query("SHOW COLUMNS FROM users LIKE 'role'");
+      if (roleCol.length === 0) {
+        await pool.query("ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'client'");
+      }
+      const [engCol] = await pool.query("SHOW COLUMNS FROM users LIKE 'engineer_type'");
+      if (engCol.length === 0) {
+        await pool.query("ALTER TABLE users ADD COLUMN engineer_type VARCHAR(50) DEFAULT NULL");
+      }
+    } catch (_colErr) {}
+
+    // Seed default demo users if users table is empty
+    const [userRows] = await pool.query("SELECT COUNT(*) AS count FROM users");
+    if (userRows[0].count === 0) {
+      const hash = bcrypt.hashSync("password123", 10);
+      await pool.query(`
+        INSERT INTO users (name, email, password_hash, role, engineer_type) VALUES
+          ('CivilHub Client', 'demo@civilhub.com', ?, 'client', NULL),
+          ('Client Salman', 'salman@civilhub.com', ?, 'client', NULL),
+          ('Ar. Nusrat Jahan', 'arc@civilhub.com', ?, 'engineer', 'architect'),
+          ('Engr. Tanvir Ahmed, PEng', 'structure@civilhub.com', ?, 'engineer', 'structural'),
+          ('Engr. Mohammad Rafiqul', 'soil@civilhub.com', ?, 'engineer', 'soil')
+      `, [hash, hash, hash, hash, hash]);
+      console.log("[MySQL] Default demo users seeded successfully.");
+    }
+
+    // 8. Ensure experts table exists
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS experts (
+        id VARCHAR(50) PRIMARY KEY,
+        name VARCHAR(120) NOT NULL,
+        title VARCHAR(150) NOT NULL,
+        role_label VARCHAR(50) NOT NULL,
+        discipline VARCHAR(50) NOT NULL,
+        license VARCHAR(50) NOT NULL,
+        experience VARCHAR(50) NOT NULL,
+        firm VARCHAR(150) NOT NULL,
+        rating VARCHAR(50) NOT NULL,
+        specialties JSON NOT NULL,
+        thread_id VARCHAR(100) NOT NULL UNIQUE,
+        avatar_initials VARCHAR(10) NOT NULL,
+        avatar_color VARCHAR(20) NOT NULL,
+        greeting TEXT NOT NULL,
+        is_active BOOLEAN DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Seed default verified consultants if empty
+    const [expertRows] = await pool.query("SELECT COUNT(*) AS count FROM experts");
+    if (expertRows[0].count === 0) {
+      const DEFAULT_EXPERTS = [
+        [
+          "architect_1",
+          "Ar. Nusrat Jahan",
+          "Senior Architect (Arc)",
+          "Architect",
+          "architect",
+          "IAB-K2104",
+          "12 years exp",
+          "Studio Nirman Dhaka",
+          "4.9 ★ (84 reviews)",
+          JSON.stringify(["Floor Layouts", "FAR Calculation", "RAJUK & CDA Approval"]),
+          "thread_client_architect_1",
+          "NJ",
+          "#0284c7",
+          "Hello! I am Ar. Nusrat Jahan, your Architectural Consultant (IAB-K2104).\n\nI can assist you with Floor Area Ratio (FAR) calculations, mandatory front/rear setbacks, architectural floor layouts, and RAJUK/CDA approval preparation.",
+          1,
+        ],
+        [
+          "architect_2",
+          "Ar. Mahmudul Hasan",
+          "Principal Urban Architect",
+          "Architect",
+          "architect",
+          "IAB-M3190",
+          "8 years exp",
+          "Hasan & Associates",
+          "4.8 ★ (56 reviews)",
+          JSON.stringify(["Residential Elevation", "Interior Space Planning", "Green Building"]),
+          "thread_client_architect_2",
+          "MH",
+          "#0369a1",
+          "Hello! I am Ar. Mahmudul Hasan (IAB-M3190). I specialize in modern residential elevation, sustainable building envelopes, and RAJUK building code compliance.",
+          1,
+        ],
+        [
+          "structural_1",
+          "Engr. Tanvir Ahmed, PEng",
+          "Principal Structural Engineer",
+          "Structure Eng",
+          "structural",
+          "MIEB-18492",
+          "15 years exp",
+          "Dhaka Structural Dynamics",
+          "5.0 ★ (112 reviews)",
+          JSON.stringify(["BNBC 2020", "Seismic RCC Detailing", "Shear Wall Design"]),
+          "thread_client_structural_1",
+          "TA",
+          "#2563eb",
+          "Hello! I am Engr. Tanvir Ahmed, PEng (MIEB-18492).\n\nI can help you evaluate column and shear wall sizing, earthquake-resistant RCC frame detailing, structural drawing review, and BNBC 2020 structural safety compliance.",
+          1,
+        ],
+        [
+          "structural_2",
+          "Engr. Shahriar Kabir",
+          "Senior RCC Frame Specialist",
+          "Structure Eng",
+          "structural",
+          "MIEB-22104",
+          "9 years exp",
+          "Apex Structural Engineers",
+          "4.9 ★ (63 reviews)",
+          JSON.stringify(["High-rise Detailing", "Beam-Column Joints", "ETABS Modeling"]),
+          "thread_client_structural_2",
+          "SK",
+          "#1d4ed8",
+          "Hello! I am Engr. Shahriar Kabir (MIEB-22104). I specialize in high-rise RCC framing, ductile rebar confinement, and ETABS structural analysis.",
+          1,
+        ],
+        [
+          "soil_1",
+          "Engr. Mohammad Rafiqul",
+          "Geotechnical & Soil Specialist",
+          "Soil Eng",
+          "soil",
+          "FIEB-09812",
+          "18 years exp",
+          "Bengal Geotechnical Lab",
+          "4.9 ★ (92 reviews)",
+          JSON.stringify(["Borehole SPT N-Value", "Bored Cast-in-Situ Piling", "Pile Load Test"]),
+          "thread_client_soil_1",
+          "MR",
+          "#059669",
+          "Hello! I am Engr. Mohammad Rafiqul, your Geotechnical & Soil Specialist (FIEB-09812).\n\nI specialize in soil test review, borehole SPT N-value interpretation, allowable bearing capacity calculation, and cast-in-situ bored pile foundation design.",
+          1,
+        ],
+        [
+          "soil_2",
+          "Engr. Anisur Rahman",
+          "Foundation & Soil Consultant",
+          "Soil Eng",
+          "soil",
+          "MIEB-17632",
+          "11 years exp",
+          "Delta Geo-Engineering",
+          "4.8 ★ (47 reviews)",
+          JSON.stringify(["Mat / Raft Footing", "Differential Settlement", "Soil Improvement"]),
+          "thread_client_soil_2",
+          "AR",
+          "#047857",
+          "Hello! I am Engr. Anisur Rahman (MIEB-17632). I evaluate soil bearing capacity, settlement risks in alluvial silt, and mat foundation suitability.",
+          1,
+        ],
+      ];
+
+      for (const exp of DEFAULT_EXPERTS) {
+        await pool.query(
+          `INSERT INTO experts (
+            id, name, title, role_label, discipline, license, experience, firm,
+            rating, specialties, thread_id, avatar_initials, avatar_color, greeting, is_active
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          exp
+        );
+      }
+      console.log("[MySQL] Default verified experts seeded successfully.");
+    }
+
+    // 9. Ensure consultation_messages table exists
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS consultation_messages (
+        id VARCHAR(100) PRIMARY KEY,
+        thread_id VARCHAR(100) NOT NULL,
+        sender_role VARCHAR(50) NOT NULL,
+        engineer_type VARCHAR(50) DEFAULT NULL,
+        sender_name VARCHAR(120) NOT NULL,
+        message_text TEXT NOT NULL,
+        attached_context JSON DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_thread_created (thread_id, created_at)
       );
     `);
     isConnected = true;

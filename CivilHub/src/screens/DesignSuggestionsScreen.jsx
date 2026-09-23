@@ -211,6 +211,9 @@ export default function DesignSuggestionsScreen({ navigation }) {
       navigation.navigate("Feasibility", {
         floors: design.floors,
         katha: design.min_katha,
+        designTitle: design.title,
+        authority: "RAJUK",
+        roadWidth: "20",
       });
     }
   };
@@ -221,10 +224,27 @@ export default function DesignSuggestionsScreen({ navigation }) {
     if (navigation && navigation.navigate) {
       navigation.navigate("Ask Expert", {
         initialContext: {
+          id: design.id,
+          title: design.title,
+          architectural_style: design.architectural_style,
           floors: design.floors,
           katha: design.min_katha,
-          authority: "RAJUK",
-          title: design.title,
+          built_area_sqft: design.built_area_sqft,
+          units_per_floor: design.units_per_floor,
+          unit_size_sqft: design.unit_size_sqft,
+          bedrooms: design.bedrooms,
+          bathrooms: design.bathrooms,
+          balconies: design.balconies,
+          dining_space: design.dining_space,
+          drawing_space: design.drawing_space,
+          kitchen_space: design.kitchen_space,
+          has_basement: Boolean(design.has_basement),
+          has_garage: Boolean(design.has_garage),
+          parking_capacity: design.parking_capacity,
+          rooftop_type: design.rooftop_type,
+          image_url: design.image_url,
+          floor_plan_images: design.floor_plan_images,
+          authority: design.authority || "RAJUK",
         },
       });
     }
@@ -243,6 +263,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
       navigation.navigate("Cost Estimator", {
         floors: String(design.floors || 5),
         floorArea: String(derivedFloorArea),
+        katha: design.min_katha,
         hasBasement: Boolean(design.has_basement),
         hasGarage: Boolean(design.has_garage),
         designTitle: design.title,
