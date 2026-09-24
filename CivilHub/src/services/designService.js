@@ -7,8 +7,8 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MOCK_DESIGNS } from "./mockDesigns.js";
+import { BACKEND_BASE_URL } from "./apiConfig";
 
-const BACKEND_BASE_URL = "http://localhost:4000";
 const CUSTOM_DESIGNS_KEY = "@civilhub_custom_designs_v1";
 const EDITED_OVERRIDES_KEY = "@civilhub_edited_overrides_v1";
 const DELETED_DESIGNS_KEY = "@civilhub_deleted_ids_v1";

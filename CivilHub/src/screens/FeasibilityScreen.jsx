@@ -7,32 +7,32 @@
 //
 // Requires: npx expo install expo-linear-gradient
 // -----------------------------------------------------------------------------
-import React, { useState } from "react";
+import React, { useState } from "react"; // Import React and the useState hook for managing state
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  StatusBar,
-  ImageBackground,
+  View, // Basic container component
+  Text, // Component for displaying text
+  ScrollView, // Component that allows scrolling of content
+  TouchableOpacity, // Component that can be pressed (for buttons)
+  StyleSheet, // Tool for creating styles
+  StatusBar, // Component to control the device's status bar
+  ImageBackground, // Component to display an image as a background
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context"; // A view that respects device notches and safe areas
+import { Ionicons } from "@expo/vector-icons"; // Icon library
+import { LinearGradient } from "expo-linear-gradient"; // Component for gradient backgrounds
 
-import FeasibilityForm from "../components/FeasibilityForm";
-import AIChatbotModal from "../components/AIChatbotModal";
+import FeasibilityForm from "../components/FeasibilityForm"; // Import the form component
+import AIChatbotModal from "../components/AIChatbotModal"; // Import the chatbot modal component
 
 // Real hero photo (Unsplash CDN, no key required). Swap for your own asset
 // via require("../../assets/hero-buildings.jpg") if you'd rather bundle it.
 const HERO_IMAGE_URL =
-  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80";
+  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80"; // URL for the background image
 
-const REGION_BADGES = ["RAJUK", "CDA", "RDA", "KDA"];
+const REGION_BADGES = ["RAJUK", "CDA", "RDA", "KDA"]; // List of region names to show as badges
 
-export default function FeasibilityScreen({ navigation }) {
-  const [chatVisible, setChatVisible] = useState(false);
+export default function FeasibilityScreen({ navigation, route }) { // The main screen component, receives navigation and route props
+  const [chatVisible, setChatVisible] = useState(false); // State to control if the chatbot modal is visible
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -45,13 +45,13 @@ export default function FeasibilityScreen({ navigation }) {
       >
         {/* Hero Banner: real background image + gradient overlay for text contrast */}
         <ImageBackground
-          source={{ uri: HERO_IMAGE_URL }}
-          style={styles.heroImage}
-          imageStyle={styles.heroImageRadius}
+          source={{ uri: HERO_IMAGE_URL }} // The image source
+          style={styles.heroImage} // Style for the image background container
+          imageStyle={styles.heroImageRadius} // Style applied only to the image itself (for rounded corners)
         >
           <LinearGradient
-            colors={["rgba(15,23,42,0.55)", "rgba(15,23,42,0.85)", "#1e293b"]}
-            style={styles.heroGradient}
+            colors={["rgba(15,23,42,0.55)", "rgba(15,23,42,0.85)", "#1e293b"]} // Dark gradient colors for better text visibility
+            style={styles.heroGradient} // Style for the gradient
           >
             <View style={styles.heroTopRow}>
               <View>
@@ -79,7 +79,7 @@ export default function FeasibilityScreen({ navigation }) {
         </ImageBackground>
 
         {/* Feasibility Form + Result Card */}
-        <FeasibilityForm />
+        <FeasibilityForm initialParams={route?.params} />
 
         {/* Bottom spacing so content clears the FAB */}
         <View style={{ height: 100 }} />
@@ -104,7 +104,7 @@ export default function FeasibilityScreen({ navigation }) {
         }}
       >
         <Ionicons name="chatbubbles" size={18} color="#ffffff" />
-        <Text style={styles.fabText}>Ask Expert 💬</Text>
+        <Text style={styles.fabText}>Ask Expert</Text>
       </TouchableOpacity>
 
       <AIChatbotModal visible={chatVisible} onClose={() => setChatVisible(false)} />
