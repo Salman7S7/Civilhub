@@ -1,15 +1,13 @@
 // src/services/costEstimator.js
 
-import { Platform } from "react-native";
+import { BACKEND_BASE_URL } from "./apiConfig";
 
 /* =========================================================
    API CONFIG
 ========================================================= */
 
 export const COST_ESTIMATOR_API =
-  Platform.OS === "android"
-    ? "http://10.0.2.2:4000/api/cost-estimator"
-    : "http://localhost:4000/api/cost-estimator";
+  `${BACKEND_BASE_URL}/api/cost-estimator`;
 
 export const USE_MOCK_BACKEND = false;
 
@@ -315,25 +313,41 @@ export function getRegulationRules({
   const normalizedBuildingType =
     normalizeBuildingType(buildingType);
 
-  const rules =
-    DEMO_RULES[normalizedAuthority][
+  const selectedRules =
+    DEMO_RULES[
+      normalizedAuthority
+    ]?.[
       normalizedBuildingType
-    ];
+    ] ||
+    DEMO_RULES.general.residential;
 
   return {
-    ...rules,
-    authority: normalizedAuthority,
-    buildingType: normalizedBuildingType,
-    roadWidth: toNumber(roadWidth),
-    source: "Frontend demo values",
-    effectiveDate: "Demo only",
+    ...selectedRules,
+
+    authority:
+      normalizedAuthority,
+
+    buildingType:
+      normalizedBuildingType,
+
+    roadWidth:
+      toNumber(roadWidth),
+
+    source:
+      "Frontend demo / sample values",
+
+    effectiveDate:
+      "Demo only",
+
     isDemo: true,
   };
 }
 
-/* =========================================================
-   FETCH REGULATION
-========================================================= */
+/*
+|--------------------------------------------------------------------------
+| FETCH REGULATION
+|--------------------------------------------------------------------------
+*/
 
 export async function fetchRegulationRules(
   params = {}
@@ -354,40 +368,49 @@ export async function fetchRegulationRules(
       params.roadWidth
     )}`;
 
-  const response = await fetch(url);
+  try {
+    const response = await fetch(url);
 
-  if (!response.ok) {
-    throw new Error(
-      "Unable to load regulation rules."
+    if (!response.ok) {
+      throw new Error(
+        "Unable to load regulation rules."
+      );
+    }
+
+    const data = await response.json();
+
+    if (data?.rules) {
+      return {
+        ...data.rules,
+        authority:
+          data.authority ||
+          params.authority ||
+          "general",
+        buildingType:
+          data.buildingType ||
+          params.buildingType ||
+          "residential",
+        source:
+          data.source || "backend",
+        effectiveDate:
+          data.effectiveDate ||
+          "Backend temporary values",
+        isDemo: true,
+      };
+    }
+
+    return data;
+  } catch (err) {
+    console.warn(
+      "fetchRegulationRules fallback to local rules:",
+      err.message
     );
+    return getRegulationRules(params);
   }
-
-  const data = await response.json();
-
-  if (data?.rules) {
-    return {
-      ...data.rules,
-      authority:
-        data.authority ||
-        params.authority ||
-        "general",
-      buildingType:
-        data.buildingType ||
-        params.buildingType ||
-        "residential",
-      source:
-        data.source || "backend",
-      effectiveDate:
-        data.effectiveDate ||
-        "Backend temporary values",
-      isDemo: true,
-    };
-  }
-
-  return data;
 }
 
 /* =========================================================
+   COST RATES/* =========================================================
    COST RATES
 ========================================================= */
 
@@ -424,54 +447,69 @@ export async function fetchCostRates({
     );
   }
 
-  const response = await fetch(
-    `${COST_ESTIMATOR_API}/rates` +
-      `?quality=${encodeURIComponent(
+  try {
+    const response = await fetch(
+      `${COST_ESTIMATOR_API}/rates?quality=${encodeURIComponent(
         quality
-      )}` +
-      `&buildingType=${encodeURIComponent(
+      )}&buildingType=${encodeURIComponent(
         buildingType
       )}`
-  );
+    );
 
-  if (!response.ok) {
-    throw new Error(
-      "Unable to load cost rates."
+    if (!response.ok) {
+      throw new Error(
+        "Unable to load cost rates."
+      );
+    }
+
+    const data = await response.json();
+
+    const normalizedQuality =
+      normalizeQuality(quality);
+
+    const rawRate =
+      data?.rates?.[normalizedQuality] ||
+      data?.[normalizedQuality] ||
+      data;
+
+    const ratePerSqft = Number(
+      rawRate?.ratePerSqft ??
+        rawRate?.rate_per_sqft ??
+        rawRate
+    );
+
+    if (
+      !Number.isFinite(ratePerSqft) ||
+      ratePerSqft <= 0
+    ) {
+      throw new Error(
+        "Invalid cost rate received from backend."
+      );
+    }
+
+    return {
+      ...rawRate,
+      quality: normalizedQuality,
+      buildingType,
+      ratePerSqft,
+    };
+  } catch (err) {
+    console.warn(
+      "fetchCostRates fallback to local rates:",
+      err.message
+    );
+
+    return getCostRates(
+      quality,
+      buildingType
     );
   }
-
-  const data = await response.json();
-
-  const normalizedQuality =
-    normalizeQuality(quality);
-
-  const rawRate =
-    data?.rates?.[normalizedQuality] ||
-    data?.[normalizedQuality] ||
-    data;
-
-  const ratePerSqft = Number(
-    rawRate?.ratePerSqft ??
-      rawRate?.rate_per_sqft ??
-      rawRate
-  );
-
-  if (
-    !Number.isFinite(ratePerSqft) ||
-    ratePerSqft <= 0
-  ) {
-    throw new Error(
-      "Invalid cost rate received from backend."
-    );
-  }
-
-  return {
-    ...rawRate,
-    quality: normalizedQuality,
-    buildingType,
-    ratePerSqft,
-  };
 }
+
+/* =========================================================
+   BUILDING FOOTPRINT
+========================================================= */
+
 
 /* =========================================================
    BUILDING FOOTPRINT
@@ -1236,6 +1274,74 @@ export function calculateEstimate({
    MAIN CALCULATOR
 ========================================================= */
 
+export function estimateConstructionCost({
+  floors = 1,
+  floorAreaSqft = 0,
+  quality = "standard",
+  hasBasement = false,
+  hasGarage = false,
+} = {}) {
+  const floorCount =
+    Math.max(
+      0,
+      toNumber(floors)
+    );
+
+  const floorArea =
+    Math.max(
+      0,
+      toNumber(
+        floorAreaSqft
+      )
+    );
+
+  const normalArea =
+    floorCount *
+    floorArea;
+
+  const basementArea =
+    hasBasement
+      ? floorArea
+      : 0;
+
+  const garageArea =
+    hasGarage
+      ? Math.min(
+          floorArea,
+          250
+        )
+      : 0;
+
+  const totalArea =
+    normalArea +
+    basementArea +
+    garageArea;
+
+  const rate =
+    QUALITY_RATES[
+      normalizeQuality(
+        quality
+      )
+    ];
+
+  const total =
+    totalArea * rate;
+
+  return {
+    total,
+    totalCost:
+      total,
+    ratePerSqft:
+      rate,
+    areaSqft:
+      totalArea,
+  };
+}
+
+/* =========================================================
+   MAIN CALCULATOR
+========================================================= */
+
 export async function calculateCostEstimate(
   params = {}
 ) {
@@ -1328,9 +1434,10 @@ export default {
   calculateBuildableFootprint,
   calculateRoomArea,
   calculateGrossFloorArea,
-  calculateEstimate,
+calculateEstimate,
   calculateLocalEstimate,
   calculateCostEstimate,
+  estimateConstructionCost,
   formatBDT,
   formatSqft,
   fetchRegulationRules,

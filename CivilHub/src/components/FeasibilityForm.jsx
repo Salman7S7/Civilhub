@@ -5,7 +5,7 @@
 // checked. Region + unit selection use simple pill-style dropdown modals
 // rather than a native <Picker> for full styling control.
 // -----------------------------------------------------------------------------
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -98,6 +98,16 @@ function ResultCard({ result }) {
         <Ionicons name={c.icon} size={22} color={c.text} />
         <Text style={[styles.resultStatus, { color: c.text }]}>{result.status}</Text>
       </View>
+
+      {result.authority && (
+        <View style={styles.authorityBadgeRow}>
+          <Ionicons name="business" size={13} color="#1d4ed8" />
+          <Text style={styles.authorityBadgeText}>
+            {result.authority.authorityName}
+          </Text>
+        </View>
+      )}
+
       <Text style={styles.resultMessage}>{result.message}</Text>
 
       <View style={styles.resultDivider} />
@@ -106,6 +116,23 @@ function ResultCard({ result }) {
         <Text style={styles.resultRowLabel}>Max Recommended Height</Text>
         <Text style={styles.resultRowValue}>{result.maxRecommendedHeight}</Text>
       </View>
+
+      {result.authority && (
+        <View style={styles.resultRow}>
+          <Text style={styles.resultRowLabel}>Governing Bylaw</Text>
+          <Text style={[styles.resultRowValue, { flex: 1, textAlign: "right" }]}>
+            {result.authority.governingBylaw}
+          </Text>
+        </View>
+      )}
+
+      <View style={styles.resultRow}>
+        <Text style={styles.resultRowLabel}>National Baseline</Text>
+        <Text style={[styles.resultRowValue, { flex: 1, textAlign: "right" }]}>
+          {result.authority?.baselineCode || "BNBC 2020"}
+        </Text>
+      </View>
+
       <View style={styles.resultRow}>
         <Text style={styles.resultRowLabel}>Setback Notes</Text>
         <Text style={[styles.resultRowValue, { flex: 1, textAlign: "right" }]}>
@@ -127,22 +154,65 @@ function ResultCard({ result }) {
       )}
 
       <Text style={styles.disclaimer}>
-        Planning estimate only — confirm with RAJUK/CDA/RDA/KDA Land Use
-        Clearance and a licensed structural engineer before construction.
+        Planning estimate only — confirm with {result.authority?.shortName || "RAJUK/CDA/RDA/KDA"} Land Use
+        Clearance (LUC) and a licensed structural engineer before construction.
       </Text>
+      {result.authority?.officialPortal && (
+        <Text style={styles.portalLink}>
+          Official Portal: {result.authority.officialPortal}
+        </Text>
+      )}
     </View>
   );
 }
 
-export default function FeasibilityForm() {
-  const [landArea, setLandArea] = useState("");
+export default function FeasibilityForm({ initialParams }) {
+  const [landArea, setLandArea] = useState(initialParams?.katha ? String(initialParams.katha) : "");
   const [landUnit, setLandUnit] = useState("katha");
-  const [roadWidth, setRoadWidth] = useState("");
-  const [region, setRegion] = useState("RAJUK");
-  const [targetStories, setTargetStories] = useState("");
+  const [roadWidth, setRoadWidth] = useState(initialParams?.roadWidth ? String(initialParams.roadWidth) : "20");
+  const [region, setRegion] = useState(initialParams?.authority || "RAJUK");
+  const [targetStories, setTargetStories] = useState(initialParams?.floors ? String(initialParams.floors) : "");
   const [result, setResult] = useState(null);
   const [checking, setChecking] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [designBanner, setDesignBanner] = useState(initialParams?.designTitle || null);
+
+  // Sync with incoming params whenever user selects "Check Feasibility for this Model"
+  useEffect(() => {
+    if (initialParams) {
+      if (initialParams.katha) setLandArea(String(initialParams.katha));
+      if (initialParams.floors) setTargetStories(String(initialParams.floors));
+      if (initialParams.authority) setRegion(initialParams.authority);
+      if (initialParams.roadWidth) setRoadWidth(String(initialParams.roadWidth));
+      else if (!roadWidth) setRoadWidth("20");
+
+      if (initialParams.designTitle) {
+        setDesignBanner(initialParams.designTitle);
+      }
+
+      const kathaVal = initialParams.katha || landArea;
+      const floorsVal = initialParams.floors || targetStories;
+      const roadVal = initialParams.roadWidth || roadWidth || "20";
+      const regionVal = initialParams.authority || region || "RAJUK";
+
+      if (kathaVal && floorsVal) {
+        setChecking(true);
+        setErrorMsg("");
+        const timer = setTimeout(() => {
+          const evaluation = evaluateFeasibility({
+            landArea: String(kathaVal),
+            landUnit: "katha",
+            roadWidth: String(roadVal),
+            region: regionVal,
+            targetStories: String(floorsVal),
+          });
+          setResult(evaluation);
+          setChecking(false);
+        }, 350);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [initialParams]);
 
   const handleVerify = () => {
     setErrorMsg("");
@@ -172,6 +242,25 @@ export default function FeasibilityForm() {
 
   return (
     <View style={styles.card}>
+      {designBanner && (
+        <View style={styles.designBanner}>
+          <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+            <Ionicons name="sparkles" size={18} color="#2563eb" style={{ marginRight: 8 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.designBannerTitle}>
+                Evaluating Model: {designBanner}
+              </Text>
+              <Text style={styles.designBannerSubtitle}>
+                {targetStories ? `${targetStories} Stories` : ""} {landArea ? `• ${landArea} Katha Plot` : ""}
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity onPress={() => setDesignBanner(null)}>
+            <Ionicons name="close" size={16} color="#64748b" />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <Text style={styles.cardTitle}>Direct Feasibility Check</Text>
       <Text style={styles.cardSubtitle}>
         Enter your plot details to get an instant permissibility estimate.
@@ -459,5 +548,51 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: "center",
     lineHeight: 14,
+  },
+  authorityBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#eff6ff",
+    borderColor: "#bfdbfe",
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: "flex-start",
+    marginTop: 6,
+    gap: 5,
+  },
+  authorityBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#1d4ed8",
+  },
+  portalLink: {
+    fontSize: 10,
+    color: "#2563eb",
+    textAlign: "center",
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  designBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#eff6ff",
+    borderColor: "#bfdbfe",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  designBannerTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1e3a8a",
+  },
+  designBannerSubtitle: {
+    fontSize: 11,
+    color: "#3b82f6",
+    marginTop: 2,
+    fontWeight: "500",
   },
 });
