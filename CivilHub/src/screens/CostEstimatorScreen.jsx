@@ -1714,21 +1714,6 @@ export default function CostEstimatorScreen({ route }) {
                     </View>
                   </View>
                 ) : null}
-
-                <View style={styles.demoNote}>
-                  <Ionicons
-                    name="flask-outline"
-                    size={19}
-                    color="#B45309"
-                  />
-
-                  <Text style={styles.demoNoteText}>
-                    The current frontend demo uses sample regulation
-                    values for testing. These values must be replaced
-                    with verified authority-specific rules before
-                    production use.
-                  </Text>
-                </View>
               </>
             ) : null}
 
@@ -1980,19 +1965,6 @@ export default function CostEstimatorScreen({ route }) {
               })}
             </View>
 
-            <View style={styles.rateNote}>
-              <Ionicons
-                name="information-circle-outline"
-                size={19}
-                color="#2563EB"
-              />
-
-              <Text style={styles.rateNoteText}>
-                The displayed rate is a demo/reference rate for
-                frontend testing. Production rates should come from
-                a verified and dated rate database.
-              </Text>
-            </View>
 
             <View style={styles.divider} />
 
@@ -2408,73 +2380,6 @@ export default function CostEstimatorScreen({ route }) {
               )}
             </View>
 
-            <View style={styles.sectionCard}>
-              <SectionHeader
-                step="i"
-                title="Sources & Disclaimer"
-                subtitle="Important information before using this estimate."
-              />
-
-              <View style={styles.disclaimerItem}>
-                <Ionicons
-                  name="document-text-outline"
-                  size={19}
-                  color="#64748B"
-                />
-
-                <Text style={styles.disclaimerText}>
-                  Regulation source:{" "}
-                  {result.rules?.source ||
-                    "Demo regulation profile"}
-                  .
-                </Text>
-              </View>
-
-              <View style={styles.disclaimerItem}>
-                <Ionicons
-                  name="calendar-outline"
-                  size={19}
-                  color="#64748B"
-                />
-
-                <Text style={styles.disclaimerText}>
-                  Regulation effective date:{" "}
-                  {result.rules?.effectiveDate ||
-                    "Not specified"}
-                  .
-                </Text>
-              </View>
-
-              <View style={styles.disclaimerItem}>
-                <Ionicons
-                  name="cash-outline"
-                  size={19}
-                  color="#64748B"
-                />
-
-                <Text style={styles.disclaimerText}>
-                  Cost rate source:{" "}
-                  {result.rates?.source ||
-                    "Demo rate profile"}
-                  .
-                </Text>
-              </View>
-
-              <View style={styles.disclaimerItem}>
-                <Ionicons
-                  name="warning-outline"
-                  size={19}
-                  color="#64748B"
-                />
-
-                <Text style={styles.disclaimerText}>
-                  Actual construction cost can vary because of
-                  location, soil condition, structural design,
-                  materials, labor, finishes, utility work,
-                  market prices and authority requirements.
-                </Text>
-              </View>
-            </View>
 
             {/* RESULT ACTIONS */}
 
@@ -3149,24 +3054,6 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
 
-  demoNote: {
-    marginTop: 14,
-    padding: 12,
-    borderRadius: 13,
-    backgroundColor: "#FFFBEB",
-    borderWidth: 1,
-    borderColor: "#FDE68A",
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-
-  demoNoteText: {
-    flex: 1,
-    color: "#92400E",
-    fontSize: 11,
-    lineHeight: 17,
-    marginLeft: 8,
-  },
 
   loadingBox: {
     padding: 15,
@@ -3387,22 +3274,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  rateNote: {
-    backgroundColor: "#EFF6FF",
-    borderRadius: 13,
-    padding: 11,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 10,
-  },
-
-  rateNoteText: {
-    flex: 1,
-    color: "#1E40AF",
-    fontSize: 11,
-    lineHeight: 17,
-    marginLeft: 8,
-  },
 
   toggleRow: {
     minHeight: 65,
@@ -3698,23 +3569,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  /* -------------------------------------------------------
-     DISCLAIMER
-  ------------------------------------------------------- */
-
-  disclaimerItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 11,
-  },
-
-  disclaimerText: {
-    flex: 1,
-    color: "#64748B",
-    fontSize: 11,
-    lineHeight: 17,
-    marginLeft: 8,
-  },
 
   /* -------------------------------------------------------
      RESULT ACTIONS
