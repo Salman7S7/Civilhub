@@ -64,7 +64,6 @@ export default function LandTaxScreen() {
     }
   };
 
-  // Once calculated for the first time, automatically re-calculate on any option change
   useEffect(() => {
     if (!hasCalculated) return;
 
