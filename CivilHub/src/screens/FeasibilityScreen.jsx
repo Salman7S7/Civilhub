@@ -26,69 +26,75 @@ import AIChatbotModal from "../components/AIChatbotModal"; // Import the chatbot
 
 // Real hero photo (Unsplash CDN, no key required). Swap for your own asset
 // via require("../../assets/hero-buildings.jpg") if you'd rather bundle it.
+import { THEME } from "../theme/designSystem";
+
 const HERO_IMAGE_URL =
-  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80"; // URL for the background image
+  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80";
 
-const REGION_BADGES = ["RAJUK", "CDA", "RDA", "KDA"]; // List of region names to show as badges
+const REGION_BADGES = ["RAJUK • Dhaka", "CDA • Chattogram", "RDA • Rajshahi", "KDA • Khulna", "Pourashava"];
 
-export default function FeasibilityScreen({ navigation, route }) { // The main screen component, receives navigation and route props
-  const [chatVisible, setChatVisible] = useState(false); // State to control if the chatbot modal is visible
+export default function FeasibilityScreen({ navigation, route }) {
+  const [chatVisible, setChatVisible] = useState(false);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
+    <SafeAreaView style={styles.safeArea} edges={[]}>
+      <StatusBar barStyle="light-content" backgroundColor={THEME.colors.navy} />
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Banner: real background image + gradient overlay for text contrast */}
-        <ImageBackground
-          source={{ uri: HERO_IMAGE_URL }} // The image source
-          style={styles.heroImage} // Style for the image background container
-          imageStyle={styles.heroImageRadius} // Style applied only to the image itself (for rounded corners)
-        >
-          <LinearGradient
-            colors={["rgba(15,23,42,0.55)", "rgba(15,23,42,0.85)", "#1e293b"]} // Dark gradient colors for better text visibility
-            style={styles.heroGradient} // Style for the gradient
+        {/* Full-width Architectural Hero Header */}
+        <View style={styles.heroOuter}>
+          <ImageBackground
+            source={{ uri: HERO_IMAGE_URL }}
+            style={styles.heroImage}
           >
-            <View style={styles.heroTopRow}>
-              <View>
-                <Text style={styles.heroEyebrow}>CIVILHUB</Text>
-                <Text style={styles.heroTitle}>Feasibility Checker</Text>
-              </View>
-              <View style={styles.heroIconWrap}>
-                <Ionicons name="business" size={24} color="#ffffff" />
-              </View>
-            </View>
-
-            <Text style={styles.heroSubtitle}>
-              Instantly check what you can build under RAJUK, CDA, RDA, KDA, or
-              municipal rules — then ask our AI assistant follow-up questions.
-            </Text>
-
-            <View style={styles.badgeRow}>
-              {REGION_BADGES.map((r) => (
-                <View key={r} style={styles.badge}>
-                  <Text style={styles.badgeText}>{r}</Text>
+            <LinearGradient
+              colors={["rgba(7,13,24,0.45)", "rgba(15,23,42,0.88)", "#0f172a"]}
+              style={styles.heroGradient}
+            >
+              <View style={styles.heroInnerContent}>
+                <View style={styles.heroTopRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.heroEyebrow}>CIVIL ENGINEERING & BNBC 2020</Text>
+                    <Text style={styles.heroTitle}>Feasibility Checker</Text>
+                  </View>
+                  <View style={styles.heroIconWrap}>
+                    <Ionicons name="business" size={24} color="#38bdf8" />
+                  </View>
                 </View>
-              ))}
-            </View>
-          </LinearGradient>
-        </ImageBackground>
 
-        {/* Feasibility Form + Result Card */}
-        <FeasibilityForm initialParams={route?.params} />
+                <Text style={styles.heroSubtitle}>
+                  Instantly evaluate allowable stories, road setbacks, and Floor Area Ratio (FAR) across RAJUK, CDA, RDA, KDA, or municipal bylaws.
+                </Text>
+
+                <View style={styles.badgeRow}>
+                  {REGION_BADGES.map((r) => (
+                    <View key={r} style={styles.badge}>
+                      <Text style={styles.badgeText}>{r}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </LinearGradient>
+          </ImageBackground>
+        </View>
+
+        {/* Content Container (Card overlays the hero section) */}
+        <View style={styles.pageContainer}>
+          <FeasibilityForm initialParams={route?.params} />
+        </View>
 
         {/* Bottom spacing so content clears the FAB */}
-        <View style={{ height: 100 }} />
+        <View style={{ height: 110 }} />
       </ScrollView>
 
       {/* Floating Expert Consultation Button */}
       <TouchableOpacity
         style={styles.fab}
-        activeOpacity={0.9}
+        activeOpacity={0.88}
         onPress={() => {
           if (navigation && navigation.navigate) {
             navigation.navigate("Ask Expert", {
@@ -103,8 +109,15 @@ export default function FeasibilityScreen({ navigation, route }) { // The main s
           }
         }}
       >
-        <Ionicons name="chatbubbles" size={18} color="#ffffff" />
-        <Text style={styles.fabText}>Ask Expert</Text>
+        <LinearGradient
+          colors={["#2563eb", "#1d4ed8"]}
+          style={styles.fabGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Ionicons name="chatbubbles" size={18} color="#ffffff" />
+          <Text style={styles.fabText}>Consult Expert Engineer</Text>
+        </LinearGradient>
       </TouchableOpacity>
 
       <AIChatbotModal visible={chatVisible} onClose={() => setChatVisible(false)} />
@@ -115,7 +128,7 @@ export default function FeasibilityScreen({ navigation, route }) { // The main s
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: THEME.colors.bg,
   },
   scroll: {
     flex: 1,
@@ -123,22 +136,31 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 24,
   },
+  heroOuter: {
+    width: "100%",
+    backgroundColor: THEME.colors.navy,
+  },
   heroImage: {
     width: "100%",
-    height: 260,
-  },
-  heroImageRadius: {
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    minHeight: 250,
   },
   heroGradient: {
     flex: 1,
     justifyContent: "flex-end",
+    paddingBottom: 44,
+    paddingTop: 24,
+  },
+  heroInnerContent: {
+    width: "100%",
+    maxWidth: 960,
+    alignSelf: "center",
     paddingHorizontal: 20,
-    paddingBottom: 22,
-    paddingTop: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+  },
+  pageContainer: {
+    width: "100%",
+    maxWidth: 960,
+    alignSelf: "center",
+    marginTop: -28,
   },
   heroTopRow: {
     flexDirection: "row",
@@ -146,51 +168,51 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   heroEyebrow: {
-    color: "#93c5fd",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1.5,
+    color: "#38bdf8",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.2,
   },
   heroTitle: {
     color: "#ffffff",
     fontSize: 26,
-    fontWeight: "800",
+    fontWeight: "900",
     marginTop: 4,
+    letterSpacing: 0.3,
   },
   heroIconWrap: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     borderRadius: 14,
-    backgroundColor: "rgba(37, 99, 235, 0.45)",
+    backgroundColor: "rgba(56, 189, 248, 0.12)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: "rgba(56, 189, 248, 0.3)",
   },
   heroSubtitle: {
-    color: "#e2e8f0",
+    color: "#cbd5e1",
     fontSize: 13,
-    lineHeight: 19,
-    marginTop: 12,
-    maxWidth: "95%",
+    lineHeight: 20,
+    marginTop: 10,
+    maxWidth: "92%",
   },
   badgeRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginTop: 16,
+    marginTop: 14,
+    gap: 8,
   },
   badge: {
-    backgroundColor: "rgba(16, 185, 129, 0.18)",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.5)",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    marginRight: 8,
-    marginBottom: 8,
+    borderColor: "rgba(255, 255, 255, 0.18)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   badgeText: {
-    color: "#34d399",
+    color: "#e2e8f0",
     fontSize: 11,
     fontWeight: "700",
   },
@@ -198,22 +220,26 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 24,
     alignSelf: "center",
+    borderRadius: 999,
+    shadowColor: "#1d4ed8",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
+    zIndex: 99,
+  },
+  fabGradient: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#2563eb",
-    borderRadius: 28,
     paddingVertical: 14,
     paddingHorizontal: 22,
-    shadowColor: "#2563eb",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 6,
+    borderRadius: 999,
+    gap: 8,
   },
   fabText: {
     color: "#ffffff",
     fontSize: 14,
-    fontWeight: "700",
-    marginLeft: 8,
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
 });
