@@ -19,8 +19,11 @@ const { SEED_DESIGNS } = require("./seedData");
 const costEstimatorRouter = require("./costEstimator");
 const { generateBnbcExpertAnswer } = require("./bnbcExpertEngine");
 
+const fs = require("fs");
 const app = express();
-const fallbackUsers = [
+
+const FALLBACK_USERS_FILE = path.join(__dirname, "fallbackUsers.json");
+const SEED_FALLBACK_USERS = [
   {
     id: 1,
     name: "CivilHub Client",
@@ -62,6 +65,37 @@ const fallbackUsers = [
     passwordHash: bcrypt.hashSync("password123", 10),
   },
 ];
+
+function loadFallbackUsers() {
+  try {
+    if (fs.existsSync(FALLBACK_USERS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(FALLBACK_USERS_FILE, "utf8"));
+      if (Array.isArray(data) && data.length > 0) {
+        const merged = [...data];
+        for (const seed of SEED_FALLBACK_USERS) {
+          if (!merged.some((u) => u.email.toLowerCase() === seed.email.toLowerCase())) {
+            merged.push(seed);
+          }
+        }
+        return merged;
+      }
+    }
+  } catch (err) {
+    console.warn("[Auth] Could not read fallbackUsers.json:", err.message);
+  }
+  saveFallbackUsers(SEED_FALLBACK_USERS);
+  return [...SEED_FALLBACK_USERS];
+}
+
+function saveFallbackUsers(users) {
+  try {
+    fs.writeFileSync(FALLBACK_USERS_FILE, JSON.stringify(users, null, 2), "utf8");
+  } catch (err) {
+    console.warn("[Auth] Could not write fallbackUsers.json:", err.message);
+  }
+}
+
+let fallbackUsers = loadFallbackUsers();
 
 // ============================================================
 // Middleware
@@ -327,13 +361,15 @@ app.post("/api/auth/register", async (req, res) => {
     }
 
     if (!getStatus().connected) {
-      if (fallbackUsers.some((user) => user.email === email)) {
+      fallbackUsers = loadFallbackUsers();
+      if (fallbackUsers.some((u) => u.email.toLowerCase() === email)) {
         return res.status(409).json({ error: "An account with this email already exists." });
       }
 
       const passwordHash = await bcrypt.hash(password, 12);
       const user = { id: Date.now(), name, email, role, engineerType, passwordHash };
       fallbackUsers.push(user);
+      saveFallbackUsers(fallbackUsers);
       const safeUser = { id: user.id, name: user.name, email: user.email, role: user.role, engineerType: user.engineerType };
       return res.status(201).json({ success: true, token: createToken(safeUser), user: safeUser });
     }
@@ -385,7 +421,7 @@ app.post("/api/auth/login", async (req, res) => {
     if (getStatus().connected) {
       try {
         const rows = await query(
-          "SELECT id, name, email, password_hash, role, engineer_type FROM users WHERE email = ? LIMIT 1",
+          "SELECT id, name, email, password_hash, role, engineer_type FROM users WHERE LOWER(email) = ? LIMIT 1",
           [email]
         );
         if (rows && rows.length > 0) {
@@ -396,17 +432,18 @@ app.post("/api/auth/login", async (req, res) => {
       }
     }
 
-    // If user not in DB or DB offline, check fallbackUsers
+    // If user not in DB or DB offline, check persistent fallbackUsers
     if (!user) {
-      const fallback = fallbackUsers.find((candidate) => candidate.email === email);
+      fallbackUsers = loadFallbackUsers();
+      const fallback = fallbackUsers.find((candidate) => candidate.email.toLowerCase() === email);
       if (fallback) {
         user = {
           id: fallback.id,
           name: fallback.name,
           email: fallback.email,
-          password_hash: fallback.passwordHash,
+          password_hash: fallback.passwordHash || fallback.password_hash,
           role: fallback.role,
-          engineer_type: fallback.engineerType,
+          engineer_type: fallback.engineerType || fallback.engineer_type,
         };
       }
     }
@@ -415,13 +452,15 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
-    const passwordMatches = await bcrypt.compare(password, user.password_hash || user.passwordHash);
+    const hashToCompare = user.password_hash || user.passwordHash;
+    const passwordMatches = await bcrypt.compare(password, hashToCompare);
     if (!passwordMatches) {
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
-    const role = reqRole || user.role || "client";
-    const engineerType = role === "engineer" ? (reqEngineerType || user.engineer_type || user.engineerType || "structural") : null;
+    // Role priority: use user's account role, defaulting to reqRole if unspecified
+    const role = user.role || reqRole || "client";
+    const engineerType = role === "engineer" ? (user.engineer_type || user.engineerType || reqEngineerType || "structural") : null;
     const safeUser = { id: user.id, name: user.name, email: user.email, role, engineerType };
     return res.json({ success: true, token: createToken(safeUser), user: safeUser });
   } catch (error) {
@@ -432,8 +471,24 @@ app.post("/api/auth/login", async (req, res) => {
 
 app.get("/api/auth/me", requireAuth, async (req, res) => {
   try {
+    if (!getStatus().connected) {
+      fallbackUsers = loadFallbackUsers();
+      const user = fallbackUsers.find((u) => u.id === req.user.sub || u.email.toLowerCase() === (req.user.email || "").toLowerCase());
+      if (!user) return res.status(404).json({ error: "User not found." });
+      return res.json({
+        success: true,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role || "client",
+          engineerType: user.engineerType || user.engineer_type || null,
+        },
+      });
+    }
+
     const rows = await query(
-      "SELECT id, name, email, created_at FROM users WHERE id = ? LIMIT 1",
+      "SELECT id, name, email, role, engineer_type, created_at FROM users WHERE id = ? LIMIT 1",
       [req.user.sub]
     );
     if (!rows.length) return res.status(404).json({ error: "User not found." });
