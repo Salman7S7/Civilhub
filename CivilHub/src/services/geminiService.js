@@ -21,7 +21,7 @@ import { generateLocalCivilConsultation } from "./expertChatService";
  * Sends a user question to our backend, which forwards it to Gemini with the
  * BNBC/RAJUK domain context attached, and returns the plain-text answer.
  *
- * If backend is offline, automatically falls back to the built-in BNBC civil engine.
+ * If backend is offline, falls back only when the local BNBC engine can answer.
  *
  * @param {string} userPrompt - The raw question typed by the user in the chat UI.
  * @returns {Promise<string>} - The AI-generated answer text.
@@ -54,12 +54,13 @@ export async function askBuildingCodeAI(userPrompt) {
       error.message
     );
     try {
-      return generateLocalCivilConsultation(userPrompt.trim());
+      const localAnswer = generateLocalCivilConsultation(userPrompt.trim());
+      if (localAnswer) return localAnswer;
     } catch (_fallbackErr) {
-      return (
-        "BNBC 2020 Guidance: Ensure mandatory road setback (min 1.5m), side setbacks (min 1.0m–1.25m), and confirm FAR with your local development authority (RAJUK/CDA/RDA/KDA).\n\n" +
-        "*Disclaimer: Final approval depends on the relevant authority and a licensed structural engineer.*"
-      );
+      // Surface the service error when the local engine cannot answer.
     }
+    throw new Error(
+      "CivilHub AI assistant is currently unavailable. Please check your backend connection and try again."
+    );
   }
 }
