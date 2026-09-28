@@ -44,6 +44,7 @@ import DesignDetailModal from "../components/designs/DesignDetailModal";
 import AddDesignModal from "../components/designs/AddDesignModal";
 import { searchDesigns } from "../services/designService";
 import { MOCK_DESIGNS } from "../services/mockDesigns";
+import { THEME } from "../theme/designSystem";
 
 const HERO_IMAGE_URL =
   "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80";
@@ -282,8 +283,8 @@ export default function DesignSuggestionsScreen({ navigation }) {
   const column2 = displayedDesigns.filter((_, idx) => idx % 2 === 1);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
+    <SafeAreaView style={styles.safeArea} edges={[]}>
+      <StatusBar barStyle="light-content" backgroundColor={THEME.colors.navy} />
 
       <ScrollView
         style={styles.scroll}
@@ -293,60 +294,65 @@ export default function DesignSuggestionsScreen({ navigation }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#2563eb"]}
-            tintColor="#2563eb"
+            colors={[THEME.colors.accent]}
+            tintColor={THEME.colors.accent}
           />
         }
       >
-        {/* Hero Banner */}
-        <ImageBackground
-          source={{ uri: HERO_IMAGE_URL }}
-          style={styles.heroImage}
-          imageStyle={styles.heroImageRadius}
-        >
-          <LinearGradient
-            colors={["rgba(15,23,42,0.5)", "rgba(15,23,42,0.85)", "#1e293b"]}
-            style={styles.heroGradient}
+        {/* Full-width Hero Banner */}
+        <View style={styles.heroOuter}>
+          <ImageBackground
+            source={{ uri: HERO_IMAGE_URL }}
+            style={styles.heroImage}
           >
-            <View style={styles.heroTopRow}>
-              <View>
-                <Text style={styles.heroEyebrow}>CIVILHUB ARCHITECTURE</Text>
-                <Text style={styles.heroTitle}>Smart Design Suggestions</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.heroUploadBtn}
-                activeOpacity={0.85}
-                onPress={() => setAddModalVisible(true)}
-              >
-                <Ionicons name="cloud-upload-outline" size={16} color="#ffffff" />
-                <Text style={styles.heroUploadBtnText}>+ Upload</Text>
-              </TouchableOpacity>
-            </View>
+            <LinearGradient
+              colors={["rgba(7,13,24,0.45)", "rgba(15,23,42,0.88)", "#0f172a"]}
+              style={styles.heroGradient}
+            >
+              <View style={styles.heroInnerContent}>
+                <View style={styles.heroTopRow}>
+                  <View>
+                    <Text style={styles.heroEyebrow}>CIVILHUB ARCHITECTURAL STUDIO</Text>
+                    <Text style={styles.heroTitle}>Smart Design Suggestions</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.heroUploadBtn}
+                    activeOpacity={0.85}
+                    onPress={() => setAddModalVisible(true)}
+                  >
+                    <Ionicons name="cloud-upload-outline" size={16} color="#ffffff" />
+                    <Text style={styles.heroUploadBtnText}>+ Upload</Text>
+                  </TouchableOpacity>
+                </View>
 
-            <Text style={styles.heroSubtitle}>
-              Pinterest-inspired architectural models (2 to 14+ stories) filtered by
-              floors, basement, car garage, rooftop, and plot size.
-            </Text>
+                <Text style={styles.heroSubtitle}>
+                  Pinterest-inspired architectural models (2 to 14+ stories) filtered by
+                  floors, basement, car garage, rooftop, and plot size.
+                </Text>
 
-            {/* Gallery Stats Row */}
-            <View style={styles.statsRow}>
-              <View style={styles.statBadge}>
-                <Text style={styles.statNumber}>{MOCK_DESIGNS.length}</Text>
-                <Text style={styles.statLabel}>Architectural Concepts</Text>
+                {/* Gallery Stats Row */}
+                <View style={styles.statsRow}>
+                  <View style={styles.statBadge}>
+                    <Text style={styles.statNumber}>{MOCK_DESIGNS.length}</Text>
+                    <Text style={styles.statLabel}>Architectural Concepts</Text>
+                  </View>
+                  <View style={styles.statDivider} />
+                  <View style={styles.statBadge}>
+                    <Text style={styles.statNumber}>2–14+</Text>
+                    <Text style={styles.statLabel}>Story Options</Text>
+                  </View>
+                  <View style={styles.statDivider} />
+                  <View style={styles.statBadge}>
+                    <Text style={styles.statNumber}>3-7+</Text>
+                    <Text style={styles.statLabel}>Katha Plots</Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statBadge}>
-                <Text style={styles.statNumber}>2–14+</Text>
-                <Text style={styles.statLabel}>Story Options</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statBadge}>
-                <Text style={styles.statNumber}>3-7+</Text>
-                <Text style={styles.statLabel}>Katha Plots</Text>
-              </View>
-            </View>
-          </LinearGradient>
-        </ImageBackground>
+            </LinearGradient>
+          </ImageBackground>
+        </View>
+
+        <View style={styles.pageContainer}>
 
         {/* 1. Core On-Screen User Filter Form (All 5 Parameters) */}
         <DesignFilterForm
@@ -547,6 +553,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
 
         {/* Bottom spacing for smooth tab clearance */}
         <View style={{ height: 40 }} />
+        </View>
       </ScrollView>
 
       {/* Multi-Parameter & Custom Value Filter Modal */}
@@ -588,7 +595,7 @@ export default function DesignSuggestionsScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: THEME.colors.bg,
   },
   scroll: {
     flex: 1,
@@ -596,22 +603,30 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 24,
   },
+  heroOuter: {
+    width: "100%",
+    backgroundColor: THEME.colors.navy,
+  },
   heroImage: {
     width: "100%",
-    height: 240,
-  },
-  heroImageRadius: {
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    minHeight: 240,
   },
   heroGradient: {
     flex: 1,
     justifyContent: "flex-end",
+    paddingBottom: 24,
+    paddingTop: 20,
+  },
+  heroInnerContent: {
+    width: "100%",
+    maxWidth: 1080,
+    alignSelf: "center",
     paddingHorizontal: 20,
-    paddingBottom: 18,
-    paddingTop: 18,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+  },
+  pageContainer: {
+    width: "100%",
+    maxWidth: 1080,
+    alignSelf: "center",
   },
   heroTopRow: {
     flexDirection: "row",
