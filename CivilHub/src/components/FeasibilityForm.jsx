@@ -331,15 +331,15 @@ export default function FeasibilityForm({ initialParams }) {
         style={styles.verifyButton}
         onPress={handleVerify}
         disabled={checking}
-        activeOpacity={0.85}
+        activeOpacity={0.88}
       >
         {checking ? (
           <ActivityIndicator color="#ffffff" />
         ) : (
-          <>
-            <Ionicons name="shield-checkmark-outline" size={18} color="#ffffff" />
-            <Text style={styles.verifyButtonText}>Verify Feasibility</Text>
-          </>
+          <View style={styles.verifyButtonContent}>
+            <Ionicons name="shield-checkmark" size={18} color="#ffffff" style={{ marginRight: 8 }} />
+            <Text style={styles.verifyButtonText}>Verify Permissibility</Text>
+          </View>
         )}
       </TouchableOpacity>
 
@@ -351,26 +351,30 @@ export default function FeasibilityForm({ initialParams }) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 22,
+    padding: 24,
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 0,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
     shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.07,
+    shadowRadius: 20,
+    elevation: 4,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1e293b",
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#0f172a",
+    letterSpacing: 0.2,
   },
   cardSubtitle: {
     fontSize: 13,
     color: "#64748b",
     marginTop: 4,
-    marginBottom: 16,
+    marginBottom: 20,
+    lineHeight: 18,
   },
   rowGroup: {
     flexDirection: "row",
@@ -381,35 +385,35 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#334155",
-    marginBottom: 6,
+    marginBottom: 7,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#e2e8f0",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
     fontSize: 15,
-    color: "#1e293b",
+    color: "#0f172a",
     backgroundColor: "#f8fafc",
   },
   dropdownTrigger: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#e2e8f0",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
     backgroundColor: "#f8fafc",
   },
   dropdownValue: {
     fontSize: 15,
-    color: "#1e293b",
-    fontWeight: "500",
+    color: "#0f172a",
+    fontWeight: "600",
   },
   dropdownPlaceholder: {
     fontSize: 15,
@@ -461,26 +465,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#2563eb",
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 15,
     gap: 8,
     shadowColor: "#2563eb",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  verifyButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   verifyButtonText: {
     color: "#ffffff",
     fontSize: 15,
-    fontWeight: "700",
-    marginLeft: 6,
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
   resultCard: {
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 16,
-    marginTop: 20,
+    borderWidth: 1.5,
+    borderRadius: 18,
+    padding: 20,
+    marginTop: 22,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
   },
   resultHeaderRow: {
     flexDirection: "row",
