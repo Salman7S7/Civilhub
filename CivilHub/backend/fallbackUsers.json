@@ -1,0 +1,50 @@
+[
+  {
+    "id": 1,
+    "name": "CivilHub Client",
+    "email": "demo@civilhub.com",
+    "role": "client",
+    "engineerType": null,
+    "passwordHash": "$2b$10$R1FgwJZQhNSYV.TodyWCOu27lmOI15WXl.ZLAAPGj.QSX81y8tMZS"
+  },
+  {
+    "id": 2,
+    "name": "Client Salman",
+    "email": "salman@civilhub.com",
+    "role": "client",
+    "engineerType": null,
+    "passwordHash": "$2b$10$ZClCvgslCrpi1g9xKsTtkuFzeS9xR8G7yvkCcXlg1AyviBDKZ7aeW"
+  },
+  {
+    "id": 3,
+    "name": "Ar. Nusrat Jahan",
+    "email": "arc@civilhub.com",
+    "role": "engineer",
+    "engineerType": "architect",
+    "passwordHash": "$2b$10$yiDukRGB3h66qwBkue8bU.XDVGzvMIBOj50pPunirup4NnVgDDQdW"
+  },
+  {
+    "id": 4,
+    "name": "Engr. Tanvir Ahmed, PEng",
+    "email": "structure@civilhub.com",
+    "role": "engineer",
+    "engineerType": "structural",
+    "passwordHash": "$2b$10$sx0gitLYtzWD0kvObuUMh.uyVKqyyANEorckC5cpBnoTyq5gFqvXy"
+  },
+  {
+    "id": 5,
+    "name": "Engr. Mohammad Rafiqul",
+    "email": "soil@civilhub.com",
+    "role": "engineer",
+    "engineerType": "soil",
+    "passwordHash": "$2b$10$5J3/l8XvQxbO7Qu84IBIaOzdI5G4caOEYk2ogba.X054QEiBcQ6p."
+  },
+  {
+    "id": 1790617430932,
+    "name": "New Registered User",
+    "email": "testuser_1790617430362@civilhub.com",
+    "role": "engineer",
+    "engineerType": "architect",
+    "passwordHash": "$2b$12$zs5F/LQaoshwuJbTINQUv.6PqQeG8sg.wEecUSQj57FunaoFITZva"
+  }
+]
