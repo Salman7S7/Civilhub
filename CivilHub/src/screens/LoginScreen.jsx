@@ -16,6 +16,8 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { loginUser, registerUser } from "../services/authService";
 
+import { THEME } from "../theme/designSystem";
+
 const HERO_IMAGE_URL =
   "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80";
 
@@ -97,22 +99,22 @@ export default function LoginScreen({ onLoginSuccess }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero Banner with Previous Architectural Image */}
+          {/* Hero Banner with Modern Gradient */}
           <ImageBackground
             source={{ uri: HERO_IMAGE_URL }}
             style={styles.hero}
             imageStyle={styles.heroImageRadius}
           >
             <LinearGradient
-              colors={["rgba(15,23,42,0.40)", "rgba(15,23,42,0.86)", "#0f172a"]}
+              colors={["rgba(7,13,24,0.4)", "rgba(15,23,42,0.88)", "#0f172a"]}
               style={styles.heroGradient}
             >
               <View style={styles.logoWrap}>
-                <Ionicons name="business" size={32} color="#ffffff" />
+                <Ionicons name="business" size={32} color="#38bdf8" />
               </View>
               <Text style={styles.brandName}>CivilHub</Text>
               <Text style={styles.brandTagline}>
-                Bangalore & Bangladesh Building Codes, Feasibility & Engineering Consultation
+                Bangladesh National Building Code (BNBC 2020), Feasibility & Engineering Consultation
               </Text>
 
               {/* Profile Selection Badge */}
@@ -451,11 +453,11 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 18,
-    backgroundColor: "rgba(56, 189, 248, 0.15)",
+    backgroundColor: "rgba(99, 102, 241, 0.18)",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(56, 189, 248, 0.35)",
+    borderColor: "rgba(99, 102, 241, 0.4)",
     marginBottom: 12,
   },
   brandName: {
@@ -489,20 +491,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   heroRoleBadgeValue: {
-    color: "#38bdf8",
+    color: "#a5b4fc",
     fontSize: 12,
     fontWeight: "700",
   },
   formCard: {
     backgroundColor: "#ffffff",
     borderRadius: 24,
-    marginHorizontal: 20,
-    marginTop: -28,
-    padding: 20,
+    marginHorizontal: "auto",
+    width: "92%",
+    maxWidth: 480,
+    alignSelf: "center",
+    marginTop: -32,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "rgba(226, 232, 240, 0.8)",
     shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.1,
-    shadowRadius: 16,
+    shadowRadius: 28,
     elevation: 8,
   },
   welcomeTitle: {
@@ -639,11 +646,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     backgroundColor: "#f8fafc",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#e2e8f0",
     borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 13,
+    paddingVertical: 13,
   },
   input: {
     flex: 1,
@@ -671,13 +678,13 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     backgroundColor: "#2563eb",
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: 16,
+    paddingVertical: 15,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowColor: "#2563eb",
+    shadowColor: "#1d4ed8",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.22,
     shadowRadius: 10,
@@ -705,3 +712,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 });
+
