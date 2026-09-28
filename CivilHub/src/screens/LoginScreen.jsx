@@ -387,8 +387,8 @@ export default function LoginScreen({ onLoginSuccess }) {
                 <>
                   <Text style={styles.loginButtonText}>
                     {isRegistering
-                      ? `Sign Up as ${getProfileTitle()}`
-                      : `Log In as ${getProfileTitle()}`}
+                      ? `Create Account as ${getProfileTitle()}`
+                      : "Log In to CivilHub"}
                   </Text>
                   <Ionicons name="arrow-forward" size={18} color="#ffffff" />
                 </>
@@ -413,6 +413,94 @@ export default function LoginScreen({ onLoginSuccess }) {
                   {isRegistering ? " Log in" : " Sign up"}
                 </Text>
               </TouchableOpacity>
+            </View>
+
+            {/* Quick Demo Accounts Helper */}
+            <View style={styles.demoSection}>
+              <View style={styles.demoDivider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>QUICK DEMO ACCOUNTS</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              <View style={styles.demoPillsRow}>
+                <TouchableOpacity
+                  style={styles.demoPill}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setIsRegistering(false);
+                    setRole("client");
+                    setEmail("salman@civilhub.com");
+                    setPassword("password123");
+                    setErrorMsg("");
+                  }}
+                >
+                  <Ionicons name="person-circle" size={14} color="#0284c7" />
+                  <Text style={styles.demoPillText}>Salman (Client)</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.demoPill}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setIsRegistering(false);
+                    setRole("client");
+                    setEmail("demo@civilhub.com");
+                    setPassword("password123");
+                    setErrorMsg("");
+                  }}
+                >
+                  <Ionicons name="person" size={14} color="#2563eb" />
+                  <Text style={styles.demoPillText}>Demo Client</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.demoPill}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setIsRegistering(false);
+                    setRole("engineer");
+                    setEngineerType("architect");
+                    setEmail("arc@civilhub.com");
+                    setPassword("password123");
+                    setErrorMsg("");
+                  }}
+                >
+                  <MaterialCommunityIcons name="drawing" size={14} color="#7c3aed" />
+                  <Text style={styles.demoPillText}>Architect</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.demoPill}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setIsRegistering(false);
+                    setRole("engineer");
+                    setEngineerType("structural");
+                    setEmail("structure@civilhub.com");
+                    setPassword("password123");
+                    setErrorMsg("");
+                  }}
+                >
+                  <MaterialCommunityIcons name="pillar" size={14} color="#2563eb" />
+                  <Text style={styles.demoPillText}>Structure Eng</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.demoPill}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setIsRegistering(false);
+                    setRole("engineer");
+                    setEngineerType("soil");
+                    setEmail("soil@civilhub.com");
+                    setPassword("password123");
+                    setErrorMsg("");
+                  }}
+                >
+                  <MaterialCommunityIcons name="shovel" size={14} color="#059669" />
+                  <Text style={styles.demoPillText}>Soil Eng</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -710,6 +798,49 @@ const styles = StyleSheet.create({
     color: "#2563eb",
     fontWeight: "800",
     fontSize: 13,
+  },
+  demoSection: {
+    marginTop: 22,
+    paddingTop: 6,
+  },
+  demoDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#e2e8f0",
+  },
+  dividerText: {
+    color: "#94a3b8",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    marginHorizontal: 10,
+  },
+  demoPillsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    justifyContent: "center",
+  },
+  demoPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 20,
+    gap: 5,
+  },
+  demoPillText: {
+    color: "#334155",
+    fontSize: 11,
+    fontWeight: "700",
   },
 });
 
