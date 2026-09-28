@@ -163,16 +163,16 @@ export default function DesignCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 16,
-    marginBottom: 14,
+    borderRadius: 18,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: "#e2e8f0",
     overflow: "hidden",
     shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 4,
   },
   imageContainer: {
     position: "relative",
