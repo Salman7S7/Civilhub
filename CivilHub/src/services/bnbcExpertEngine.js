@@ -460,21 +460,6 @@ export function generateBnbcExpertAnswer(question, context = null) {
   }
 
   // 10. General / Comprehensive Fallback Response
-  const isConstructionQuery = /(road|width|story|stories|storied|floor|floors|tola|setback|far|mgc|coverage|soil|spt|borehole|foundation|pile|footing|rebar|steel|concrete|cement|brick|building|house|structure|structural|architect|architecture|rajuk|cda|kda|rda|pourashava|municipality|bylaw|dap|permit|approval|plan|cantilever|balcony|lift|elevator|stair|staircase|fire|noc|safety|parking|garage|katha|sqft|bigha|seismic|earthquake|zone|zoning|occupancy|residential|commercial|drainage|plumbing)/i.test(cleanLower);
-
-  if (!isConstructionQuery) {
-    return (
-      `I am the **CivilHub AI Assistant**, specializing exclusively in **Bangladesh Building Regulations (BNBC 2020)** and urban construction guidelines (such as RAJUK, CDA, KDA, and RDA).\n\n` +
-      `Your inquiry (*"${question.trim()}"*) appears to be outside civil construction and municipal building codes. I can best assist you with:\n` +
-      `- **Permissible Building Height & Stories** based on road width\n` +
-      `- **Mandatory Setbacks & FAR** (Floor Area Ratio)\n` +
-      `- **Geotechnical Soil Investigation (SPT)** and foundation criteria\n` +
-      `- **Fire Safety & Passenger Lift Regulations**\n` +
-      `- **Municipal Plan Approval Guidelines** in Dhaka, Chattogram, Khulna, and Rajshahi\n\n` +
-      `Please feel free to ask any question regarding your building or land development in Bangladesh!`
-    );
-  }
-
   return (
     `### Bangladesh Building Code & Engineering Advisory (BNBC 2020 & ${authority.name})\n\n` +
     `Regarding your inquiry on: **"${question.trim()}"**\n\n` +
