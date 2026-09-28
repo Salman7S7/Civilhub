@@ -1186,7 +1186,7 @@ export default function CostEstimatorScreen({ route }) {
   ======================================================= */
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={
@@ -2461,6 +2461,9 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 16,
     paddingBottom: 40,
+    width: "100%",
+    maxWidth: 980,
+    alignSelf: "center",
   },
 
   /* -------------------------------------------------------
@@ -2468,12 +2471,19 @@ const styles = StyleSheet.create({
   ------------------------------------------------------- */
 
   header: {
-    backgroundColor: "#1E293B",
-    borderRadius: 22,
-    padding: 18,
+    backgroundColor: "#0f172a",
+    borderRadius: 24,
+    padding: 22,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 6,
   },
 
   headerIcon: {
@@ -2660,11 +2670,16 @@ const styles = StyleSheet.create({
 
   sectionCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    padding: 16,
-    marginBottom: 14,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    elevation: 3,
   },
 
   sectionHeader: {
@@ -2674,13 +2689,18 @@ const styles = StyleSheet.create({
   },
 
   stepCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: "#2563EB",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 11,
+    marginRight: 12,
+    shadowColor: "#2563EB",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
 
   stepNumber: {
