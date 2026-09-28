@@ -26,6 +26,7 @@ import {
   YEAR_OPTIONS,
   computeLandTax,
 } from "../services/landTaxService";
+import { THEME } from "../theme/designSystem";
 
 export default function LandTaxScreen() {
   const [areaValue, setAreaValue] = useState("5");
@@ -110,23 +111,30 @@ export default function LandTaxScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+    <SafeAreaView style={styles.safeArea} edges={[]}>
+      <StatusBar barStyle="light-content" backgroundColor={THEME.colors.navy} />
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Main Header Banner */}
-        <View style={styles.headerContainer}>
-          <Text style={styles.brandTitle}>CivilHub</Text>
-          <Text style={styles.pageTitle}>Land Tax & Khajna</Text>
-          <Text style={styles.pageSubtitle}>
-            Calculate Land Development Tax (ভূমি উন্নয়ন কর), holding tax, and pay online directly via
-            official government portal.
-          </Text>
-        </View>
+        <View style={styles.pageContainer}>
+          {/* Main Header Banner */}
+          <View style={styles.headerContainer}>
+            <View style={styles.headerTopRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.brandTitle}>CIVILHUB / STATUTORY PORTAL</Text>
+                <Text style={styles.pageTitle}>Land Tax & Khajna</Text>
+              </View>
+              <View style={styles.headerIconWrap}>
+                <Ionicons name="receipt" size={24} color="#38bdf8" />
+              </View>
+            </View>
+            <Text style={styles.pageSubtitle}>
+              Official Land Development Tax (ভূমি উন্নয়ন কর) estimation, municipal holding tax rates, and direct access to ldtax.gov.bd.
+            </Text>
+          </View>
 
         {/* Card 1: Land Area */}
         <View style={styles.card}>
@@ -416,6 +424,7 @@ export default function LandTaxScreen() {
 
         {/* Bottom padding */}
         <View style={{ height: 40 }} />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -424,7 +433,7 @@ export default function LandTaxScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: THEME.colors.bg,
   },
   scroll: {
     flex: 1,
@@ -432,41 +441,77 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
+  pageContainer: {
+    width: "100%",
+    maxWidth: 960,
+    alignSelf: "center",
+  },
 
   // Header Banner
   headerContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+    backgroundColor: THEME.colors.navy,
+    borderRadius: 24,
+    padding: 22,
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 6,
+  },
+  headerTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  headerIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: "rgba(56, 189, 248, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(56, 189, 248, 0.3)",
+    marginLeft: 12,
   },
   brandTitle: {
-    fontSize: 24,
+    fontSize: 11,
     fontWeight: "800",
-    color: "#1d68e8",
-    letterSpacing: -0.5,
+    color: "#38bdf8",
+    letterSpacing: 1.2,
   },
   pageTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#0f172a",
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#ffffff",
     marginTop: 4,
+    letterSpacing: 0.3,
   },
   pageSubtitle: {
     fontSize: 13,
-    color: "#64748b",
-    lineHeight: 19,
-    marginTop: 6,
+    color: "#cbd5e1",
+    lineHeight: 20,
+    marginTop: 8,
   },
 
   // Form Card
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 20,
+    padding: 20,
     marginHorizontal: 16,
-    marginTop: 14,
+    marginTop: 16,
     borderWidth: 1,
     borderColor: "#e2e8f0",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    elevation: 3,
   },
   cardLabel: {
     fontSize: 14,
