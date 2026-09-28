@@ -1,0 +1,555 @@
+\documentclass[12pt,a4paper]{article}
+
+% -----------------------------------------------------------------------------
+% Packages and Styling
+% -----------------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage{setspace}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[colorlinks=true, linkcolor=blue!70!black, urlcolor=blue!70!black, citecolor=blue!70!black]{hyperref}
+
+\setstretch{1.15}
+
+% -----------------------------------------------------------------------------
+% Figure Placeholder Helper Macro
+% -----------------------------------------------------------------------------
+% When actual image files are ready, simply replace the \placeholderimage call
+% with: \includegraphics[width=0.85\linewidth]{your_image.png}
+\newcommand{\placeholderimage}[2]{%
+  \begin{tikzpicture}
+    \node[draw=black!40, fill=gray!8, dashed, rounded corners=4pt, minimum width=0.88\linewidth, minimum height=6.2cm, align=center, inner sep=12pt] {
+      \textcolor{gray!70}{\textbf{[ Figure Placeholder: #1 ]}}\\[0.8em]
+      \footnotesize\textcolor{gray!60}{Replace with: \texttt{\textbackslash includegraphics[width=0.85\textbackslash linewidth]\{#2\}}}
+    };
+  \end{tikzpicture}
+}
+
+% Code Listing Settings
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{gray!5},
+  frame=single,
+  rulecolor=\color{gray!30},
+  breaklines=true,
+  tabsize=2,
+  showstringspaces=false
+}
+
+\begin{document}
+
+% =============================================================================
+% TITLE / COVER PAGE
+% =============================================================================
+\begin{titlepage}
+    \centering
+    \vspace*{0.5cm}
+
+    % University Logo Placeholder
+    \begin{tikzpicture}
+      \node[draw=orange!80!black, fill=orange!5, rounded corners=6pt, line width=1.5pt, minimum width=3.2cm, minimum height=1.6cm, align=center] {
+        \textbf{\Huge \textcolor{orange!90!black}{UIU}}\\[0.2em]
+        \scriptsize \textcolor{orange!90!black}{UNITED INTERNATIONAL UNIVERSITY}
+      };
+    \end{tikzpicture}
+
+    \vspace{1.2cm}
+
+    {\Large \textbf{United International University}}\\[0.3em]
+    {\large Department of Computer Science and Engineering}
+
+    \vspace{1.6cm}
+
+    {\Huge \textbf{CivilHub}}\\[0.6em]
+    {\large \textbf{An AI-Powered Civil Engineering and Architectural Intelligence Platform for Bangladesh}}
+
+    \vspace{1.6cm}
+
+    % Course & Instructor Info Box
+    \begin{center}
+    \begin{tabular}{|p{0.88\linewidth}|}
+    \hline
+    \vspace{0.15cm}
+    \textbf{Course Title:} Software Engineering Laboratory \\[0.3em]
+    \textbf{Course Code:} CSE 3422 (D) \\[0.3em]
+    \textbf{Section:} D \\[0.3em]
+    \textbf{Course Teacher:} Samin Sharaf Somik \\[0.15cm]
+    \hline
+    \end{tabular}
+    \end{center}
+
+    \vspace{1.2cm}
+
+    {\large \textbf{Team Name: Structura / Deadliners}}\\[0.3em]
+    {\normalsize \textbf{Group: 1}}
+
+    \vspace{0.6cm}
+
+    % Student Details Table
+    \begin{center}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{|p{6.5cm}|p{4.0cm}|}
+    \hline
+    \textbf{Student Name} & \textbf{Student ID} \\
+    \hline
+    Salman Farsi & 0112230863 \\
+    Team Member 2 & 0112230869 \\
+    Team Member 3 & 0112230871 \\
+    Team Member 4 & 0112231020 \\
+    \hline
+    \end{tabular}
+    \end{center}
+
+    \vfill
+
+    {\textbf{Project Repository}}\\[0.2em]
+    \url{https://github.com/Salman7S7/Civilhub.git}
+
+    \vspace{0.5cm}
+\end{titlepage}
+
+% =============================================================================
+% TABLE OF CONTENTS
+% =============================================================================
+\newpage
+\pagenumbering{roman}
+\tableofcontents
+
+% =============================================================================
+% MAPPED PROGRAM OUTCOMES (PO)
+% =============================================================================
+\newpage
+\section*{Mapped Program Outcomes}
+\addcontentsline{toc}{section}{Mapped Program Outcomes}
+
+\begin{table}[htbp]
+\centering
+\caption{Program Outcome (PO) Mapping for the CivilHub Project}
+\label{tab:po_mapping}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{|p{2.8cm}|X|}
+\hline
+\textbf{Program Outcome (PO)} & \textbf{Project Alignment} \\
+\hline
+\textbf{PO2: Problem Analysis} & 
+The project identifies severe procedural bottlenecks, regulatory non-compliance risks, and lack of accessible engineering advisory in Bangladesh's construction and real estate sectors. By analyzing municipal setback bylaws (BNBC 2020, RAJUK, CDA, RDA, KDA) and non-transparent construction costing, a formal software solution was engineered to automate compliance verification and itemized budget forecasting. \\
+\hline
+\textbf{PO3: Design and Development of Solutions} & 
+The platform was architected as an integrated full-stack system featuring automated building code compliance algorithms, dynamic 5-step estimation formulas, curated architectural design matching, and role-based client-engineer collaboration workspaces ensuring data integrity, scalability, and robust user experience. \\
+\hline
+\textbf{PO5: Modern Tool Usage} & 
+Modern engineering frameworks and libraries were utilized across the stack. The cross-platform client was built using React Native and Expo with React Navigation and Async Storage; the backend was developed in Node.js and Express; relational data was structured in MySQL; and generative AI capabilities were integrated via Google Gemini API (@google/genai). Git and GitHub were used for version control. \\
+\hline
+\textbf{PO8: Ethics} & 
+Professional responsibility and public safety in structural construction were prioritized. AI advisories explicitly embed legal disclaimers, enforce building code standards to prevent hazardous illegal construction, and ensure secure communication between verified engineers and clients without exposing sensitive private credentials. \\
+\hline
+\textbf{PO9: Individual and Teamwork} & 
+The project was executed by a collaborative student team dividing responsibilities systematically across mobile/web frontend engineering, backend RESTful API development, database schema modeling, and AI prompt engineering/service integration. \\
+\hline
+\textbf{PO10: Communication} & 
+Effective communication is demonstrated through detailed technical documentation, structured system architecture sequence diagrams, formal software engineering reports, and intuitive graphical user interfaces. \\
+\hline
+\textbf{PO12: Lifelong Learning} & 
+The development necessitated self-directed exploration of generative AI system integration, cross-platform mobile-web deployment with Expo, dynamic civil engineering calculation engines, and real-time state synchronization. \\
+\hline
+\end{tabularx}
+\end{table}
+
+% =============================================================================
+% ABSTRACT
+% =============================================================================
+\newpage
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+Urban development and residential construction in Bangladesh are heavily regulated by complex building codes and municipal bylaws, such as the Bangladesh National Building Code (BNBC 2020) and development authorities including RAJUK, CDA, RDA, and KDA. However, prospective land owners, real estate developers, and civil engineering practitioners frequently struggle with opaque setback rules, Floor Area Ratio (FAR) calculations, unpredictable construction cost overruns, and fragmented communication with verified engineering professionals.
+
+This report presents \textbf{CivilHub}, a comprehensive, full-stack civil engineering, architectural planning, and regulatory intelligence platform tailored specifically for the construction sector in Bangladesh. CivilHub integrates an automated regulatory feasibility engine, a 5-step interactive construction cost estimator, an architectural floor plan catalog, a land transfer tax and mutation calculator, and a dual-mode consultation workspace powered by Google Gemini generative AI and verified human structural, architectural, and geotechnical engineers. Built on a modular React Native/Expo client, a Node.js/Express REST backend, and a relational MySQL database, CivilHub demonstrates the practical application of software engineering principles to bridge the gap between complex building regulations and accessible digital tooling.
+
+% =============================================================================
+% SECTION 1: INTRODUCTION
+% =============================================================================
+\newpage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\section{Introduction}
+Civil engineering and architectural planning are foundational to safe, sustainable, and orderly urban development. In developing countries such as Bangladesh, rapid urbanization has spurred immense private and commercial construction activity. However, navigating statutory building codes, calculating permissible floor areas, estimating multi-trade material and labor costs, and obtaining authentic professional advice remain daunting challenges for ordinary land owners and developers. Traditional workflows rely heavily on informal, manual consultations and static spreadsheets, frequently resulting in building rule violations, budget deficits, and structural safety compromises.
+
+With the proliferation of modern web and mobile platforms and advances in generative artificial intelligence, there is a compelling opportunity to digitize and democratize architectural and structural engineering knowledge. \textbf{CivilHub} was conceived and developed as a centralized digital platform that consolidates building code validation, architectural exploration, itemized cost estimation, land duty calculations, and expert consultation into a unified, user-friendly environment.
+
+The system is designed in adherence to core software engineering principles, emphasizing modularity, component reusability, transactional data consistency, secure role-based access control, and cross-platform compatibility across mobile and web environments.
+
+% =============================================================================
+% SECTION 2: MOTIVATION
+% =============================================================================
+\section{Motivation}
+The development of CivilHub is motivated by several acute challenges prevalent in Bangladesh's construction and building management ecosystem:
+\begin{enumerate}
+    \item \textbf{Regulatory Complexity and Code Non-Compliance:} The Bangladesh National Building Code (BNBC 2020) along with specific rules from regional development authorities (e.g., RAJUK Imarat Nirman Bidhimala, CDA, RDA, KDA) dictate strict limits on Maximum Ground Coverage (MGC), Floor Area Ratio (FAR), mandatory front/rear/side setbacks, and road frontage widths. Most land owners lack the technical literacy to interpret these rules, leading to unauthorized construction, administrative fines, or demolition notices.
+    \item \textbf{Cost Uncertainty and Budget Overruns:} Building construction involves interdependent expenditures across structural RCC work, interior/exterior finishes, electrical fittings, and sanitary plumbing. Land owners often receive vague lump-sum contractor quotes without transparent unit-rate breakdowns, causing severe financial strain during execution.
+    \item \textbf{Scarcity of Accessible Expert Consultation:} Connecting with licensed professional engineers (IAB-registered Architects, PEng/IEB Structural Engineers, Geotechnical Specialists) is often geographically constrained and expensive. A digital bridge that facilitates direct client-engineer consultation is urgently needed.
+    \item \textbf{Absence of Jurisdiction-Aware Engineering AI Tools:} Generic conversational AI models lack contextual ground-truth knowledge regarding Bangladesh's municipal zoning laws and local unit systems (Katha, Bigha, Decimal, Square Feet, BDT currency). Developing an AI assistant explicitly grounded in BNBC 2020 and local municipal bylaws provides invaluable preliminary guidance.
+\end{enumerate}
+
+% =============================================================================
+% SECTION 3: OBJECTIVES OF THE SYSTEM
+% =============================================================================
+\section{Objectives of the System}
+The overarching objective of the CivilHub project is to design, implement, test, and document an intuitive, reliable, and secure platform that empowers citizens, builders, and engineers in Bangladesh with accessible building planning tools.
+
+The specific technical and functional objectives are as follows:
+\begin{itemize}
+    \item To implement an automated \textbf{Feasibility Checker} that evaluates plot dimensions, road frontage, and target stories against BNBC 2020, RAJUK, CDA, RDA, and KDA regulatory requirements.
+    \item To build a \textbf{Smart Architectural Designs Catalog} featuring residential and commercial layouts with 3D elevations, floor plan specifications, and cross-module synchronization.
+    \item To engineer a \textbf{5-Step Construction Cost Estimator} that dynamically computes itemized structural, finishing, electrical, and plumbing costs in Bangladeshi Taka (BDT) based on quality grades (Standard, Premium, Luxury).
+    \item To provide a \textbf{Land Tax and Transfer Duty Calculator} reflecting current Bangladesh stamp duty, registration fees, local government taxes, gain taxes, and mutation costs.
+    \item To develop a \textbf{Dual-Mode Expert Consultation System} integrating Google Gemini AI for instant regulatory answers alongside a dedicated Messenger-style workspace connecting clients with verified licensed engineers.
+    \item To enforce robust \textbf{Role-Based Access Control (RBAC)} and stateless JWT authentication separating Client and Engineer disciplines (Architect, Structural Engineer, Geotechnical Specialist).
+    \item To adhere to software engineering rigor across architecture design, database normalization, RESTful API development, and validation testing.
+\end{itemize}
+
+% =============================================================================
+% SECTION 4: SYSTEM OVERVIEW
+% =============================================================================
+\section{System Overview}
+CivilHub is structured around a multi-tier, client-server software architecture designed to deliver high responsiveness and maintainability across web and mobile viewports:
+\begin{itemize}
+    \item \textbf{Client Tier:} Developed using React Native, Expo 51, and React Native Web. It utilizes a role-aware bottom tab navigator, modular screen components, linear gradients, vector icons, and asynchronous local caching via AsyncStorage.
+    \item \textbf{Application \& API Tier:} Built using Node.js and Express. It serves RESTful endpoints for authentication, regulatory feasibility analysis, architectural design querying, cost computation, and consultation messaging.
+    \item \textbf{Data Persistence Tier:} Powered by a relational MySQL 8.0 database utilizing connection pooling (\texttt{mysql2/promise}) to store user accounts, expert profiles, architectural models, cost estimation logs, and consultation message threads.
+    \item \textbf{AI Intelligence Layer:} Integrates Google Gemini generative language models (\texttt{@google/genai}) with structured system prompts grounded in BNBC 2020 and local municipal building rules, backed by an internal rule-based heuristic fallback engine.
+\end{itemize}
+
+% =============================================================================
+% SECTION 5: FEATURE DESCRIPTION
+% =============================================================================
+\section{Feature Description}
+This section presents a comprehensive breakdown of the core functional modules of CivilHub along with their user interface implementations.
+
+\subsection{User Authentication and Role Selection}
+CivilHub provides a streamlined, secure authentication interface. Users can register and log in under two primary profiles: \textbf{Client} (land owners, builders, and citizens) and \textbf{Engineer} (licensed technical professionals). When the Engineer role is selected, users specify their professional discipline: \textit{Architect}, \textit{Structural Engineer}, or \textit{Soil / Geotechnical Specialist}. Authentication is secured using bcrypt password hashing and JSON Web Tokens (JWT).
+
+\begin{figure}[H]
+    \centering
+    \placeholderimage{User Authentication and Role Selection Interface}{figures/fig1_auth_interface.png}
+    \caption{User Authentication and Role Selection Interface}
+    \label{fig:auth_interface}
+\end{figure}
+
+\subsection{Feasibility Checker and Building Code Engine}
+The Feasibility Checker module automates regulatory compliance verification for land plots in Bangladesh. The user inputs the plot size (in Katha or Sq. Ft.), frontage road width (in Feet), desired number of stories, and the governing municipal authority (RAJUK, CDA, RDA, KDA, or General Pourashava).
+
+The system instantly evaluates:
+\begin{itemize}
+    \item \textbf{Permissibility Status:} Whether the requested height is allowable given the frontage road width.
+    \item \textbf{Floor Area Ratio (FAR):} Allowable built-up area multiplier in accordance with BNBC 2020 and RAJUK rules.
+    \item \textbf{Maximum Ground Coverage (MGC):} Maximum allowable building footprint percentage.
+    \item \textbf{Mandatory Setbacks:} Clear minimum setback distances required for front, rear, and side boundaries.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \placeholderimage{Feasibility Checker and Building Code Verification}{figures/fig2_feasibility.png}
+    \caption{Feasibility Checker and Building Code Verification Interface}
+    \label{fig:feasibility_screen}
+\end{figure}
+
+\subsection{Smart Architectural Designs Catalog}
+CivilHub incorporates a rich catalog of pre-engineered residential and commercial architectural models. Users can filter designs by land requirement (Katha), number of floors, basement availability, parking/garage inclusion, rooftop type (e.g., Open Terrace, Green Roof), and bedroom count.
+
+\begin{figure}[H]
+    \centering
+    \placeholderimage{Smart Architectural Designs Catalog and Filter Sheet}{figures/fig3_designs_catalog.png}
+    \caption{Smart Architectural Designs Catalog and Multi-Parameter Filter Sheet}
+    \label{fig:designs_catalog}
+\end{figure}
+
+\subsection{Architectural Model Inspector and Cross-Module Workflows}
+Selecting any architectural model launches a detailed design inspector modal displaying 3D elevations, room dimensions (bedrooms, bathrooms, balconies, dining, drawing, kitchen), and structural features. Crucially, the model inspector provides one-tap cross-module workflow shortcuts:
+\begin{enumerate}
+    \item \textbf{Check Feasibility for this Model:} Automatically populates the plot size and story count into the Feasibility Engine.
+    \item \textbf{Estimate Cost \& Customize:} Pre-populates floor dimensions and structural configurations into the 5-Step Cost Estimator.
+    \item \textbf{Ask Expert about this Design:} Bundles the model's architectural specifications into a consultation card and launches the Expert Chat module.
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \placeholderimage{Architectural Model Inspector Modal and Action Triggers}{figures/fig4_design_modal.png}
+    \caption{Architectural Model Inspector Modal with Cross-Module Triggers}
+    \label{fig:design_modal}
+\end{figure}
+
+\subsection{5-Step Interactive Construction Cost Estimator}
+The Cost Estimator module provides an interactive 5-step wizard for accurate construction budgeting in Bangladesh:
+\begin{itemize}
+    \item \textbf{Step 1: Land Data:} Land area in Katha, frontage road width, and target stories.
+    \item \textbf{Step 2: Bylaw Verification:} Automated check of allowable ground coverage and setbacks.
+    \item \textbf{Step 3: Floor-wise Room Sizing:} Customization of unit count, room dimensions, basements, and parking garages.
+    \item \textbf{Step 4: Material Quality Profiles:} Selection between Standard (economical finishes), Premium (branded tiles and sanitary fittings), and Luxury (imported marble, VRF HVAC, and premium structural specifications).
+    \item \textbf{Step 5: Itemized Cost Breakdown:} Computation of total built-up square footage and itemized cost shares in BDT.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \placeholderimage{5-Step Interactive Cost Estimator Workflow}{figures/fig5_cost_estimator_steps.png}
+    \caption{5-Step Interactive Construction Cost Estimator Workflow}
+    \label{fig:cost_estimator_steps}
+\end{figure}
+
+\subsection{Itemized Cost Analytics and Breakdown}
+The final output of the Cost Estimator provides an itemized financial summary categorizing expenditures into:
+\begin{itemize}
+    \item \textbf{Structural Civil Works (45\%):} Excavation, RCC foundation, columns, beams, slabs, and rebar.
+    \item \textbf{Finishing Works (30\%):} Brick masonry, plaster, floor tiles, paint, doors, and window glazing.
+    \item \textbf{Plumbing and Sanitary (13\%):} Water piping, sewer lines, septic tanks, and fixtures.
+    \item \textbf{Electrical and Automation (12\%):} Conduiting, wiring, switchboards, sub-station provisions, and lighting.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \placeholderimage{Itemized Construction Cost Breakdown and Financial Summary}{figures/fig6_cost_breakdown.png}
+    \caption{Itemized Construction Cost Breakdown and Financial Summary}
+    \label{fig:cost_breakdown}
+\end{figure}
+
+\subsection{Land Tax and Property Transfer Duty Calculator}
+Property transactions in Bangladesh incur various statutory taxes governed by the National Board of Revenue (NBR), Ministry of Land, and local registration complexes. CivilHub provides a comprehensive tax calculator supporting:
+\begin{itemize}
+    \item \textbf{Stamp Duty (1.5\%)}
+    \item \textbf{Registration Fee (1\%)}
+    \item \textbf{Local Government Tax (2\%--3\% depending on City Corporation / Pourashava)}
+    \item \textbf{Advance Gain Tax (AIT / Gain Tax under Section 53FF)}
+    \item \textbf{Mutation (Namjari) Application \& Khatiyan Fees}
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \placeholderimage{Land Tax and Property Transfer Duty Calculator}{figures/fig7_land_tax.png}
+    \caption{Land Tax and Property Transfer Duty Calculator Interface}
+    \label{fig:land_tax_screen}
+\end{figure}
+
+\subsection{Dual-Mode Expert Consultation and AI Chatbot}
+CivilHub offers a dual-mode advisory interface tailored for construction consultation:
+\begin{itemize}
+    \item \textbf{CivilHub AI Assistant:} Powered by Google Gemini with domain prompts covering BNBC 2020, RAJUK setback bylaws, structural load requirements, and foundation recommendations.
+    \item \textbf{Verified Human Engineer Directory:} Messenger-style messaging connecting clients with verified licensed engineers categorized by discipline (\textit{Architect}, \textit{Structural Engineer}, and \textit{Soil / Geotechnical Specialist}).
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \placeholderimage{Dual-Mode Expert Consultation and AI Advisory Chat}{figures/fig8_expert_chat.png}
+    \caption{Dual-Mode Expert Consultation and AI Advisory Chat Interface}
+    \label{fig:expert_chat}
+\end{figure}
+
+\subsection{Embedded Architectural Specification Sharing in Chat}
+When a client initiates an expert consultation from an architectural model or cost estimate, CivilHub generates an interactive \textbf{Embedded Design Specification Card} attached directly to the message bubble. Both client and consulting engineer can tap the card to inspect full dimensional blueprints, room arrangements, and structural notes without leaving the chat thread.
+
+\begin{figure}[H]
+    \centering
+    \placeholderimage{Embedded Architectural Specification Card in Chat Thread}{figures/fig9_chat_context_card.png}
+    \caption{Embedded Architectural Specification Card within Consultation Thread}
+    \label{fig:chat_context_card}
+\end{figure}
+
+\subsection{Dedicated Engineer Consultation Workspace}
+When logged in as a verified engineer, the interface transforms into a focused consultation workspace. Engineers can review client-submitted floor plans, examine attached project parameters, and provide formal professional feedback. To protect client confidentiality and professional discipline boundaries, engineer profiles are restricted to communicating exclusively with clients.
+
+\begin{figure}[H]
+    \centering
+    \placeholderimage{Dedicated Licensed Engineer Consultation Workspace}{figures/fig10_engineer_workspace.png}
+    \caption{Dedicated Licensed Engineer Consultation Workspace}
+    \label{fig:engineer_workspace}
+\end{figure}
+
+% =============================================================================
+% SECTION 6: TECHNOLOGY STACK
+% =============================================================================
+\section{Technology Stack}
+CivilHub is constructed using a robust, modular, and modern technology stack ensuring high performance, responsive UI rendering, relational data consistency, and seamless AI integration.
+
+\subsection{Architecture Overview}
+The system adheres to a decoupled client-server architecture. The cross-platform mobile/web client communicates with the Node.js/Express backend via RESTful JSON endpoints. Persistent application state is managed in MySQL, while AI queries are dispatched to Google Gemini API endpoints.
+
+\begin{figure}[H]
+    \centering
+    \placeholderimage{CivilHub System Component and Data Flow Architecture}{figures/fig11_system_architecture.png}
+    \caption{CivilHub System Component and Data Flow Architecture}
+    \label{fig:system_architecture}
+\end{figure}
+
+\subsection{Frontend Technologies}
+The frontend is engineered as a unified cross-platform single-page application and mobile client:
+\begin{itemize}
+    \item \textbf{React Native (0.74.5) \& React (18.2.0):} Declarative, component-driven UI library supporting native-like fluid animations and modular layout hierarchies.
+    \item \textbf{Expo SDK 51:} Build tooling and runtime framework facilitating rapid multi-platform execution across iOS, Android, and Web browsers (\texttt{react-native-web}).
+    \item \textbf{React Navigation (Bottom Tabs 6.5):} Role-aware bottom tab navigation system managing active screen stacks and profile badges.
+    \item \textbf{Expo Vector Icons \& Linear Gradient:} Visual design system providing aesthetic iconography (\texttt{Ionicons}, \texttt{MaterialCommunityIcons}) and modern gradient backdrops.
+    \item \textbf{AsyncStorage:} Local persistent client-side storage for session tokens, cached filters, and offline fallback states.
+\end{itemize}
+
+\subsection{Backend Technologies}
+The backend service provides a scalable, stateless RESTful API:
+\begin{itemize}
+    \item \textbf{Node.js \& Express (4.21):} Event-driven asynchronous JavaScript runtime and web framework managing API routing, request validation, and middleware pipelines.
+    \item \textbf{MySQL2 (\texttt{mysql2/promise}):} Asynchronous MySQL connection pooling library handling transactional queries and high-concurrency database operations.
+    \item \textbf{JSON Web Tokens (JWT) \& BcryptJS:} Stateless session management, cryptographic token signing, and one-way password hashing.
+    \item \textbf{CORS \& Dotenv:} Cross-Origin Resource Sharing handling for web clients and environment variable security management.
+\end{itemize}
+
+\subsubsection{Backend File Structure}
+The backend follows a clean, modular file organization:
+\begin{lstlisting}
+CivilHub/backend/
+|-- server.js              # Express app bootstrap, route controllers, and Gemini proxy
+|-- db.js                  # MySQL pool initialization, migration, and seeding
+|-- costEstimator.js       # 5-step cost estimation formulas and municipal bylaw rates
+|-- bnbcExpertEngine.js    # Rule-based BNBC expert knowledge engine (fallback)
+|-- seedData.js            # Initial architectural models and rate profiles
+|-- package.json           # Backend dependency manifest
+|-- .env                   # Environment credentials (DB host, port, Gemini API key)
+`-- .env.example           # Configuration template
+\end{lstlisting}
+
+\subsection{Database Architecture}
+CivilHub employs a normalized MySQL 8.0 relational database schema. The database schema encompasses seven primary entities:
+
+\begin{table}[H]
+\centering
+\caption{Database Schema Entity Descriptions}
+\label{tab:db_schema}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{|p{3.8cm}|p{3.2cm}|X|}
+\hline
+\textbf{Table Name} & \textbf{Primary Key} & \textbf{Description \& Stored Attributes} \\
+\hline
+\texttt{users} & \texttt{id} (Auto Int) & User authentication records, roles (\texttt{client}, \texttt{engineer}), engineer discipline, and bcrypt password hashes. \\
+\hline
+\texttt{experts} & \texttt{id} (VarChar) & Verified consultant profiles, IAB/IEB license numbers, firms, ratings, specialties, and greetings. \\
+\hline
+\texttt{designs} & \texttt{id} (Auto Int) & Architectural models, floor counts, Katha requirements, room layouts, basement/garage flags, and 3D preview URLs. \\
+\hline
+\texttt{construction\_rates} & \texttt{id} (Auto Int) & Construction rates per sq. ft., trade percentage shares (structure, finishing, electrical, plumbing), and basement multipliers. \\
+\hline
+\texttt{cost\_estimates} & \texttt{id} (Auto Int) & Logged client cost estimates, total built-up areas, quality tiers, and itemized BDT cost breakdowns. \\
+\hline
+\texttt{feasibility\_logs} & \texttt{id} (Auto Int) & Feasibility audit trail storing plot sizes, road widths, requested floors, authority rules, and FAR calculations. \\
+\hline
+\texttt{consultation\_messages} & \texttt{id} (VarChar) & Message history indexed by \texttt{thread\_id}, sender role, message body, timestamps, and embedded design cards (JSON). \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{AI and Machine Learning Integration}
+CivilHub integrates a specialized AI layer designed for civil engineering and building regulatory advisory:
+\begin{itemize}
+    \item \textbf{Google Gemini Generative AI (\texttt{@google/genai}):} Cloud-hosted Large Language Model accessed via RESTful endpoints. The prompt engineering pipeline injects statutory parameters from BNBC 2020, RAJUK setback guidelines, and municipal zoning rules.
+    \item \textbf{Custom System Prompting:} Forces structured, safety-first outputs, automatic citation of relevant building code clauses, and mandatory professional review disclaimers.
+    \item \textbf{Rule-Based Heuristic Engine Fallback:} An internal regulatory engine (\texttt{bnbcExpertEngine.js}) capable of answering setback, FAR, and soil test queries during offline periods or transient AI outages.
+\end{itemize}
+
+\subsection{Real-Time Communication and Polling Layer}
+To enable responsive, real-time message synchronization between clients and consulting engineers, CivilHub implements a high-efficiency polling mechanism (2.5-second interval) backed by indexed MySQL queries (\texttt{thread\_id}, \texttt{created\_at}). The architecture supports seamless dispatch across isolated threads (\texttt{thread\_client\_architect}, \texttt{thread\_client\_structural}, \texttt{thread\_client\_soil}).
+
+\subsection{Authentication and Security Architecture}
+Security is enforced across multiple layers:
+\begin{itemize}
+    \item \textbf{Stateless JWT Authorization:} Cryptographically signed tokens with configurable expiration validating user identity on protected routes.
+    \item \textbf{Bcrypt Hashing:} Passwords hashed with 10–12 salt rounds before database persistence.
+    \item \textbf{Role-Based Access Control (RBAC):} Strict route guards ensuring clients access estimation and browsing suites while engineers access dedicated consultation workspaces.
+    \item \textbf{SQL Injection Prevention:} Parameterized prepared statements executed through \texttt{mysql2/promise}.
+\end{itemize}
+
+\subsection{External Integrations}
+\begin{itemize}
+    \item \textbf{Google Gemini API:} Generative building code intelligence and reasoning.
+    \item \textbf{Municipal Bylaw Knowledge Repositories:} Regulatory datasets encoding rules from BNBC 2020, RAJUK, CDA, RDA, and KDA.
+    \item \textbf{Cloud Asset Delivery:} High-resolution architectural elevations and floor plan rendering.
+\end{itemize}
+
+\subsection{DevOps and Deployment Architecture}
+CivilHub is structured for production deployment:
+\begin{itemize}
+    \item \textbf{Client Bundle:} Expo Web static export deployable to Vercel/Netlify; native APK/AAB builds via EAS (Expo Application Services).
+    \item \textbf{Backend Server:} Containerized Node.js service executable behind an Nginx reverse proxy with PM2 process monitoring.
+    \item \textbf{Database:} Managed MySQL 8.0 instance with automated backup and SSL connection pooling.
+\end{itemize}
+
+\subsection{Development and Testing Tools}
+\begin{itemize}
+    \item \textbf{Postman / Thunder Client:} API endpoint validation and payload verification.
+    \item \textbf{Expo CLI \& Metro Bundler:} Real-time hot-reloading and multi-device debugging.
+    \item \textbf{ESLint \& Prettier:} Code formatting and syntax consistency.
+    \item \textbf{Git / GitHub:} Distributed version control and collaborative branching workflow.
+\end{itemize}
+
+\subsection{Key Technical Highlights}
+\begin{itemize}
+    \item Comprehensive civil engineering intelligence system tailored for Bangladesh.
+    \item Dynamic 5-step estimation algorithm modeling real-world structural, finishing, electrical, and plumbing trade shares.
+    \item Cross-module integration linking architectural designs directly to feasibility checks, cost estimators, and expert consultation threads.
+    \item Dual-mode AI and verified human expert consultation workspace with embedded blueprint sharing.
+    \item Resilient dual-layer backend architecture with seamless MySQL pooling and in-memory fallback catalog.
+\end{itemize}
+
+% =============================================================================
+% SECTION 7: SYSTEM TESTING AND VALIDATION
+% =============================================================================
+\section{System Testing and Validation}
+Comprehensive testing was conducted to verify system stability, computational accuracy, and security across modules:
+\begin{itemize}
+    \item \textbf{Building Code Compliance Verification:} Feasibility engine calculations were benchmarked against published RAJUK and BNBC 2020 setback and FAR tables across various frontage road widths (20 ft, 25 ft, 40 ft, 60 ft) to confirm zero calculation errors.
+    \item \textbf{Cost Estimation Formula Validation:} Multi-floor cost calculations and trade percentages (45\% structure, 30\% finishing, 13\% plumbing, 12\% electrical) were validated against standard Bangladesh construction rates across Standard, Premium, and Luxury tiers.
+    \item \textbf{Authentication and Role Guard Testing:} Registration, login, and token verification were tested for both Client and Engineer roles, confirming proper route restrictions.
+    \item \textbf{Cross-Module Context Passing Testing:} Verified that clicking ``Check Feasibility'', ``Estimate Cost'', or ``Ask Expert'' on any design card correctly pre-populates target parameters into destination screens.
+    \item \textbf{API Reliability and AI Fallback Testing:} Simulated network interruptions to the Gemini API, confirming that the internal BNBC heuristic engine automatically serves accurate fallback advice without application crashes.
+\end{itemize}
+
+% =============================================================================
+% SECTION 8: CHALLENGES
+% =============================================================================
+\section{Challenges}
+During the design and implementation of CivilHub, several technical and domain-specific challenges were addressed:
+\begin{itemize}
+    \item \textbf{Mathematical Modeling of Building Bylaws:} Translating complex, conditional setback tables and FAR multipliers from text-based legal acts into deterministic algorithmic rules across multiple authorities (RAJUK, CDA, RDA, KDA).
+    \item \textbf{Multi-Trade Dynamic Cost Formulas:} Balancing simplicity for everyday clients with engineering precision across variable room sizes, floor quantities, basements, and material grades.
+    \item \textbf{Cross-Platform State Management:} Ensuring seamless rendering, responsive touch interactions, and consistent modal behaviors across mobile screens and desktop web browsers using React Native Web and Expo.
+    \item \textbf{Grounded AI Prompt Engineering:} Formulating prompt guardrails that prevent LLM hallucinations on critical structural safety parameters and enforce mandatory legal disclaimers.
+    \item \textbf{Real-Time Thread Isolation:} Maintaining isolated consultation message queues for different engineering disciplines while supporting rich interactive design card attachments.
+\end{itemize}
+
+% =============================================================================
+% SECTION 9: FUTURE ENHANCEMENTS
+% =============================================================================
+\section{Future Enhancements}
+While CivilHub provides a robust and functional platform, several promising avenues exist for future enhancement:
+\begin{itemize}
+    \item \textbf{Automated CAD/BIM File Analysis:} Integration of an AI-powered DXF/DWG/IFC blueprint parser that automatically measures room dimensions and verifies setback clearances from uploaded CAD drawings.
+    \item \textbf{Live Video/Audio Consultation:} Integration of WebRTC for real-time video consultations and screen-sharing between clients and engineers.
+    \item \textbf{Direct Municipal Portal Integration:} Integration with government e-Permit and RAJUK/CDA digital building sanction systems for direct online application tracking.
+    \item \textbf{Augmented Reality (AR) Model Visualizer:} Interactive 3D visualization of architectural models superimposed onto actual land plots using mobile AR capabilities.
+    \item \textbf{Live Material Price Tracker:} Integration with construction material suppliers in Bangladesh for automated daily price updates on rebar, cement, and brick.
+\end{itemize}
+
+% =============================================================================
+% SECTION 10: CONCLUSION
+% =============================================================================
+\section{Conclusion}
+CivilHub demonstrates the effective application of modern software engineering methodologies, relational database modeling, and artificial intelligence to address critical challenges in Bangladesh's construction and architectural planning sector. By unifying statutory building code feasibility analysis, dynamic multi-trade cost estimation, curated architectural catalogs, land transfer duty calculations, and dual-mode expert consultations, CivilHub provides a scalable, reliable, and citizen-centric digital solution. The platform bridges the divide between complex civil engineering regulations and practical, accessible digital tools, contributing toward safer, more transparent, and well-planned urban development.
+
+\end{document}
