@@ -127,69 +127,84 @@ export default function ExpertChatScreen({ route, session }) {
     }
   }, [route?.params?.initialContext]);
 
-  // Load chat history and poll for new messages in background every 2.5 seconds
+    // Keep track of typing state in a ref so background polling never resets or causes re-mounts
+  const isTypingRef = useRef(isTyping);
+  useEffect(() => {
+    isTypingRef.current = isTyping;
+  }, [isTyping]);
+
+  // Load chat history and poll for new messages in background every 3 seconds
   useEffect(() => {
     let isMounted = true;
 
     async function loadHistory(isPolling = false) {
-      if (!isPolling) setLoadingHistory(true);
+      // Never unmount the scrollview or flash a full-page spinner if messages already exist
+      if (!isPolling) {
+        setMessages((current) => {
+          if (current.length === 0) setLoadingHistory(true);
+          return current;
+        });
+      }
       try {
         const history = await getChatHistory(activeThreadId);
-        if (isMounted) {
+        if (isMounted && Array.isArray(history)) {
           setMessages((prev) => {
-            // Check if messages changed before triggering state update to prevent jitter
-            if (
-              history.length !== prev.length ||
-              (history.length > 0 && prev.length > 0 && history[history.length - 1].id !== prev[prev.length - 1].id)
-            ) {
+            // Strictly compare messages to avoid needless re-renders and scroll jumps
+            if (history.length !== prev.length) {
               return history;
             }
-            return prev;
+            const hasChanged = history.some(
+              (item, idx) => !prev[idx] || item.id !== prev[idx].id || item.text !== prev[idx].text
+            );
+            return hasChanged ? history : prev;
           });
         }
       } catch (err) {
         if (!isPolling) console.error("Failed to load chat history:", err);
       } finally {
-        if (isMounted && !isPolling) setLoadingHistory(false);
+        if (isMounted) setLoadingHistory(false);
       }
     }
 
     loadHistory(false);
 
-    // Poll every 2.5 seconds for incoming messages from client / engineer
+    // Poll every 3 seconds for incoming messages from client / engineer
     const intervalId = setInterval(() => {
-      if (isMounted && !isTyping) {
+      if (isMounted && !isTypingRef.current) {
         loadHistory(true);
       }
-    }, 2500);
+    }, 3000);
 
     return () => {
       isMounted = false;
       clearInterval(intervalId);
     };
-  }, [activeThreadId, isTyping]);
+  }, [activeThreadId]);
 
   const handleManualRefresh = async () => {
     try {
       const history = await getChatHistory(activeThreadId);
-      setMessages(history);
+      if (Array.isArray(history)) {
+        setMessages(history);
+      }
     } catch (err) {
       console.warn("Failed to manually refresh chat:", err);
     }
   };
 
-  // Auto-scroll to bottom
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  };
+  // Track whether we should auto-scroll on content size change
+  const shouldScrollRef = useRef(false);
 
+  // When messages count increases, flag that we need to scroll
+  const prevMessagesCountRef = useRef(messages.length);
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
+    if (messages.length > prevMessagesCountRef.current || isTyping) {
+      shouldScrollRef.current = true;
+    }
+    prevMessagesCountRef.current = messages.length;
+  }, [messages.length, isTyping]);
 
-  // Send message
+// Send message
   const handleSend = async (textToSend = inputText) => {
     const trimmed = (textToSend || "").trim();
     if (!trimmed || isTyping) return;
@@ -400,7 +415,7 @@ export default function ExpertChatScreen({ route, session }) {
               </Text>
               <Text style={styles.headerSubtitle}>
                 {chatMode === "ai"
-                  ? "Powered by Google Gemini & BNBC 2020"
+                  ? "Powered by OpenRouter GPT-4o & BNBC 2020"
                   : isEngineer
                   ? "Direct Client Consultation"
                   : selectedExpert
@@ -614,7 +629,7 @@ export default function ExpertChatScreen({ route, session }) {
                         </Text>
                         <Text style={styles.expertCardMeta} numberOfLines={1}>
                           <Text style={styles.licenseHighlight}>{expert.license}</Text>
-                          {" • "}
+                          {" â€¢ "}
                           {expert.firm}
                         </Text>
                       </View>
@@ -683,7 +698,7 @@ export default function ExpertChatScreen({ route, session }) {
                       {selectedExpert.name}
                     </Text>
                     <Text style={styles.expertActiveRole} numberOfLines={1}>
-                      {selectedExpert.license} • {selectedExpert.firm}
+                      {selectedExpert.license} â€¢ {selectedExpert.firm}
                     </Text>
                   </View>
                 </View>
@@ -722,7 +737,7 @@ export default function ExpertChatScreen({ route, session }) {
                           Attached Model: {activeContext.title}
                         </Text>
                         <Text style={styles.attachedPreviewSubtitle}>
-                          {activeContext.floors} Floors • {activeContext.katha} Katha Plot • {activeContext.bedrooms || 3} Bed • {activeContext.bathrooms || 3} Bath
+                          {activeContext.floors} Floors â€¢ {activeContext.katha} Katha Plot â€¢ {activeContext.bedrooms || 3} Bed â€¢ {activeContext.bathrooms || 3} Bath
                         </Text>
                       </View>
                       <TouchableOpacity
@@ -744,7 +759,7 @@ export default function ExpertChatScreen({ route, session }) {
                           )
                         }
                       >
-                        <Text style={styles.intentChipText}>🏛️ FAR & Setbacks</Text>
+                        <Text style={styles.intentChipText}>ðŸ›ï¸ FAR & Setbacks</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -756,7 +771,7 @@ export default function ExpertChatScreen({ route, session }) {
                           )
                         }
                       >
-                        <Text style={styles.intentChipText}>🏗️ Structural & Soil</Text>
+                        <Text style={styles.intentChipText}>ðŸ—ï¸ Structural & Soil</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -768,7 +783,7 @@ export default function ExpertChatScreen({ route, session }) {
                           )
                         }
                       >
-                        <Text style={styles.intentChipText}>💰 Cost Advice</Text>
+                        <Text style={styles.intentChipText}>ðŸ’° Cost Advice</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -780,7 +795,7 @@ export default function ExpertChatScreen({ route, session }) {
                           )
                         }
                       >
-                        <Text style={styles.intentChipText}>📐 Custom Layout</Text>
+                        <Text style={styles.intentChipText}>ðŸ“ Custom Layout</Text>
                       </TouchableOpacity>
                     </View>
                   </>
@@ -790,8 +805,8 @@ export default function ExpertChatScreen({ route, session }) {
                       <MaterialCommunityIcons name="office-building-cog" size={15} color="#1d4ed8" />
                       <Text style={styles.contextBannerText} numberOfLines={1}>
                         Context: {activeContext.floors ? `${activeContext.floors} Fl ` : ""}
-                        {activeContext.katha ? `• ${activeContext.katha} Katha ` : ""}
-                        {activeContext.authority ? `• ${activeContext.authority}` : ""}
+                        {activeContext.katha ? `â€¢ ${activeContext.katha} Katha ` : ""}
+                        {activeContext.authority ? `â€¢ ${activeContext.authority}` : ""}
                       </Text>
                     </View>
                     <TouchableOpacity onPress={() => setActiveContext(null)}>
@@ -834,6 +849,12 @@ export default function ExpertChatScreen({ route, session }) {
                 style={styles.messageList}
                 contentContainerStyle={styles.messageListContent}
                 showsVerticalScrollIndicator={false}
+                onContentSizeChange={() => {
+                  if (shouldScrollRef.current) {
+                    shouldScrollRef.current = false;
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }
+                }}
               >
                 {messages.map((msg) => {
                   const isAi = msg.senderRole === "ai";
@@ -928,7 +949,7 @@ export default function ExpertChatScreen({ route, session }) {
                                   {msg.attachedContext.title}
                                 </Text>
                                 <Text style={styles.designCardSubtitle}>
-                                  {msg.attachedContext.architectural_style || "Architectural Model"} • {msg.attachedContext.authority || "RAJUK"}
+                                  {msg.attachedContext.architectural_style || "Architectural Model"} â€¢ {msg.attachedContext.authority || "RAJUK"}
                                 </Text>
                               </View>
                             </View>
@@ -966,7 +987,7 @@ export default function ExpertChatScreen({ route, session }) {
                                 <View style={styles.designCardChip}>
                                   <Ionicons name="bed-outline" size={12} color="#1e40af" />
                                   <Text style={styles.designCardChipText}>
-                                    {msg.attachedContext.bedrooms} Bed • {msg.attachedContext.bathrooms || 2} Bath
+                                    {msg.attachedContext.bedrooms} Bed â€¢ {msg.attachedContext.bathrooms || 2} Bath
                                   </Text>
                                 </View>
                               ) : null}
@@ -1112,7 +1133,7 @@ export default function ExpertChatScreen({ route, session }) {
                   {selectedInspectDesign?.title || "Design Specifications"}
                 </Text>
                 <Text style={styles.specsModalSubtitle}>
-                  {selectedInspectDesign?.architectural_style || "Architectural Design"} • {selectedInspectDesign?.authority || "RAJUK"}
+                  {selectedInspectDesign?.architectural_style || "Architectural Design"} â€¢ {selectedInspectDesign?.authority || "RAJUK"}
                 </Text>
               </View>
               <TouchableOpacity
@@ -1248,16 +1269,24 @@ const styles = StyleSheet.create({
   },
   keyboardContainer: {
     flex: 1,
+    width: "100%",
+    maxWidth: 960,
+    alignSelf: "center",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 13,
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
+    borderBottomColor: "#e8edf2",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerLeft: {
     flexDirection: "row",
@@ -1313,24 +1342,30 @@ const styles = StyleSheet.create({
   },
   modeToggleBar: {
     flexDirection: "row",
-    backgroundColor: "#f1f5f9",
-    padding: 6,
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     gap: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
+    borderBottomColor: "#e8edf2",
   },
   modeTab: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 9,
+    paddingVertical: 10,
     paddingHorizontal: 8,
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
+    borderWidth: 1.5,
+    borderColor: "#dde3ed",
     gap: 6,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
   modeTabActiveAI: {
     backgroundColor: "#4f46e5",
@@ -1703,22 +1738,27 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   quickChipsWrapper: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f8fafc",
     borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-    paddingVertical: 8,
+    borderBottomColor: "#e8edf2",
+    paddingVertical: 9,
   },
   quickChipsContainer: {
     paddingHorizontal: 14,
     gap: 8,
   },
   quickChip: {
-    backgroundColor: "#f1f5f9",
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: "#dde3ed",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
   quickChipText: {
     fontSize: 12,
@@ -1738,11 +1778,13 @@ const styles = StyleSheet.create({
   },
   messageList: {
     flex: 1,
+    backgroundColor: "#f0f4f8",
   },
   messageListContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
+    paddingHorizontal: 14,
+    paddingTop: 16,
+    paddingBottom: 10,
+    gap: 10,
   },
   messageRow: {
     flexDirection: "row",
@@ -1756,13 +1798,18 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   avatarBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: "#2563eb",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 2,
+    shadowColor: "#2563eb",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 3,
   },
   avatarBadgeAI: {
     backgroundColor: "#4f46e5",
@@ -1775,13 +1822,23 @@ const styles = StyleSheet.create({
   },
   myBubble: {
     backgroundColor: "#2563eb",
-    borderBottomRightRadius: 4,
+    borderBottomRightRadius: 5,
+    shadowColor: "#2563eb",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
   },
   otherBubble: {
     backgroundColor: "#ffffff",
-    borderBottomLeftRadius: 4,
+    borderBottomLeftRadius: 5,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: "#e4e9f0",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
   },
   aiBubble: {
     backgroundColor: "#ffffff",
@@ -1849,39 +1906,54 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
     backgroundColor: "#ffffff",
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
+    borderTopColor: "#e8edf2",
     gap: 10,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 5,
   },
   input: {
     flex: 1,
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    backgroundColor: "#f4f7fa",
+    borderWidth: 1.5,
+    borderColor: "#dde3ed",
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 10,
     fontSize: 14,
-    maxHeight: 90,
+    maxHeight: 100,
     color: "#0f172a",
+    lineHeight: 20,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "#2563eb",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#2563eb",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 4,
   },
   sendButtonAI: {
     backgroundColor: "#4f46e5",
+    shadowColor: "#4f46e5",
   },
   sendButtonDisabled: {
-    backgroundColor: "#94a3b8",
+    backgroundColor: "#b0bec9",
+    shadowOpacity: 0,
+    elevation: 0,
   },
 
   /* -------------------------------------------------------
@@ -2130,3 +2202,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 });
+
+
+
