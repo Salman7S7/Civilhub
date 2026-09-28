@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
-    "dev": "concurrently -n \"BACKEND,EXPO\" -c \"blue,green\" \"npm run backend\" \"npm run web\"",
+    "dev": "concurrently -n \"BACKEND,EXPO\" -c \"cyan,green\" \"npm run backend\" \"npm run web\"",
+    "dev:start": "concurrently -n \"BACKEND,EXPO\" -c \"cyan,green\" \"npm run backend\" \"npm run start\"",
+    "dev:android": "concurrently -n \"BACKEND,EXPO\" -c \"cyan,green\" \"npm run backend\" \"npm run android\"",
+    "dev:ios": "concurrently -n \"BACKEND,EXPO\" -c \"cyan,green\" \"npm run backend\" \"npm run ios\"",
     "start": "expo start",
     "server": "node backend/server.js",
     "backend": "node backend/server.js",
