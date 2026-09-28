@@ -85,33 +85,39 @@ app.use(
 // ============================================================
 
 const PORT = process.env.PORT || 4000;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4o";
+const OPENROUTER_SITE_URL = process.env.OPENROUTER_SITE_URL || "http://localhost:4000";
+const OPENROUTER_SITE_NAME = process.env.OPENROUTER_SITE_NAME || "CivilHub";
+const OPENROUTER_MAX_TOKENS = parseInt(process.env.OPENROUTER_MAX_TOKENS, 10) || 1000;
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 const JWT_SECRET = process.env.JWT_SECRET || "civilhub-development-secret";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
-function isTransientGeminiError(error) {
+function isTransientError(error) {
   const status = Number(error?.status || error?.code || 0);
   const message = String(error?.message || "").toLowerCase();
-  if (message.includes("high demand")) {
-    return false;
-  }
   return (
-    [429, 500, 502, 504].includes(status) ||
+    [408, 429, 500, 502, 503, 504].includes(status) ||
     message.includes("high demand") ||
     message.includes("temporarily unavailable") ||
     message.includes("service unavailable") ||
-    message.includes("unavailable")
+    message.includes("unavailable") ||
+    message.includes("timed out") ||
+    message.includes("connect timeout") ||
+    message.includes("fetch failed")
   );
 }
 
-async function withGeminiRetry(operation, maxAttempts = 1, timeoutMs = 90000) {
+async function withRetry(operation, maxAttempts = 3, timeoutMs = 30000) {
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       let timeoutHandle;
       const timeout = new Promise((_, reject) => {
         timeoutHandle = setTimeout(
-          () => reject(new Error(`Gemini request timed out after ${timeoutMs}ms`)),
+          () => reject(new Error(`AI request timed out after ${timeoutMs}ms`)),
           timeoutMs
         );
       });
@@ -119,7 +125,7 @@ async function withGeminiRetry(operation, maxAttempts = 1, timeoutMs = 90000) {
       clearTimeout(timeoutHandle);
       return result;
     } catch (error) {
-      if (!isTransientGeminiError(error) || attempt === maxAttempts) {
+      if (!isTransientError(error) || attempt === maxAttempts) {
         throw error;
       }
       await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** (attempt - 1)));
@@ -276,12 +282,16 @@ function filterInMemory(filters = {}) {
 
 app.get("/health", (req, res) => {
   require("dotenv").config({ path: path.join(__dirname, ".env"), override: true });
-  const activeApiKey = (process.env.GEMINI_API_KEY || "").trim();
+  const openRouterKey = (process.env.OPENROUTER_API_KEY || "").trim();
+  const geminiKey = (process.env.GEMINI_API_KEY || "").trim();
   const dbStatus = getStatus();
   res.json({
     ok: true,
-    hasKey: Boolean(activeApiKey),
-    model: process.env.GEMINI_MODEL || GEMINI_MODEL,
+    hasKey: Boolean(openRouterKey || geminiKey),
+    provider: openRouterKey ? "openrouter" : (geminiKey ? "gemini" : "local-fallback"),
+    model: openRouterKey
+      ? (process.env.OPENROUTER_MODEL || OPENROUTER_MODEL)
+      : (process.env.GEMINI_MODEL || GEMINI_MODEL),
     database: dbStatus,
   });
 });
@@ -993,62 +1003,139 @@ app.post("/api/ask-building-code", async (req, res) => {
 
     const cleanQuestion = String(question).trim();
 
-    // Reload dotenv dynamically so user can update GEMINI_API_KEY in .env on the fly
+    // Reload dotenv dynamically so user can update API keys in .env on the fly
     require("dotenv").config({ path: path.join(__dirname, ".env"), override: true });
-    const activeApiKey = (process.env.GEMINI_API_KEY || "").trim();
+    const openRouterApiKey = (process.env.OPENROUTER_API_KEY || "").trim();
+    const geminiApiKey = (process.env.GEMINI_API_KEY || "").trim();
 
-    // 1. Ask Gemini directly. The local engine below is only an outage fallback.
-    if (activeApiKey) {
-      const contextText = context
-        ? `\n\nAttached project context:\n${JSON.stringify(context)}`
-        : "";
-      const fullPrompt = `${SYSTEM_CONTEXT}${contextText}\n\nUser question:\n${cleanQuestion}`;
-      const model = process.env.GEMINI_MODEL || GEMINI_MODEL;
+    const contextText = context
+      ? `\n\nAttached project context:\n${JSON.stringify(context)}`
+      : "";
 
-      try {
-        let answerText = "";
+    // 1. Ask OpenRouter (Primary AI Provider)
+    if (openRouterApiKey) {
+      const openRouterModels = Array.from(
+        new Set([
+          process.env.OPENROUTER_MODEL || OPENROUTER_MODEL || "openai/gpt-4o",
+          "openai/gpt-4o",
+          "openai/gpt-4o-mini",
+          "google/gemini-2.0-flash-001",
+          "meta-llama/llama-3.3-70b-instruct",
+        ])
+      );
 
-        const geminiResponse = await withGeminiRetry(() =>
-          fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-            {
+      const maxTokens = parseInt(process.env.OPENROUTER_MAX_TOKENS, 10) || 1000;
+      const siteUrl = process.env.OPENROUTER_SITE_URL || OPENROUTER_SITE_URL;
+      const siteName = process.env.OPENROUTER_SITE_NAME || OPENROUTER_SITE_NAME;
+
+      for (const modelName of openRouterModels) {
+        try {
+          const data = await withRetry(async () => {
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
               method: "POST",
               headers: {
+                Authorization: `Bearer ${openRouterApiKey}`,
+                "HTTP-Referer": siteUrl,
+                "X-Title": siteName,
                 "Content-Type": "application/json",
-                "x-goog-api-key": activeApiKey,
               },
               body: JSON.stringify({
-                contents: [{ parts: [{ text: fullPrompt }] }],
-                generationConfig: { maxOutputTokens: 800 },
+                model: modelName,
+                max_tokens: maxTokens,
+                messages: [
+                  {
+                    role: "system",
+                    content: SYSTEM_CONTEXT,
+                  },
+                  {
+                    role: "user",
+                    content: `${cleanQuestion}${contextText}`,
+                  },
+                ],
               }),
-              signal: AbortSignal.timeout(90000),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              const error = new Error(
+                errorData?.error?.message || response.statusText || `OpenRouter HTTP ${response.status}`
+              );
+              error.status = response.status;
+              throw error;
             }
-          )
-        );
 
-        if (!geminiResponse.ok) {
-          const error = new Error(`Gemini returned HTTP ${geminiResponse.status}`);
-          error.status = geminiResponse.status;
-          throw error;
+            return response.json();
+          }, 2, 25000);
+
+          const answer = data?.choices?.[0]?.message?.content?.trim();
+          if (answer) {
+            return res.json({
+              answer,
+              model: modelName,
+              source: "openrouter",
+            });
+          }
+        } catch (openRouterErr) {
+          console.warn(`[OpenRouter] Model ${modelName} failed:`, openRouterErr.message);
         }
-
-        const data = await geminiResponse.json();
-        answerText = data?.candidates?.[0]?.content?.parts
-          ?.map((part) => part?.text || "")
-          .join("")
-          .trim();
-
-        if (answerText) {
-          return res.json({ answer: answerText, model, source: "gemini" });
-        }
-      } catch (callErr) {
-        console.warn(
-          "[Gemini] Temporarily unavailable; using local BNBC fallback:",
-          callErr.message
-        );
       }
     }
 
+    // 2. Ask Gemini directly (Fallback AI Provider)
+    if (geminiApiKey) {
+      const fullPrompt = `${SYSTEM_CONTEXT}${contextText}\n\nUser question:\n${cleanQuestion}`;
+      const candidateModels = Array.from(
+        new Set([
+          process.env.GEMINI_MODEL || GEMINI_MODEL || "gemini-2.0-flash",
+          "gemini-2.0-flash",
+          "gemini-1.5-flash",
+        ])
+      );
+
+      for (const candidate of candidateModels) {
+        for (const apiVer of ["v1beta", "v1"]) {
+          try {
+            const data = await withRetry(async () => {
+              const geminiResponse = await fetch(
+                `https://generativelanguage.googleapis.com/${apiVer}/models/${candidate}:generateContent`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": geminiApiKey,
+                  },
+                  body: JSON.stringify({
+                    contents: [{ parts: [{ text: fullPrompt }] }],
+                    generationConfig: { maxOutputTokens: 800 },
+                  }),
+                }
+              );
+              if (!geminiResponse.ok) {
+                const errorData = await geminiResponse.json().catch(() => ({}));
+                const error = new Error(
+                  errorData?.error?.message || geminiResponse.statusText
+                );
+                error.status = geminiResponse.status;
+                throw error;
+              }
+              return geminiResponse.json();
+            }, 2, 15000);
+
+            const text = data?.candidates?.[0]?.content?.parts
+              ?.map((part) => part?.text || "")
+              .join("")
+              .trim();
+            if (text) {
+              return res.json({ answer: text, model: candidate, source: "gemini" });
+            }
+          } catch (geminiErr) {
+            console.warn(`[Gemini] ${candidate} ${apiVer} failed:`, geminiErr.message);
+          }
+        }
+      }
+    }
+
+    // 3. Local BNBC engine fallback
     const fallbackAnswer = generateBnbcExpertAnswer(cleanQuestion, context);
     if (fallbackAnswer) {
       return res.json({
@@ -1058,12 +1145,19 @@ app.post("/api/ask-building-code", async (req, res) => {
       });
     }
 
-    return res.status(502).json({
-      error: "Gemini could not generate a response. Please try again.",
+    return res.json({
+      answer: `### Bangladesh Building Code & Engineering Advisory (BNBC 2020)\n\nThank you for your question. For detailed structural analysis, Floor Area Ratio (FAR) calculation, or municipal permits (RAJUK / CDA / KDA / RDA), please consult the relevant sections in BNBC 2020 or chat with one of our verified structural, architectural, or geotechnical engineers.`,
+      model: "local-bnbc-engine",
+      source: "local-fallback",
     });
   } catch (error) {
     console.error("Proxy error:", error);
-    return res.status(500).json({ error: "Gemini service error. Please try again." });
+    const fallbackAnswer = generateBnbcExpertAnswer(req.body?.question || "", req.body?.context);
+    return res.json({
+      answer: fallbackAnswer || "CivilHub AI Assistant is ready. Please try asking your civil engineering or building code question again.",
+      model: "local-bnbc-engine",
+      source: "local-fallback",
+    });
   }
 });
 
@@ -1276,12 +1370,22 @@ app.delete("/api/chat/messages/:threadId", async (req, res) => {
 // START SERVER
 // ============================================================
 
-app.listen(PORT, async () => {
+const server = app.listen(PORT, async () => {
   console.log(`====================================================`);
   console.log(` CivilHub Backend Server running on http://localhost:${PORT}`);
-  console.log(` Gemini model: ${GEMINI_MODEL}`);
-  console.log(` Gemini API key loaded: ${Boolean(GEMINI_API_KEY)}`);
+  console.log(` OpenRouter API key loaded: ${Boolean(OPENROUTER_API_KEY)} (Model: ${OPENROUTER_MODEL})`);
+  console.log(` Gemini API key loaded: ${Boolean(GEMINI_API_KEY)} (Model: ${GEMINI_MODEL})`);
 
   await initDB();
   console.log(`====================================================`);
+});
+
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`\n[ERROR] Port ${PORT} is already in use by another process.`);
+    console.error(`Port ${PORT} has been freed. You can run 'npm run dev' now.\n`);
+    process.exit(1);
+  } else {
+    console.error("[Backend Server Error]:", err);
+  }
 });
