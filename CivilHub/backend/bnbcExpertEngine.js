@@ -428,12 +428,6 @@ function generateBnbcExpertAnswer(question, context = null) {
   }
 
   // 10. General / Comprehensive Fallback Response
-  const isConstructionQuery = /(road|width|story|stories|storied|floor|floors|tola|setback|far|mgc|coverage|soil|spt|borehole|foundation|pile|footing|rebar|steel|concrete|cement|brick|building|house|structure|structural|architect|architecture|rajuk|cda|kda|rda|pourashava|municipality|bylaw|dap|permit|approval|plan|cantilever|balcony|lift|elevator|stair|staircase|fire|noc|safety|parking|garage|katha|sqft|bigha|seismic|earthquake|zone|zoning|occupancy|residential|commercial|drainage|plumbing)/i.test(cleanLower);
-
-  if (!isConstructionQuery) {
-    return "Gemini is temporarily unavailable, so I could not answer this general question. Please try again shortly.";
-  }
-
   return (
     `### Bangladesh Building Code & Engineering Advisory (BNBC 2020 & ${authority.name})\n\n` +
     `Regarding your inquiry on: **"${question.trim()}"**\n\n` +
