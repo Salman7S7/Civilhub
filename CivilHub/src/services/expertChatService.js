@@ -509,6 +509,7 @@ export async function queryAiExpert(userPrompt, activeContext = null) {
   const enrichedPrompt = `${contextHeader}${trimmedPrompt}`;
 
   let answerText = "";
+  let requestError = null;
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -523,13 +524,30 @@ export async function queryAiExpert(userPrompt, activeContext = null) {
     clearTimeout(timeoutId);
 
     const data = await res.json().catch(() => ({}));
-    if (res.ok && data && data.answer) {
-      answerText = data.answer;
-    } else {
-      throw new Error(data?.error || "Gemini could not generate a response.");
+    if (!res.ok) {
+      throw new Error(data.error || `AI service error (${res.status}).`);
     }
-  } catch (_netErr) {
-    throw new Error("Gemini service is unavailable. Please check the backend and try again.");
+    if (data && data.answer) {
+      answerText = data.answer;
+    }
+  } catch (error) {
+    requestError = error;
+  }
+
+  // Local BNBC expert engine fallback
+  if (!answerText) {
+    try {
+      answerText = generateBnbcExpertAnswer(trimmedPrompt, activeContext) || "";
+    } catch (_fallbackErr) {
+      // ignore
+    }
+  }
+
+  if (!answerText) {
+    throw new Error(
+      requestError?.message ||
+        "The assistant could not answer this question. Please try again later."
+    );
   }
 
   return {
