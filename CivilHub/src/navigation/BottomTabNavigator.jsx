@@ -18,10 +18,12 @@ import ExpertChatScreen from "../screens/ExpertChatScreen";
 
 const Tab = createBottomTabNavigator();
 
+import { THEME } from "../theme/designSystem";
+
 const COLORS = {
-  slate: "#1e293b",
-  accent: "#2563eb",
-  inactive: "#94a3b8",
+  navy: THEME.colors.navy,
+  accent: THEME.colors.accent,
+  inactive: "#64748b",
   background: "#ffffff",
 };
 
@@ -43,38 +45,85 @@ export default function BottomTabNavigator({ onLogout, session }) {
       {!!getRoleLabel() && (
         <View
           style={{
-            backgroundColor: "rgba(56, 189, 248, 0.18)",
+            backgroundColor: "rgba(56, 189, 248, 0.12)",
             borderWidth: 1,
             borderColor: "rgba(56, 189, 248, 0.35)",
-            paddingHorizontal: 9,
+            paddingHorizontal: 10,
             paddingVertical: 4,
             borderRadius: 8,
             marginRight: 10,
           }}
         >
-          <Text style={{ color: "#38bdf8", fontSize: 11, fontWeight: "800" }}>
-            {getRoleLabel()}
+          <Text style={{ color: "#38bdf8", fontSize: 11, fontWeight: "800", letterSpacing: 0.5 }}>
+            {getRoleLabel().toUpperCase()}
           </Text>
         </View>
       )}
       <Pressable
         onPress={onLogout}
-        style={{
+        style={({ pressed }) => ({
           flexDirection: "row",
           alignItems: "center",
-          paddingHorizontal: 10,
-          paddingVertical: 7,
-          borderRadius: 9,
-          backgroundColor: "rgba(255,255,255,0.12)",
-        }}
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 10,
+          backgroundColor: pressed ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.15)",
+        })}
       >
-        <Ionicons name="log-out-outline" size={17} color="#ffffff" />
-        <Text style={{ color: "#ffffff", fontWeight: "700", marginLeft: 5, fontSize: 13 }}>
+        <Ionicons name="log-out-outline" size={16} color="#ffffff" />
+        <Text style={{ color: "#ffffff", fontWeight: "700", marginLeft: 6, fontSize: 12 }}>
           Logout
         </Text>
       </Pressable>
     </View>
   );
+
+  const sharedTabBarOptions = {
+    tabBarLabelPosition: "below-icon",
+    tabBarStyle: {
+      height: 70,
+      paddingBottom: 10,
+      paddingTop: 8,
+      backgroundColor: "#ffffff",
+      borderTopWidth: 2,
+      borderTopColor: "#cbd5e1",
+      shadowColor: "#0f172a",
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 14,
+      elevation: 12,
+    },
+    tabBarItemStyle: {
+      paddingVertical: 4,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    tabBarLabelStyle: {
+      fontSize: 11,
+      fontWeight: "700",
+      letterSpacing: 0.2,
+      marginTop: 2,
+    },
+    tabBarActiveTintColor: THEME.colors.accent,
+    tabBarInactiveTintColor: "#64748b",
+    headerShown: true,
+    headerStyle: {
+      backgroundColor: THEME.colors.navy,
+      shadowColor: "transparent",
+      elevation: 0,
+      borderBottomWidth: 1.5,
+      borderBottomColor: "rgba(255, 255, 255, 0.15)",
+    },
+    headerTintColor: "#ffffff",
+    headerTitleStyle: {
+      fontSize: 18,
+      fontWeight: "800",
+      letterSpacing: 0.3,
+    },
+    headerRight: renderHeaderRight,
+  };
 
   // ---------------------------------------------------------------------------
   // 1. ENGINEER PORTAL: Dedicated navbar for chatting with Client only
@@ -84,38 +133,14 @@ export default function BottomTabNavigator({ onLogout, session }) {
       <Tab.Navigator
         initialRouteName="Client Chat"
         screenOptions={{
-          headerShown: true,
-          headerStyle: {
-            backgroundColor: COLORS.slate,
-            shadowColor: "transparent",
-          },
-          headerTintColor: "#ffffff",
-          headerTitle: `CivilHub - ${getRoleLabel()}`,
-          headerTitleStyle: {
-            fontSize: 18,
-            fontWeight: "700",
-          },
-          headerRight: renderHeaderRight,
-          tabBarActiveTintColor: COLORS.accent,
-          tabBarInactiveTintColor: COLORS.inactive,
-          tabBarStyle: {
-            height: 64,
-            paddingBottom: 8,
-            paddingTop: 6,
-            backgroundColor: COLORS.background,
-            borderTopWidth: 1,
-            borderTopColor: "#e2e8f0",
-          },
-          tabBarLabelStyle: {
-            fontSize: 12,
-            fontWeight: "600",
-          },
+          ...sharedTabBarOptions,
+          headerTitle: `CivilHub — ${getRoleLabel()}`,
         }}
       >
         <Tab.Screen
           name="Client Chat"
           options={{
-            title: "Client Consultation",
+            title: `CivilHub — ${getRoleLabel()}`,
             tabBarLabel: "Client Chat",
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons
@@ -138,38 +163,13 @@ export default function BottomTabNavigator({ onLogout, session }) {
   return (
     <Tab.Navigator
       initialRouteName="Feasibility"
-      screenOptions={{
-        headerShown: true,
-        headerStyle: {
-          backgroundColor: COLORS.slate,
-          shadowColor: "transparent",
-        },
-        headerTintColor: "#ffffff",
-        headerTitleStyle: {
-          fontSize: 18,
-          fontWeight: "700",
-        },
-        headerRight: renderHeaderRight,
-        tabBarActiveTintColor: COLORS.accent,
-        tabBarInactiveTintColor: COLORS.inactive,
-        tabBarStyle: {
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 6,
-          backgroundColor: COLORS.background,
-          borderTopWidth: 1,
-          borderTopColor: "#e2e8f0",
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "600",
-        },
-      }}
+      screenOptions={sharedTabBarOptions}
     >
       <Tab.Screen
         name="Feasibility"
         component={FeasibilityScreen}
         options={{
+          title: "CivilHub",
           tabBarLabel: "Feasibility",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="business-outline" size={size} color={color} />
@@ -180,7 +180,8 @@ export default function BottomTabNavigator({ onLogout, session }) {
         name="Smart Designs"
         component={DesignSuggestionsScreen}
         options={{
-          tabBarLabel: "Smart Designs",
+          title: "Smart Designs",
+          tabBarLabel: "Designs",
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="floor-plan" size={size} color={color} />
           ),
@@ -190,7 +191,8 @@ export default function BottomTabNavigator({ onLogout, session }) {
         name="Cost Estimator"
         component={CostEstimatorScreen}
         options={{
-          tabBarLabel: "Cost Estimator",
+          title: "Cost Estimator",
+          tabBarLabel: "Cost",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calculator-outline" size={size} color={color} />
           ),
@@ -200,6 +202,7 @@ export default function BottomTabNavigator({ onLogout, session }) {
         name="Land Tax"
         component={LandTaxScreen}
         options={{
+          title: "Land Tax",
           tabBarLabel: "Land Tax",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="receipt-outline" size={size} color={color} />
@@ -209,6 +212,7 @@ export default function BottomTabNavigator({ onLogout, session }) {
       <Tab.Screen
         name="Ask Expert"
         options={{
+          title: "Ask Expert",
           tabBarLabel: "Ask Expert",
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons
