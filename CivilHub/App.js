@@ -64,20 +64,10 @@ const SessionStore = {
 // ---------------------------------------------------------------------------
 export default function App() {
   const [session, setSession] = useState(null);
-  const [loadingSession, setLoadingSession] = useState(true);
 
-  // Restore persisted session on launch / tab reload
+  // Clear any stale cached session on fresh open so the user signs in first
   useEffect(() => {
-    let isMounted = true;
-    async function restoreSession() {
-      const saved = await SessionStore.get();
-      if (isMounted && saved?.user) {
-        setSession(saved);
-      }
-      if (isMounted) setLoadingSession(false);
-    }
-    restoreSession();
-    return () => { isMounted = false; };
+    SessionStore.remove();
   }, []);
 
   const handleLoginSuccess = async (newSession) => {
@@ -89,14 +79,6 @@ export default function App() {
     setSession(null);
     await SessionStore.remove();
   };
-
-  if (loadingSession) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2563eb" />
-      </View>
-    );
-  }
 
   return (
     <SafeAreaProvider>
